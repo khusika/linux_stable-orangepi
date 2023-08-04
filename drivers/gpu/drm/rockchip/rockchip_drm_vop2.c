@@ -10502,7 +10502,8 @@ static void vop2_setup_cluster_alpha(struct vop2 *vop2, struct vop2_cluster *clu
 		fb = top_win_vpstate->base.fb;
 		if (!fb)
 			return;
-		if (top_win_vpstate->base.pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
+		if (top_win_vpstate->base.pixel_blend_mode == DRM_MODE_BLEND_PREMULTI ||
+		    top_win_vpstate->base.pixel_blend_mode == DRM_MODE_BLEND_PIXEL_NONE)
 			premulti_en = true;
 		else
 			premulti_en = false;
@@ -10573,7 +10574,8 @@ static void vop2_setup_alpha(struct vop2_video_port *vp,
 			 */
 			bottom_layer_alpha_en = true;
 			dst_global_alpha = vpstate->global_alpha;
-			if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
+			if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI ||
+			    pstate->pixel_blend_mode == DRM_MODE_BLEND_PIXEL_NONE)
 				premulti_en = 1;
 			else
 				premulti_en = 0;
@@ -10599,7 +10601,8 @@ static void vop2_setup_alpha(struct vop2_video_port *vp,
 
 		vpstate = to_vop2_plane_state(pstate);
 		fb = pstate->fb;
-		if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
+		if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI ||
+		    pstate->pixel_blend_mode == DRM_MODE_BLEND_PIXEL_NONE)
 			premulti_en = 1;
 		else
 			premulti_en = 0;
@@ -10723,7 +10726,8 @@ static void rk3576_extra_alpha(struct vop2_video_port *vp, const struct vop2_zpo
 		pstate = extra_win->base.state;
 		vpstate = to_vop2_plane_state(pstate);
 		fb = pstate->fb;
-		if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
+		if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI ||
+		    pstate->pixel_blend_mode == DRM_MODE_BLEND_PIXEL_NONE)
 			alpha_config.src_premulti_en = 1;
 		else
 			alpha_config.src_premulti_en = 0;
@@ -10825,7 +10829,8 @@ static void vop3_setup_alpha(struct vop2_video_port *vp,
 			 */
 			bottom_layer_alpha_en = true;
 			dst_global_alpha = vpstate->global_alpha;
-			if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
+			if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI ||
+			    pstate->pixel_blend_mode == DRM_MODE_BLEND_PIXEL_NONE)
 				premulti_en = 1;
 			else
 				premulti_en = 0;
@@ -10841,7 +10846,8 @@ static void vop3_setup_alpha(struct vop2_video_port *vp,
 		pstate = win->base.state;
 		vpstate = to_vop2_plane_state(pstate);
 		fb = pstate->fb;
-		if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI)
+		if (pstate->pixel_blend_mode == DRM_MODE_BLEND_PREMULTI ||
+		    pstate->pixel_blend_mode == DRM_MODE_BLEND_PIXEL_NONE)
 			premulti_en = 1;
 		else
 			premulti_en = 0;
