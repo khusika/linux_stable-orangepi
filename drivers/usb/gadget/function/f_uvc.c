@@ -807,7 +807,6 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	struct usb_ep *ep;
 	struct f_uvc_opts *opts;
 	int ret = -EINVAL;
-	u8 address;
 
 	uvcg_info(f, "%s()\n", __func__);
 
@@ -904,20 +903,20 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 	}
 	uvc->enable_interrupt_ep = opts->enable_interrupt_ep;
 
-	if (gadget_is_superspeed(c->cdev->gadget)) {
-		if (!opts->streaming_bulk)
-			ep = usb_ep_autoconfig_ss(cdev->gadget,
-						  &uvc_ss_streaming_ep,
-						  &uvc_ss_streaming_comp);
-		else
+	/*
+	 * gadget_is_{super|dual}speed() API check UDC controller capitblity. It should pass down
+	 * highest speed endpoint descriptor to UDC controller. So UDC controller driver can reserve
+	 * enough resource at check_config(), especially mult and maxburst. So UDC driver (such as
+	 * cdns3) can know need at least (mult + 1) * (maxburst + 1) * wMaxPacketSize internal
+	 * memory for this uvc functions. This is the only straightforward method to resolve the UDC
+	 * resource allocation issue in the current gadget framework.
+	 */
+	if (opts->streaming_bulk) {
+		if (gadget_is_superspeed(c->cdev->gadget)) {
 			ep = usb_ep_autoconfig_ss(cdev->gadget,
 						  &uvc_ss_bulk_streaming_ep,
 						  &uvc_ss_bulk_streaming_comp);
-	} else if (gadget_is_dualspeed(cdev->gadget)) {
-		if (!opts->streaming_bulk) {
-			ep = usb_ep_autoconfig(cdev->gadget,
-					       &uvc_hs_streaming_ep);
-		} else {
+		} else if (gadget_is_dualspeed(cdev->gadget)) {
 			ep = usb_ep_autoconfig(cdev->gadget,
 					       &uvc_hs_bulk_streaming_ep);
 			/*
@@ -929,14 +928,17 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 			uvc_hs_bulk_streaming_ep.wMaxPacketSize =
 				cpu_to_le16(min(opts->streaming_maxpacket,
 						512U));
-		}
-	} else {
-		if (!opts->streaming_bulk)
-			ep = usb_ep_autoconfig(cdev->gadget,
-					       &uvc_fs_streaming_ep);
-		else
+		} else {
 			ep = usb_ep_autoconfig(cdev->gadget,
 					       &uvc_fs_bulk_streaming_ep);
+		}
+	} else if (gadget_is_superspeed(c->cdev->gadget)) {
+		ep = usb_ep_autoconfig_ss(cdev->gadget, &uvc_ss_streaming_ep,
+					  &uvc_ss_streaming_comp);
+	} else if (gadget_is_dualspeed(cdev->gadget)) {
+		ep = usb_ep_autoconfig(cdev->gadget, &uvc_hs_streaming_ep);
+	} else {
+		ep = usb_ep_autoconfig(cdev->gadget, &uvc_fs_streaming_ep);
 	}
 
 	if (!ep) {
@@ -944,17 +946,14 @@ uvc_function_bind(struct usb_configuration *c, struct usb_function *f)
 		goto error;
 	}
 	uvc->video.ep = ep;
-	address = uvc->video.ep->address;
 
-	if (!opts->streaming_bulk) {
-		uvc_fs_streaming_ep.bEndpointAddress = address;
-		uvc_hs_streaming_ep.bEndpointAddress = address;
-		uvc_ss_streaming_ep.bEndpointAddress = address;
-	} else {
-		uvc_fs_bulk_streaming_ep.bEndpointAddress = address;
-		uvc_hs_bulk_streaming_ep.bEndpointAddress = address;
-		uvc_ss_bulk_streaming_ep.bEndpointAddress = address;
-	}
+	uvc_fs_streaming_ep.bEndpointAddress = uvc->video.ep->address;
+	uvc_hs_streaming_ep.bEndpointAddress = uvc->video.ep->address;
+	uvc_ss_streaming_ep.bEndpointAddress = uvc->video.ep->address;
+
+	uvc_fs_bulk_streaming_ep.bEndpointAddress = uvc->video.ep->address;
+	uvc_hs_bulk_streaming_ep.bEndpointAddress = uvc->video.ep->address;
+	uvc_ss_bulk_streaming_ep.bEndpointAddress = uvc->video.ep->address;
 
 #if defined(CONFIG_ARCH_ROCKCHIP) && defined(CONFIG_NO_GKI)
 	if (opts->device_name)
