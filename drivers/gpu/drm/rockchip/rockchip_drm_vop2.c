@@ -582,6 +582,7 @@ struct vop2_video_port {
 	struct vop2 *vop2;
 	struct reset_control *dclk_rst;
 	struct clk *dclk;
+	struct clk *dclk_switch;
 	struct clk *dclk_parent;
 	uint8_t id;
 	bool layer_sel_update;
@@ -630,6 +631,12 @@ struct vop2_video_port {
 	 *
 	 */
 	bool has_dci_enabled_win;
+
+	/**
+	 * @dclk_switch_enabled: a new refresh rate is config by userspace and the
+	 * vrr type is switch dclk.
+	 */
+	bool dclk_switch_enabled;
 
 	/**
 	 * @bg_ovl_dly: The timing delay from background layer
@@ -5179,6 +5186,10 @@ static void vop2_disable(struct drm_crtc *crtc)
 	struct vop2 *vop2 = vp->vop2;
 
 	clk_disable_unprepare(vp->dclk);
+	if (vp->dclk_switch_enabled) {
+		vp->dclk_switch_enabled = false;
+		clk_disable_unprepare(vp->dclk_switch);
+	}
 
 	if (--vop2->enable_count > 0)
 		return;
@@ -11983,28 +11994,127 @@ out:
 	kfree(vop2_zpos_splice_hdr);
 }
 
-static void vop2_crtc_update_vrr(struct drm_crtc *crtc)
+static struct clk *vop2_get_switch_dclk(struct vop2_video_port *vp)
+{
+	struct vop2 *vop2 = vp->vop2;
+	const struct vop2_data *vop2_data = vop2->data;
+	const struct vop2_video_port_data *vp_data = &vop2_data->vp[vp->id];
+	struct vop2_video_port *dclk_switch_vp;
+	uint32_t dclk_switch_id;
+
+	if (!vp_data->dclk_switch_id)
+		return NULL;
+
+	dclk_switch_id = ffs(vp_data->dclk_switch_id) - 1;
+	if (dclk_switch_id >= vop2_data->nr_vps || dclk_switch_id >= ARRAY_SIZE(vop2->vps))
+		return NULL;
+	dclk_switch_vp = &vop2->vps[dclk_switch_id];
+
+	return dclk_switch_vp->dclk;
+}
+
+static void vop2_crtc_dclk_seamless_switch(struct drm_crtc *crtc)
 {
 	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
 	struct drm_display_mode *adjust_mode = &crtc->state->adjusted_mode;
-
+	struct vop2_clk *dclk;
+	char clk_name[32];
+	unsigned int dclk_src;
 	unsigned int vrefresh;
-	unsigned int new_vtotal, vfp, new_vfp;
+	u64 dclk_rate;
+	int ret;
 
-	if (!vp->refresh_rate_change)
-		return;
+	DRM_DEV_INFO(vop2->dev, "change refresh rate by changing dclk\n");
 
-	if (!vcstate->min_refresh_rate || !vcstate->max_refresh_rate)
-		return;
+	if (!vp->dclk_switch) {
+		vp->dclk_switch = vop2_get_switch_dclk(vp);
+		if (!vp->dclk_switch)
+			return;
+	}
 
-	if (vcstate->request_refresh_rate < vcstate->min_refresh_rate ||
-	    vcstate->request_refresh_rate > vcstate->max_refresh_rate) {
-		DRM_ERROR("invalid rate:%d\n", vcstate->request_refresh_rate);
+	dclk_src = VOP_MODULE_GET(vop2, vp, dclk_src_sel);
+
+	snprintf(clk_name, sizeof(clk_name), "dclk%d", vp->id);
+	dclk = vop2_clk_get(vop2, clk_name);
+	if (!dclk) {
+		DRM_DEV_INFO(vop2->dev, "can't find dclk%d\n", vp->id);
 		return;
 	}
 
+	vrefresh = drm_mode_vrefresh(adjust_mode);
+	DRM_DEV_INFO(vop2->dev, "origin fresh rate:%u, request fresh rate:%u\n",
+		     vrefresh, vcstate->request_refresh_rate);
+
+	if (vp->loader_protect && !dclk->rate)
+		dclk->rate = clk_get_rate(vp->dclk);
+
+	if (!vp->dclk_switch_enabled) {
+		vp->dclk_switch_enabled = true;
+		ret = clk_prepare_enable(vp->dclk_switch);
+		if (ret < 0)
+			DRM_DEV_ERROR(vop2->dev, "failed to enable dclk switch %d\n", ret);
+	}
+
+	dclk_rate = (unsigned long long)dclk->rate * vcstate->request_refresh_rate;
+	do_div(dclk_rate, vrefresh);
+
+	DRM_DEV_INFO(vop2->dev, "origin dclk rate:%lu, request dclk rate:%llu\n",
+		     dclk->rate, dclk_rate);
+	if (dclk_rate > (VOP2_MAX_DCLK_RATE * 1000))
+		return;
+
+	if (dclk_src) {
+		rockchip_drm_dclk_set_rate(vop2->version, vp->dclk, dclk_rate);
+		DRM_DEV_INFO(vop2->dev, "set %s to %llu, get %lu\n",
+			     __clk_get_name(vp->dclk), dclk_rate, clk_get_rate(vp->dclk));
+	} else {
+		rockchip_drm_dclk_set_rate(vop2->version, vp->dclk_switch, dclk_rate);
+		DRM_DEV_INFO(vop2->dev, "set %s to %llu, get %lu\n",
+			     __clk_get_name(vp->dclk_switch), dclk_rate,
+			     clk_get_rate(vp->dclk_switch));
+	}
+
+	VOP_MODULE_SET(vop2, vp, dclk_src_sel, dclk_src ? 0 : 1);
+}
+
+static void vop2_crtc_hfp_seamless_switch(struct drm_crtc *crtc)
+{
+	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct vop2 *vop2 = vp->vop2;
+	struct drm_display_mode *adjust_mode = &crtc->state->adjusted_mode;
+	u32 hsync_len;
+	unsigned int vrefresh;
+	unsigned int new_htotal, hfp, new_hfp;
+
+	DRM_DEV_INFO(vop2->dev, "change refresh rate by changing hfp\n");
+	vrefresh = drm_mode_vrefresh(adjust_mode);
+
+	/* calculate new hfp for new refresh rate */
+	new_htotal = adjust_mode->htotal * vrefresh / vcstate->request_refresh_rate;
+	hfp = adjust_mode->hsync_start -  adjust_mode->hdisplay;
+	new_hfp = hfp + new_htotal - adjust_mode->htotal;
+
+	DRM_DEV_INFO(vop2->dev, "origin fresh rate:%u, request fresh rate:%u\n",
+		     vrefresh, vcstate->request_refresh_rate);
+	DRM_DEV_INFO(vop2->dev, "origin hfp:%u, request hfp:%u\n", hfp, new_hfp);
+	/* config vop2 htotal register */
+	hsync_len = VOP_MODULE_GET(vop2, vp, htotal_pw) & 0xffff;
+	VOP_MODULE_SET(vop2, vp, htotal_pw, (new_htotal << 16) | hsync_len);
+}
+
+static void vop2_crtc_vfp_seamless_switch(struct drm_crtc *crtc)
+{
+	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct vop2 *vop2 = vp->vop2;
+	struct drm_display_mode *adjust_mode = &crtc->state->adjusted_mode;
+	unsigned int vrefresh;
+	unsigned int new_vtotal, vfp, new_vfp;
+
+	DRM_DEV_INFO(vop2->dev, "change refresh rate by changing vfp\n");
 	vrefresh = drm_mode_vrefresh(adjust_mode);
 
 	/* calculate new vfp for new refresh rate */
@@ -12030,6 +12140,38 @@ static void vop2_crtc_update_vrr(struct drm_crtc *crtc)
 
 	/* config all connectors attach to this crtc */
 	rockchip_connector_update_vfp_for_vrr(crtc, adjust_mode, new_vfp);
+}
+
+static void vop2_crtc_update_vrr(struct drm_crtc *crtc)
+{
+	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+
+	if (!vp->refresh_rate_change)
+		return;
+
+	if (!vcstate->min_refresh_rate || !vcstate->max_refresh_rate)
+		return;
+
+	if (vcstate->request_refresh_rate < vcstate->min_refresh_rate ||
+	    vcstate->request_refresh_rate > vcstate->max_refresh_rate) {
+		DRM_ERROR("invalid rate:%d\n", vcstate->request_refresh_rate);
+		return;
+	}
+
+	switch (vcstate->vrr_type) {
+	case ROCKCHIP_VRR_DCLK_MODE:
+		vop2_crtc_dclk_seamless_switch(crtc);
+		break;
+	case ROCKCHIP_VRR_HFP_MODE:
+		vop2_crtc_hfp_seamless_switch(crtc);
+		break;
+	case ROCKCHIP_VRR_VFP_MODE:
+		vop2_crtc_vfp_seamless_switch(crtc);
+		fallthrough;
+	default:
+		break;
+	}
 }
 
 static bool post_sharp_enabled(struct drm_crtc *crtc)

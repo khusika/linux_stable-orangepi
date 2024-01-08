@@ -1315,6 +1315,7 @@ struct vop2_video_port_data {
 	char id;
 	uint8_t splice_vp_id;
 	uint16_t lut_dma_rid;
+	uint32_t dclk_switch_id;
 	uint32_t feature;
 	uint64_t soc_id[VOP2_SOC_VARIANT];
 	uint16_t gamma_lut_len;
