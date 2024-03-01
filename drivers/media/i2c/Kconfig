@@ -1676,6 +1676,19 @@ config VIDEO_OV9734
 	  To compile this driver as a module, choose M here: the
 	  module's name is ov9734.
 
+config VIDEO_OX03C10
+	tristate "OmniVision OX03C10 sensor support"
+	depends on VIDEO_DEV && I2C
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  This is a Video4Linux2 sensor driver for the OmniVision
+	  OX03C10 camera.
+
+	  To compile this driver as a module, choose M here: the
+	  module's name is OX03C10.
+
 config VIDEO_PREISP_DUMMY_SENSOR
 	tristate "Preisp dummy sensor support"
 	depends on VIDEO_DEV && I2C
