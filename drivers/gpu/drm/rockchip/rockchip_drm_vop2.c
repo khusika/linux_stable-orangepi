@@ -7902,6 +7902,57 @@ static void vop2_dump_connector_on_crtc(struct drm_crtc *crtc, struct seq_file *
 	drm_connector_list_iter_end(&conn_iter);
 }
 
+static int vop2_vrr_info_dump(struct drm_crtc *crtc, struct seq_file *s)
+{
+	struct drm_display_mode *mode = &crtc->state->adjusted_mode;
+	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
+	int current_pixel_clock;
+	int current_htotal, current_hfp;
+	int current_vtotal, current_vfp;
+
+	if (!vcstate->min_refresh_rate || !vcstate->max_refresh_rate)
+		return 0;
+
+	DEBUG_PRINT("    Variable refresh rate info:\n");
+	DEBUG_PRINT("\tMin refresh rate: %d\n", vcstate->min_refresh_rate);
+	DEBUG_PRINT("\tMax refresh rate: %d\n", vcstate->max_refresh_rate);
+
+	if (vcstate->request_refresh_rate < vcstate->min_refresh_rate ||
+	    vcstate->request_refresh_rate > vcstate->max_refresh_rate) {
+		DEBUG_PRINT("\tInvalid request rate:%d\n", vcstate->request_refresh_rate);
+		return -EINVAL;
+	}
+
+	DEBUG_PRINT("\tCurrent refresh rate: %d\n", vcstate->request_refresh_rate);
+
+	switch (vcstate->vrr_type) {
+	case ROCKCHIP_VRR_DCLK_MODE:
+		DEBUG_PRINT("\tType: DCLK\n");
+		current_pixel_clock = mode->crtc_clock * vcstate->request_refresh_rate /
+				      drm_mode_vrefresh(mode);
+		DEBUG_PRINT("\tCurrent pixel clock:%d\n", current_pixel_clock);
+		break;
+	case ROCKCHIP_VRR_HFP_MODE:
+		DEBUG_PRINT("\tType: HFP\n");
+		current_htotal = mode->htotal * drm_mode_vrefresh(mode) /
+				 vcstate->request_refresh_rate;
+		current_hfp = mode->hsync_start - mode->hdisplay + current_htotal - mode->htotal;
+		DEBUG_PRINT("\tCurrent hfp:%d\n", current_hfp);
+		break;
+	case ROCKCHIP_VRR_VFP_MODE:
+		DEBUG_PRINT("\tType: VFP\n");
+		current_vtotal = mode->vtotal * drm_mode_vrefresh(mode) /
+				 vcstate->request_refresh_rate;
+		current_vfp = mode->vsync_start - mode->vdisplay + current_vtotal - mode->vtotal;
+		DEBUG_PRINT("\tCurrent vfp:%d\n", current_vfp);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 static int vop2_crtc_debugfs_dump(struct drm_crtc *crtc, struct seq_file *s)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
@@ -7950,6 +8001,8 @@ static int vop2_crtc_debugfs_dump(struct drm_crtc *crtc, struct seq_file *s)
 		    mode->crtc_hsync_end, mode->crtc_htotal);
 	DEBUG_PRINT("\tFixed V: %d %d %d %d\n", mode->crtc_vdisplay, mode->crtc_vsync_start,
 		    mode->crtc_vsync_end, mode->crtc_vtotal);
+
+	vop2_vrr_info_dump(crtc, s);
 
 	drm_atomic_crtc_for_each_plane(plane, crtc) {
 		vop2_plane_info_dump(s, plane);
