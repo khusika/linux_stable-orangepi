@@ -713,6 +713,7 @@ static int __dw9800v_set_power(struct dw9800v_device *dw9800v, bool on)
 			goto unlock_and_return;
 		}
 		dw9800v->power_on = true;
+		usleep_range(5000, 6000);
 	} else {
 		ret = regulator_disable(dw9800v->supply);
 		if (ret < 0) {
