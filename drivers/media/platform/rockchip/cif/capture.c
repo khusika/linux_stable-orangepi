@@ -1011,13 +1011,10 @@ cif_input_fmt *rkcif_get_input_fmt(struct rkcif_device *dev, struct v4l2_rect *r
 			csi_info->vc = ch_info.vc;
 		else
 			csi_info->vc = pad_id;
-		if (ch_info.bus_fmt == MEDIA_BUS_FMT_SPD_2X8 ||
-		    ch_info.bus_fmt == MEDIA_BUS_FMT_EBD_1X8) {
-			if (ch_info.data_type > 0)
-				csi_info->data_type = ch_info.data_type;
-			if (ch_info.data_bit > 0)
-				csi_info->data_bit = ch_info.data_bit;
-		}
+		if (ch_info.data_type > 0)
+			csi_info->data_type = ch_info.data_type;
+		if (ch_info.data_bit > 0)
+			csi_info->data_bit = ch_info.data_bit;
 		if (ch_info.field == 0)
 			fmt.format.field = V4L2_FIELD_NONE;
 		else
@@ -4059,19 +4056,13 @@ static int rkcif_csi_channel_init(struct rkcif_stream *stream,
 		channel->virtual_width *= 2;
 		channel->height /= 2;
 	}
-	if (stream->cif_fmt_in->mbus_code == MEDIA_BUS_FMT_EBD_1X8 ||
-	    stream->cif_fmt_in->mbus_code == MEDIA_BUS_FMT_SPD_2X8) {
-		if (dev->channels[stream->id].data_type)
-			channel->data_type = dev->channels[stream->id].data_type;
-		else
-			channel->data_type = get_data_type(stream->cif_fmt_in->mbus_code,
-							   channel->cmd_mode_en,
-							   channel->dsi_input);
-	} else {
+	if (dev->channels[stream->id].data_type)
+		channel->data_type = dev->channels[stream->id].data_type;
+	else
 		channel->data_type = get_data_type(stream->cif_fmt_in->mbus_code,
 						   channel->cmd_mode_en,
 						   channel->dsi_input);
-	}
+
 	channel->csi_fmt_val = get_csi_fmt_val(stream,
 					       &dev->channels[stream->id]);
 
