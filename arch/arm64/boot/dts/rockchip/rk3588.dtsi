@@ -25,6 +25,10 @@
 		usbdp1 = &usbdp_phy1;
 	};
 
+	system {
+		cpu,model = "Rockchip RK3588";
+	};
+
 	usbdrd3_1: usbdrd3_1 {
 		compatible = "rockchip,rk3588-dwc3", "rockchip,rk3399-dwc3";
 		clocks = <&cru REF_CLK_USB3OTG1>, <&cru SUSPEND_CLK_USB3OTG1>,
