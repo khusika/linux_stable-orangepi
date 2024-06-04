@@ -4773,6 +4773,8 @@ static void vop2_power_domain_off_by_disabled_vp(struct vop2_power_domain *pd)
 	}
 
 	if (vp) {
+		if (vp->dclk_switch)
+			clk_prepare_enable(vp->dclk_switch);
 		ret = clk_prepare_enable(vp->dclk);
 		if (ret < 0)
 			DRM_DEV_ERROR(vop2->dev, "failed to enable dclk for video port%d - %d\n",
@@ -4791,6 +4793,8 @@ static void vop2_power_domain_off_by_disabled_vp(struct vop2_power_domain *pd)
 			DRM_DEV_INFO(vop2->dev, "wait for vp%d dsp_hold timeout\n", vp->id);
 
 		vop2_dsp_hold_valid_irq_disable(crtc);
+		if (vp->dclk_switch)
+			clk_disable_unprepare(vp->dclk_switch);
 		clk_disable_unprepare(vp->dclk);
 	}
 }
