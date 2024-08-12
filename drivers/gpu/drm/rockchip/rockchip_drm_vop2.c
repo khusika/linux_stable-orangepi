@@ -8498,8 +8498,8 @@ vop2_crtc_mode_valid(struct drm_crtc *crtc, const struct drm_display_mode *mode)
 				request_clock = request_clock >> 2;
 		}
 		clock = rockchip_drm_dclk_round_rate(vop2->version,
-						     vp->dclk_parent ? vp->dclk_parent : vp->dclk,
-						     request_clock * 1000) / 1000;
+						     vp->dclk_parent ? clk_get_parent(vp->dclk) :
+						     vp->dclk, request_clock * 1000) / 1000;
 	}
 
 	/*
@@ -8925,8 +8925,8 @@ static bool vop2_crtc_mode_fixup(struct drm_crtc *crtc,
 	if (adj_mode->crtc_clock <= VOP2_MAX_DCLK_RATE) {
 		adj_mode->crtc_clock =
 			rockchip_drm_dclk_round_rate(vop2->version,
-						     vp->dclk_parent ? vp->dclk_parent : vp->dclk,
-						     adj_mode->crtc_clock * 1000);
+						     vp->dclk_parent ? clk_get_parent(vp->dclk) :
+						     vp->dclk, adj_mode->crtc_clock * 1000);
 		adj_mode->crtc_clock = DIV_ROUND_UP(adj_mode->crtc_clock, 1000);
 	}
 	return true;
