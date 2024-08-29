@@ -20,6 +20,7 @@
 	rockchip,micbias1;
 	rockchip,micbias2;
 	rockchip,no-hp-det;
+	rockchip,boot-dac-out = "line-hp";
 	rockchip,en-always-grps = <1 2 3>;
 	rockchip,adc-grps-route = <0 1 2 3>;
 };
