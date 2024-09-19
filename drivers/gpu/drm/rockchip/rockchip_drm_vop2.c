@@ -2126,7 +2126,7 @@ static void vop2_win_disable(struct vop2_win *win, bool skip_splice_win)
 		if (win->pd) {
 
 			/*
-			 * Don't dynamic turn on/off PD_ESMART at RK3588.
+			 * Don't dynamic turn on/off PD_ESMART at RK3588/RK3576.
 			 * (1) There is a design issue for PD_EMSART when attached
 			 *     on VP1/2/3, we found it will trigger POST_BUF_EMPTY irq at vp0
 			 *     in splice mode.
@@ -2135,12 +2135,10 @@ static void vop2_win_disable(struct vop2_win *win, bool skip_splice_win)
 			 *     maybe lead to PD_ESMART closed at wrong time and display error.
 			 * (3) PD_ESMART power up maybe have 4 us delay, this will lead to POST_BUF_EMPTY.
 			 */
-			if ((win->pd->data->id == VOP2_PD_ESMART && vop2->version == VOP_VERSION_RK3588) ||
-			     vop2->version == VOP_VERSION_RK3576)
-				return;
-
-			vop2_power_domain_put(win->pd);
-			win->pd->vp_mask &= ~win->vp_mask;
+			if (win->pd->data->id != VOP2_PD_ESMART) {
+				vop2_power_domain_put(win->pd);
+				win->pd->vp_mask &= ~win->vp_mask;
+			}
 		}
 	}
 
