@@ -6916,6 +6916,8 @@ void rkcif_do_stop_stream(struct rkcif_stream *stream,
 				break;
 			}
 		}
+		if (can_reset && hw_dev->dummy_buf.vaddr)
+			rkcif_destroy_dummy_buf(stream);
 		mutex_unlock(&hw_dev->dev_lock);
 		if (dev->can_be_reset && dev->chip_id >= CHIP_RK3588_CIF) {
 			rkcif_do_soft_reset(dev);
@@ -6938,8 +6940,6 @@ void rkcif_do_stop_stream(struct rkcif_stream *stream,
 		}
 		if (atomic_read(&dev->pipe.stream_cnt) == 0)
 			atomic_set(&stream->sub_stream_buf_cnt, 0);
-		if (can_reset && hw_dev->dummy_buf.vaddr)
-			rkcif_destroy_dummy_buf(stream);
 		stream->rounding_bit = 0;
 		if (stream->id == RKCIF_STREAM_MIPI_ID0 && dev->is_support_get_exp) {
 			kfifo_free(&stream->exp_kfifo);
