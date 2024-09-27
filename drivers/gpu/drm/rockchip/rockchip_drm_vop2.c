@@ -4603,8 +4603,8 @@ static void vop2_initial(struct drm_crtc *crtc)
 			vop2_mask_write(vop2, 0x700, 0x3, 4, 0, 0, true);
 
 		if (vop2->version == VOP_VERSION_RK3576) {
-			/* Default use rkiommu 1.0 for axi0 */
-			VOP_CTRL_SET(vop2, rkmmu_v2_en, 0);
+			/* Default use rkiommu 2.0 for axi0 */
+			VOP_CTRL_SET(vop2, rkmmu_v2_en, 1);
 
 			if (vop2->merge_irq == true)
 				VOP_CTRL_SET(vop2, vp_intr_merge_en, 1);
