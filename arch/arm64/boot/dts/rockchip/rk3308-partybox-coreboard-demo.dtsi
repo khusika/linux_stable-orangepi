@@ -8,7 +8,7 @@
 
 / {
 	chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff0c0000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rootfstype=squashfs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1 isolcpus=2,3 nohz_full=2,3";
+		bootargs = "earlycon=uart8250,mmio32,0xff0c0000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rootfstype=squashfs rootwait isolcpus=2,3 nohz_full=2,3 snd_soc_core.prealloc_buffer_size_kbytes=16";
 	};
 
 	pwm-leds {
@@ -76,6 +76,14 @@
 
 &dac_sound {
 	status = "okay";
+};
+
+&dmac0 {
+	iram = <&vad_sram>;
+};
+
+&dmac1 {
+	iram = <&vad_sram>;
 };
 
 &emmc {
@@ -173,6 +181,10 @@
 	u2phy_otg: otg-port {
 		status = "okay";
 	};
+};
+
+&vad_sram {
+	pool;
 };
 
 &pinctrl {

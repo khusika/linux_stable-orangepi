@@ -12,7 +12,7 @@
 	compatible = "rockchip,rk3308-evb-audio-v10-partybox", "rockchip,rk3308";
 
 	chosen {
-		bootargs = "earlycon=uart8250,mmio32,0xff0c0000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rootfstype=squashfs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1 isolcpus=2,3 nohz_full=2,3";
+		bootargs = "earlycon=uart8250,mmio32,0xff0c0000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rootfstype=squashfs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1 isolcpus=2,3 nohz_full=2,3 snd_soc_core.prealloc_buffer_size_kbytes=16";
 	};
 
 	reserved-memory {
@@ -57,6 +57,14 @@
 	};
 };
 
+&dmac0 {
+	iram = <&vad_sram>;
+};
+
+&dmac1 {
+	iram = <&vad_sram>;
+};
+
 &rk3308bs_cpu0_opp_table {
 	opp-408000000 {
 		status = "disabled";
@@ -81,6 +89,14 @@
 	rockchip,wait-card-locked = <0>;
 };
 
+&vad {
+	status = "disabled";
+};
+
 &vad_acodec_sound {
 	status = "okay";
+};
+
+&vad_sram {
+	pool;
 };
