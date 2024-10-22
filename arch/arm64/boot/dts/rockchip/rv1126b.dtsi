@@ -1,0 +1,225 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+#include <dt-bindings/clock/rockchip,rv1126b-cru.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/soc/rockchip,boot-mode.h>
+#include <dt-bindings/soc/rockchip-system-status.h>
+
+/ {
+	compatible = "rockchip,rv1126b";
+
+	interrupt-parent = <&gic>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	clocks {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		xin32k: xin32k {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <32768>;
+			clock-output-names = "xin32k";
+		};
+
+		xin24m: xin24m {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <24000000>;
+			clock-output-names = "xin24m";
+		};
+
+		clk_rcosc: clk_rcosc {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <96000000>;
+			clock-output-names = "clk_rcosc";
+		};
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x0>;
+		};
+		cpu1: cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x1>;
+		};
+		cpu2: cpu@2 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x2>;
+		};
+		cpu3: cpu@3 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a53";
+			reg = <0x3>;
+		};
+	};
+
+	fiq_debugger: fiq-debugger {
+		compatible = "rockchip,fiq-debugger";
+		rockchip,serial-id = <0>;
+		rockchip,wake-irq = <0>;
+		rockchip,irq-mode-enable = <0>;
+		rockchip,baudrate = <1500000>;  /* Only 115200 and 1500000 */
+		interrupts = <GIC_SPI 240 IRQ_TYPE_LEVEL_HIGH>;
+		status = "disabled";
+	};
+
+	pmu_a53: pmu-a53 {
+		compatible = "arm,cortex-a53-pmu";
+		interrupts = <GIC_SPI 244 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 245 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 246 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 247 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-affinity = <&cpu0>, <&cpu1>, <&cpu2>, <&cpu3>;
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 14 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 11 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
+			     <GIC_PPI 10 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
+	};
+
+	cru: clock-controller@20000000 {
+		compatible = "rockchip,rv1126b-cru";
+		reg = <0x20000000 0xc0000>;
+		#clock-cells = <1>;
+		#reset-cells = <1>;
+
+		assigned-clocks =
+			<&cru PLL_GPLL>, <&cru PLL_CPLL>,
+			<&cru PLL_AUPLL>, <&cru CLK_AUDIO_FRAC0_SRC>,
+			<&cru CLK_AUDIO_FRAC1_SRC>, <&cru CLK_UART_FRAC0_SRC>,
+			<&cru CLK_UART_FRAC1_SRC>, <&cru CLK_CM_FRAC0_SRC>,
+			<&cru CLK_CM_FRAC1_SRC>, <&cru CLK_CM_FRAC2_SRC>,
+			<&cru CLK_UART_FRAC0>, <&cru CLK_UART_FRAC1>,
+			<&cru CLK_CM_FRAC0>, <&cru CLK_CM_FRAC1>,
+			<&cru CLK_CM_FRAC2>, <&cru CLK_AUDIO_FRAC0>,
+			<&cru CLK_AUDIO_FRAC1>;
+		assigned-clock-rates =
+			<1188000000>, <1000000000>,
+			<786432000>, <786432000>,
+			<786432000>, <1188000000>,
+			<1188000000>, <1188000000>,
+			<1188000000>, <786432000>,
+			<96000000>, <128000000>,
+			<18432000>, <500000000>,
+			<250000000>, <45158400>,
+			<49152000>;
+	};
+
+	uart0: serial@20810000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x20810000 0x100>;
+		interrupts = <GIC_SPI 56 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART0>, <&cru PCLK_UART0>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		status = "disabled";
+	};
+
+	sai0: sai@20960000 {
+		compatible = "rockchip,rv1126b-sai", "rockchip,sai-v1";
+		reg = <0x20960000 0x1000>;
+		interrupts = <GIC_SPI 179 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru MCLK_SAI0>, <&cru HCLK_SAI0>;
+		clock-names = "mclk", "hclk";
+		dmas = <&dmac 17>, <&dmac 16>;
+		dma-names = "tx", "rx";
+		resets = <&cru SRST_MRESETN_SAI0>, <&cru SRST_HRESETN_SAI0>;
+		reset-names = "m", "h";
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "SAI0";
+		status = "disabled";
+	};
+
+	sai1: sai@20970000 {
+		compatible = "rockchip,rv1126b-sai", "rockchip,sai-v1";
+		reg = <0x20970000 0x1000>;
+		interrupts = <GIC_SPI 180 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru MCLK_SAI1>, <&cru HCLK_SAI1>;
+		clock-names = "mclk", "hclk";
+		dmas = <&dmac 19>, <&dmac 18>;
+		dma-names = "tx", "rx";
+		resets = <&cru SRST_MRESETN_SAI1>, <&cru SRST_HRESETN_SAI1>;
+		reset-names = "m", "h";
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "SAI1";
+		status = "disabled";
+	};
+
+	sai2: sai@20980000 {
+		compatible = "rockchip,rv1126b-sai", "rockchip,sai-v1";
+		reg = <0x20980000 0x1000>;
+		interrupts = <GIC_SPI 181 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru MCLK_SAI2>, <&cru HCLK_SAI2>;
+		clock-names = "mclk", "hclk";
+		dmas = <&dmac 21>, <&dmac 20>;
+		dma-names = "tx", "rx";
+		resets = <&cru SRST_MRESETN_SAI2>, <&cru SRST_HRESETN_SAI2>;
+		reset-names = "m", "h";
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "SAI2";
+		status = "disabled";
+	};
+
+	dmac: dma-controller@20b80000 {
+		compatible = "rockchip,rv1126b-dma", "rockchip,dma";
+		reg = <0x20b80000 0x2000>;
+		interrupts = <GIC_SPI 81 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru ACLK_RKDMA>, <&cru PCLK_RKDMA>;
+		clock-names = "aclk", "pclk";
+		#dma-cells = <1>;
+	};
+
+	rktimer: timer@20c00000 {
+		compatible = "rockchip,rv1126b-timer", "rockchip,rk3288-timer";
+		reg = <0x20c00000 0x20>;
+		interrupts = <GIC_SPI 67 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_TIMER>, <&cru CLK_TIMER0>;
+		clock-names = "pclk", "timer";
+	};
+
+	gic: interrupt-controller@21201000 {
+		compatible = "arm,gic-400";
+		#interrupt-cells = <3>;
+		#address-cells = <0>;
+		interrupt-controller;
+		reg = <0x21201000 0x1000>,
+		      <0x21202000 0x2000>,
+		      <0x21204000 0x2000>,
+		      <0x21206000 0x2000>;
+		interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
+	};
+
+	system_sram: sram@3ffb0000 {
+		compatible = "mmio-sram";
+		reg = <0x3ffb0000 0x10000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0 0x3ffb0000 0x10000>;
+	};
+};
