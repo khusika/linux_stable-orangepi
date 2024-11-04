@@ -37,6 +37,13 @@ config CLK_RV1126
 	help
 	  Build the driver for RV1126 Clock Driver.
 
+config CLK_RV1126B
+	tristate "Rockchip RV1126B clock controller support"
+	depends on CPU_RV1126B || COMPILE_TEST
+	default y
+	help
+	  Build the driver for RV1126B Clock Driver.
+
 config CLK_RK1808
 	tristate "Rockchip RK1808 clock controller support"
 	depends on CPU_RK1808 || COMPILE_TEST
