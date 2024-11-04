@@ -22,6 +22,7 @@
 #define DRIVER_NAME			"rk-dma"
 #define DMA_MAX_SIZE			(0x1000000)
 #define LLI_BLOCK_SIZE			(SZ_4K)
+#define RK_DMA_VER(major, minor)	(((major) << 16) | ((minor) << 0))
 
 #define RK_MAX_BURST_LEN		16
 #define RK_DMA_BUSWIDTHS \
@@ -34,17 +35,13 @@
 #define HIWORD_UPDATE(v, h, l)	(((v) << (l)) | (GENMASK((h), (l)) << 16))
 #define GENMASK_VAL(v, h, l)	(((v) & GENMASK(h, l)) >> l)
 
-#define RK_DMA_CMN_GROUP_SIZE		0x40
+#define RK_DMA_CMN_GROUP_SIZE		0x100
 #define RK_DMA_LCH_GROUP_SIZE		0x40
-#define RK_DMA_PCH_GROUP_SIZE		0x40
 
 #define RK_DMA_CMN_REG(x)		(d->base + (x))
 #define RK_DMA_LCH_REG(x)		(l->base + (x))
 #define RK_DMA_LCHn_REG(n, x)		(d->base + RK_DMA_CMN_GROUP_SIZE + \
 					 (RK_DMA_LCH_GROUP_SIZE * (n)) + (x))
-#define RK_DMA_PCHn_REG(n, x)		(d->base + RK_DMA_CMN_GROUP_SIZE + \
-					 (RK_DMA_LCH_GROUP_SIZE * (d->dma_channels)) + \
-					 (RK_DMA_PCH_GROUP_SIZE * (n)) + (x))
 
 /* RK_DMA Common Register Define */
 #define RK_DMA_CMN_VER			RK_DMA_CMN_REG(0x0000) /* Address Offset: 0x0000 */
@@ -55,48 +52,32 @@
 #define RK_DMA_CMN_DYNCTL		RK_DMA_CMN_REG(0x0014) /* Address Offset: 0x0014 */
 #define RK_DMA_CMN_IS0			RK_DMA_CMN_REG(0x0018) /* Address Offset: 0x0018 */
 #define RK_DMA_CMN_IS1			RK_DMA_CMN_REG(0x001c) /* Address Offset: 0x001C */
-#define RK_DMA_CMN_PERISEL0		RK_DMA_CMN_REG(0x0020) /* Address Offset: 0x0020 */
-#define RK_DMA_CMN_PERISEL1		RK_DMA_CMN_REG(0x0024) /* Address Offset: 0x0024 */
 #define RK_DMA_CMN_CAP0			RK_DMA_CMN_REG(0x0030) /* Address Offset: 0x0030 */
 #define RK_DMA_CMN_CAP1			RK_DMA_CMN_REG(0x0034) /* Address Offset: 0x0034 */
+#define RK_DMA_CMN_PCH_EN		RK_DMA_CMN_REG(0x0040) /* Address Offset: 0x0040 */
+#define RK_DMA_CMN_PCH_SEN		RK_DMA_CMN_REG(0x0044) /* Address Offset: 0x0044 */
 
 /* RK_DMA_Logic Channel Register Define */
-#define RK_DMA_LCH_CTL			RK_DMA_LCH_REG(0x0000) /* Address Offset: 0x0000 */
-#define RK_DMA_LCH_BIND			RK_DMA_LCH_REG(0x0004) /* Address Offset: 0x0004 */
+#define RK_DMA_LCH_CTL0			RK_DMA_LCH_REG(0x0000) /* Address Offset: 0x0000 */
+#define RK_DMA_LCH_CTL1			RK_DMA_LCH_REG(0x0004) /* Address Offset: 0x0004 */
 #define RK_DMA_LCH_CMDBA		RK_DMA_LCH_REG(0x0008) /* Address Offset: 0x0008 */
 #define RK_DMA_LCH_TRF_CMD		RK_DMA_LCH_REG(0x000c) /* Address Offset: 0x000C */
-#define RK_DMA_LCH_TRF_PARA		RK_DMA_LCH_REG(0x0010) /* Address Offset: 0x0010 */
+#define RK_DMA_LCH_CMDBA_HIGH		RK_DMA_LCH_REG(0x0010) /* Address Offset: 0x0010 */
 #define RK_DMA_LCH_IS			RK_DMA_LCH_REG(0x0014) /* Address Offset: 0x0014 */
 #define RK_DMA_LCH_IE			RK_DMA_LCH_REG(0x0018) /* Address Offset: 0x0018 */
-#define RK_DMA_LCH_DBG			RK_DMA_LCH_REG(0x001c) /* Address Offset: 0x001C */
+#define RK_DMA_LCH_DBGS0		RK_DMA_LCH_REG(0x001c) /* Address Offset: 0x001C */
+#define RK_DMA_LCH_DBGC0		RK_DMA_LCH_REG(0x0020) /* Address Offset: 0x0020 */
 
 /* RK_DMA_Logic Channel-N Register Define */
-#define RK_DMA_LCHn_CTL(n)		RK_DMA_LCHn_REG(n, 0x0000) /* Address Offset: 0x0000 */
-#define RK_DMA_LCHn_BIND(n)		RK_DMA_LCHn_REG(n, 0x0004) /* Address Offset: 0x0004 */
+#define RK_DMA_LCHn_CTL0(n)		RK_DMA_LCHn_REG(n, 0x0000) /* Address Offset: 0x0000 */
+#define RK_DMA_LCHn_CTL1(n)		RK_DMA_LCHn_REG(n, 0x0004) /* Address Offset: 0x0004 */
 #define RK_DMA_LCHn_CMDBA(n)		RK_DMA_LCHn_REG(n, 0x0008) /* Address Offset: 0x0008 */
 #define RK_DMA_LCHn_TRF_CMD(n)		RK_DMA_LCHn_REG(n, 0x000c) /* Address Offset: 0x000C */
-#define RK_DMA_LCHn_TRF_PARA(n)		RK_DMA_LCHn_REG(n, 0x0010) /* Address Offset: 0x0010 */
+#define RK_DMA_LCHn_CMDBA_HIGH		RK_DMA_LCHn_REG(n, 0x0010) /* Address Offset: 0x0010 */
 #define RK_DMA_LCHn_IS(n)		RK_DMA_LCHn_REG(n, 0x0014) /* Address Offset: 0x0014 */
 #define RK_DMA_LCHn_IE(n)		RK_DMA_LCHn_REG(n, 0x0018) /* Address Offset: 0x0018 */
-#define RK_DMA_LCHn_DBG(n)		RK_DMA_LCHn_REG(n, 0x001c) /* Address Offset: 0x001C */
-
-/* RK_DMA_Phycial Channel Register Define */
-#define RK_DMA_PCHn_CTL(n)		RK_DMA_PCHn_REG(n, 0x0000) /* Address Offset: 0x0000 */
-#define RK_DMA_PCHn_BIND(n)		RK_DMA_PCHn_REG(n, 0x0004) /* Address Offset: 0x0004 */
-#define RK_DMA_PCHn_CMDBA(n)		RK_DMA_PCHn_REG(n, 0x0008) /* Address Offset: 0x0008 */
-#define RK_DMA_PCHn_DBG(n)		RK_DMA_PCHn_REG(n, 0x000c) /* Address Offset: 0x000C */
-#define RK_DMA_PCHn_TRF_CTL0(n)		RK_DMA_PCHn_REG(n, 0x0010) /* Address Offset: 0x0010 */
-#define RK_DMA_PCHn_TRF_CTL1(n)		RK_DMA_PCHn_REG(n, 0x0014) /* Address Offset: 0x0014 */
-#define RK_DMA_PCHn_SAR(n)		RK_DMA_PCHn_REG(n, 0x0018) /* Address Offset: 0x0018 */
-#define RK_DMA_PCHn_DAR(n)		RK_DMA_PCHn_REG(n, 0x001c) /* Address Offset: 0x001C */
-#define RK_DMA_PCHn_BLOCK_TS(n)		RK_DMA_PCHn_REG(n, 0x0020) /* Address Offset: 0x0020 */
-#define RK_DMA_PCHn_LLP_NXT(n)		RK_DMA_PCHn_REG(n, 0x0024) /* Address Offset: 0x0024 */
-#define RK_DMA_PCHn_LLP_CUR(n)		RK_DMA_PCHn_REG(n, 0x0028) /* Address Offset: 0x0028 */
-#define RK_DMA_PCHn_TRF_CFG(n)		RK_DMA_PCHn_REG(n, 0x002c) /* Address Offset: 0x002C */
-#define RK_DMA_PCHn_BLOCK_CS(n)		RK_DMA_PCHn_REG(n, 0x0030) /* Address Offset: 0x0030 */
-#define RK_DMA_PCHn_PCH_RSV1(n)		RK_DMA_PCHn_REG(n, 0x0034) /* Address Offset: 0x0034 */
-#define RK_DMA_PCHn_SAR_RELOAD(n)	RK_DMA_PCHn_REG(n, 0x0038) /* Address Offset: 0x0038 */
-#define RK_DMA_PCHn_DAR_RELOAD(n)	RK_DMA_PCHn_REG(n, 0x003c) /* Address Offset: 0x003C */
+#define RK_DMA_LCHn_DBGS0(n)		RK_DMA_LCHn_REG(n, 0x001c) /* Address Offset: 0x001C */
+#define RK_DMA_LCHn_DBGC0(n)		RK_DMA_LCHn_REG(n, 0x0020) /* Address Offset: 0x0020 */
 
 /* CMN_VER */
 #define CMN_VER_MAJOR(v)		GENMASK_VAL(v, 31, 16)
@@ -127,63 +108,74 @@
 #define CMN_DYNCTL_AXI_DYNEN_MASK	BIT(2)
 #define CMN_DYNCTL_AXI_DYNEN_EN		BIT(2)
 #define CMN_DYNCTL_AXI_DYNEN_DIS	0
-#define CMN_DYNCTL_RREQ_ARB_DYNEN_MASK	BIT(3)
-#define CMN_DYNCTL_RREQ_ARB_DYNEN_EN	BIT(3)
-#define CMN_DYNCTL_RREQ_ARB_DYNEN_DIS	0
-#define CMN_DYNCTL_WREQ_ARB_DYNEN_MASK	BIT(4)
-#define CMN_DYNCTL_WREQ_ARB_DYNEN_EN	BIT(4)
-#define CMN_DYNCTL_WREQ_ARB_DYNEN_DIS	0
-#define CMN_DYNCTL_BIND_ARB_DYNEN_MASK	BIT(5)
-#define CMN_DYNCTL_BIND_ARB_DYNEN_EN	BIT(5)
-#define CMN_DYNCTL_BIND_ARB_DYNEN_DIS	0
+#define CMN_DYNCTL_ARB_DYNEN_MASK	BIT(3)
+#define CMN_DYNCTL_ARB_DYNEN_EN		BIT(3)
+#define CMN_DYNCTL_ARB_DYNEN_DIS	0
+#define CMN_DYNCTL_MEM_DYNEN_MASK	BIT(4)
+#define CMN_DYNCTL_MEM_DYNEN_EN		BIT(4)
+#define CMN_DYNCTL_MEM_DYNEN_DIS	0
 
 /* CMN_CAP0 */
 #define CMN_LCH_NUM(v)			(GENMASK_VAL(v, 5, 0) + 1)
 #define CMN_PCH_NUM(v)			(GENMASK_VAL(v, 11, 6) + 1)
+#define CMN_STATIC_SUP			BIT(12)
+#define CMN_STRIDE_SUP			BIT(13)
+#define CMN_TT_SUP_M2M			BIT(14)
+#define CMN_TT_SUP_M2P			BIT(15)
+#define CMN_TT_SUP_P2M			BIT(16)
+#define CMN_TT_SUP_P2P			BIT(17)
+#define CMN_MB_SUP_CONT			BIT(18)
+#define CMN_MB_SUP_RELOAD		BIT(19)
+#define CMN_MB_SUP_LLI			BIT(20)
+#define CMN_BUF_DEPTH(v)		(GENMASK_VAL(v, 31, 21) + 1)
 
 /* CMN_CAP1 */
 #define CMN_AXI_SIZE(v)			(1 << GENMASK_VAL(v, 2, 0))
 #define CMN_AXI_LEN(v)			(GENMASK_VAL(v, 10, 3) + 1)
+#define CMN_AXBURST_SUP_FIXED		BIT(11)
+#define CMN_AXBURST_SUP_INCR		BIT(12)
+#define CMN_AXBURST_SUP_WRAP		BIT(13)
+#define CMN_AXADDR_WIDTH(v)		(32 + GENMASK_VAL(v, 18, 14) - 3)
+#define CMN_AXOSR_SUP(v)		(GENMASK_VAL(v, 23, 19) + 1)
 
-/* LCH_CTL */
-#define LCH_CTL_CH_EN			HIWORD_UPDATE(1, 0, 0)
-#define LCH_CTL_CH_DIS			HIWORD_UPDATE(0, 0, 0)
-#define LCH_CTL_CH_SRST			HIWORD_UPDATE(1, 1, 1)
+/* CMN_PCH_EN */
+#define CMN_PCH_EN(n)			HIWORD_UPDATE(1, (n), (n))
+#define CMN_PCH_DIS(n)			HIWORD_UPDATE(0, (n), (n))
 
-/* LCH_BIND */
-#define LCH_BIND_BIND_VLD_MASK		BIT(0)
-#define LCH_BIND_BIND_VLD_BIND		BIT(0)
-#define LCH_BIND_BIND_VLD_UNBIND	0
-#define LCH_BIND_BIND_PIDX_MASK		GENMASK(4, 1)
-#define LCH_BIND_BIND_PRIOR_MASK	GENMASK(17, 16)
-#define LCH_BIND_BIND_PRIOR(x)		((x) << 16)
-#define LCH_BIND_BIND_PIDX_S_MASK	GENMASK(27, 24)
-#define LCH_BIND_BIND_PIDX_S(x)		((x) << 24)
-#define LCH_BIND_BIND_SEN_MASK		BIT(31)
-#define LCH_BIND_BIND_SEN_EN		BIT(31)
-#define LCH_BIND_BIND_SEN_DIS		0
+/* CMN_PCH_SEN */
+#define CMN_PCH_S_EN(n)			HIWORD_UPDATE(1, (n), (n))
+#define CMN_PCH_S_DIS(n)		HIWORD_UPDATE(0, (n), (n))
+
+/* LCH_CTL0 */
+#define LCH_CTL0_CH_EN_MASK		BIT(0)
+#define LCH_CTL0_CH_EN			BIT(0)
+#define LCH_CTL0_CH_DIS			0
+
+/* LCH_CTL1 */
+#define LCH_CTL1_WFE_ID_MASK		GENMASK(5, 0)
+#define LCH_CTL1_WFE_ID(x)		((x) << 0)
+#define LCH_CTL1_SEV_ID_MASK		GENMASK(11, 6)
+#define LCH_CTL1_SEV_ID(x)		((x) << 6)
+#define LCH_CTL1_BIND_PIDX_S_MASK	GENMASK(19, 16)
+#define LCH_CTL1_BIND_PIDX_S(x)		((x) << 16)
+#define LCH_CTL1_WFE_EN_MASK		BIT(24)
+#define LCH_CTL1_WFE_EN			BIT(24)
+#define LCH_CTL1_WFE_DIS		0
+#define LCH_CTL1_SEV_EN_MASK		BIT(25)
+#define LCH_CTL1_SEV_EN			BIT(25)
+#define LCH_CTL1_SEV_DIS		0
+#define LCH_CTL1_BIND_S_EN_MASK		BIT(26)
+#define LCH_CTL1_BIND_S_EN		BIT(26)
+#define LCH_CTL1_BIND_S_DIS		0
 
 /* LCH_TRF_CMD */
 #define LCH_TRF_CMD_DMA_START		HIWORD_UPDATE(1, 0, 0)
 #define LCH_TRF_CMD_DMA_KILL		HIWORD_UPDATE(1, 1, 1)
 #define LCH_TRF_CMD_DMA_RESUME		HIWORD_UPDATE(1, 2, 2)
 #define LCH_TRF_CMD_DMA_FLUSH		HIWORD_UPDATE(1, 3, 3)
-#define LCH_TRF_CMD_P2P_INFI_EN		HIWORD_UPDATE(1, 9, 9)
-#define LCH_TRF_CMD_P2P_INFI_DIS	HIWORD_UPDATE(0, 9, 9)
 #define LCH_TRF_CMD_SRC_MT(x)		HIWORD_UPDATE(x, 11, 10)
 #define LCH_TRF_CMD_DST_MT(x)		HIWORD_UPDATE(x, 13, 12)
 #define LCH_TRF_CMD_TT_FC(x)		HIWORD_UPDATE(x, 15, 14)
-
-/* LCH_TRF_PARA */
-#define LCH_TRF_PARA_LLI_VALID_MASK	BIT(0)
-#define LCH_TRF_PARA_LLI_VALID		BIT(0)
-#define LCH_TRF_PARA_LLI_INVALID	0
-#define LCH_TRF_PARA_LLI_LAST_MASK	BIT(1)
-#define LCH_TRF_PARA_LLI_LAST		BIT(1)
-#define LCH_TRF_PARA_LLI_WAIT_MASK	BIT(2)
-#define LCH_TRF_PARA_LLI_WAIT_EN	BIT(2)
-#define LCH_TRF_PARA_IOC_MASK		BIT(3)
-#define LCH_TRF_PARA_IOC_EN		BIT(3)
 
 /* LCH_IS */
 #define LCH_IS_DMA_DONE_IS		BIT(0)
@@ -241,89 +233,99 @@
 #define LCH_IE_LLI_WAIT_IE_EN		BIT(12)
 #define LCH_IE_LLI_WAIT_IE_DIS		0
 
-/* LCH_DBG */
-#define LCH_DBG_DMA_CS_MASK		GENMASK(3, 0)
+/* LCH_DBGS0 */
+#define LCH_DBGS0_DMA_CS(v)		GENMASK_VAL(v, 3, 0)
+#define LCH_DBGS0_DMA_CS_IDLE		0
+#define LCH_DBGS0_DMA_CS_WFE		1
+#define LCH_DBGS0_DMA_CS_BLK_START	2
+#define LCH_DBGS0_DMA_CS_PERI_WAIT	3
+#define LCH_DBGS0_DMA_CS_BIND		4
+#define LCH_DBGS0_DMA_CS_TRANS		5
+#define LCH_DBGS0_DMA_CS_REL		6
+#define LCH_DBGS0_DMA_CS_PERI_ACK	7
+#define LCH_DBGS0_DMA_CS_PERI_FNSH	8
+#define LCH_DBGS0_DMA_CS_SEV		9
+#define LCH_DBGS0_DMA_CS_BLK_DONE	10
+#define LCH_DBGS0_DMA_CS_SUSPD		11
+#define LCH_DBGS0_DMA_CS_ERR		12
+#define LCH_DBGS0_DMA_CS_DONE		13
+#define LCH_DBGS0_BIND_VLD		BIT(11)
+#define LCH_DBGS0_BIND_PIDX(v)		GENMASK_VAL(v, 15, 12)
 
-/* PCH_CTL */
-#define PCH_CTL_CH_EN			HIWORD_UPDATE(1, 0, 0)
-#define PCH_CTL_CH_DIS			HIWORD_UPDATE(0, 0, 0)
-#define PCH_CTL_CH_SRST			HIWORD_UPDATE(1, 1, 1)
+/* LCH_DBGC0 */
+#define LCH_DBGC0_SOFT_SEV		BIT(24)
 
-/* PCH_BIND */
-#define PCH_BIND_BIND_VLD_MASK		BIT(0)
-#define PCH_BIND_BIND_VLD_BIND		BIT(0)
-#define PCH_BIND_BIND_VLD_UNBIND	0
-#define PCH_BIND_BIND_LIDX_MASK		GENMASK(6, 1)
-#define PCH_BIND_BIND_SBURST_MASK	BIT(7)
-#define PCH_BIND_BIND_DBURST_MASK	BIT(8)
-#define PCH_BIND_BIND_SEN_MASK		BIT(31)
-#define PCH_BIND_BIND_SEN_EN		BIT(31)
-#define PCH_BIND_BIND_SEN_DIS		0
+/* LCH_LLI_CNT */
+#define LCH_LLI_CNT(v)			GENMASK_VAL(v, 15, 0)
 
-/* PCH_DBG */
-#define PCH_DBG_SRC_CS_MASK		GENMASK(2, 0)
-#define PCH_DBG_DST_CS_MASK		GENMASK(5, 3)
-#define PCH_DBG_CMD_CS_MASK		GENMASK(8, 6)
-
+/* CMD Entry Memory Structure Define */
 /* TRF_CTL0 */
-#define PCH_TRF_CTL0_LLI_VALID_MASK	BIT(0)
-#define PCH_TRF_CTL0_LLI_VALID		BIT(0)
-#define PCH_TRF_CTL0_LLI_INVALID	0
-#define PCH_TRF_CTL0_LLI_LAST_MASK	BIT(1)
-#define PCH_TRF_CTL0_LLI_LAST		BIT(1)
-#define PCH_TRF_CTL0_LLI_WAIT_MASK	BIT(2)
-#define PCH_TRF_CTL0_LLI_WAIT_EN	BIT(2)
-#define PCH_TRF_CTL0_IOC_MASK		BIT(3)
-#define PCH_TRF_CTL0_IOC_EN		BIT(3)
-#define PCH_TRF_CTL0_MSIZE_MASK		GENMASK(31, 15)
-#define PCH_TRF_CTL0_MSIZE(x)		((x) << 15)
+#define TRF_CTL0_LLI_VALID_MASK		BIT(0)
+#define TRF_CTL0_LLI_VALID		BIT(0)
+#define TRF_CTL0_LLI_INVALID		0
+#define TRF_CTL0_LLI_LAST_MASK		BIT(1)
+#define TRF_CTL0_LLI_LAST		BIT(1)
+#define TRF_CTL0_LLI_WAIT_MASK		BIT(2)
+#define TRF_CTL0_LLI_WAIT_EN		BIT(2)
+#define TRF_CTL0_IOC_MASK		BIT(3)
+#define TRF_CTL0_IOC_EN			BIT(3)
+#define TRF_CTL0_CNT_CLR		BIT(4)
+#define TRF_CTL0_MSIZE_MASK		GENMASK(31, 15)
+#define TRF_CTL0_MSIZE(x)		((x) << 15)
 
 /* TRF_CTL1 */
-#define PCH_TRF_CTL1_ARBURST_MASK	BIT(0)
-#define PCH_TRF_CTL1_ARBURST_INCR	BIT(0)
-#define PCH_TRF_CTL1_ARBURST_FIXED	0
-#define PCH_TRF_CTL1_ARSIZE_MASK	GENMASK(4, 2)
-#define PCH_TRF_CTL1_ARSIZE(x)		((x) << 2)
-#define PCH_TRF_CTL1_ARLEN_MASK		GENMASK(8, 5)
-#define PCH_TRF_CTL1_ARLEN(x)		((x - 1) << 5)
-#define PCH_TRF_CTL1_AROSR_MASK		GENMASK(15, 11)
-#define PCH_TRF_CTL1_AROSR(x)		((x) << 11)
-#define PCH_TRF_CTL1_AWBURST_MASK	BIT(16)
-#define PCH_TRF_CTL1_AWBURST_INCR	BIT(16)
-#define PCH_TRF_CTL1_AWBURST_FIXED	0
-#define PCH_TRF_CTL1_AWSIZE_MASK	GENMASK(20, 18)
-#define PCH_TRF_CTL1_AWSIZE(x)		((x) << 18)
-#define PCH_TRF_CTL1_AWLEN_MASK		GENMASK(24, 21)
-#define PCH_TRF_CTL1_AWLEN(x)		((x - 1) << 21)
-#define PCH_TRF_CTL1_AWOSR_MASK		GENMASK(31, 27)
-#define PCH_TRF_CTL1_AWOSR(x)		((x) << 27)
+#define TRF_CTL1_ARBURST_MASK		BIT(0)
+#define TRF_CTL1_ARBURST_INCR		BIT(0)
+#define TRF_CTL1_ARBURST_FIXED		0
+#define TRF_CTL1_ARSIZE_MASK		GENMASK(4, 2)
+#define TRF_CTL1_ARSIZE(x)		((x) << 2)
+#define TRF_CTL1_ARLEN_MASK		GENMASK(10, 5)
+#define TRF_CTL1_ARLEN(x)		((x - 1) << 5)
+#define TRF_CTL1_AROSR_MASK		GENMASK(14, 11)
+#define TRF_CTL1_AROSR(x)		((x) << 11)
+#define TRF_CTL1_AWBURST_MASK		BIT(16)
+#define TRF_CTL1_AWBURST_INCR		BIT(16)
+#define TRF_CTL1_AWBURST_FIXED		0
+#define TRF_CTL1_AWSIZE_MASK		GENMASK(20, 18)
+#define TRF_CTL1_AWSIZE(x)		((x) << 18)
+#define TRF_CTL1_AWLEN_MASK		GENMASK(26, 21)
+#define TRF_CTL1_AWLEN(x)		((x - 1) << 21)
+#define TRF_CTL1_AWOSR_MASK		GENMASK(30, 27)
+#define TRF_CTL1_AWOSR(x)		((x) << 27)
 
 /* BLOCK_TS */
-#define PCH_BLOCK_TS_MASK		GENMASK(24, 0)
-#define PCH_BLOCK_TS(x)			((x) & GENMASK(24, 0))
+#define BLOCK_TS_MASK			GENMASK(24, 0)
+#define BLOCK_TS(x)			((x) & GENMASK(24, 0))
+#define BLOCK_ON			BIT(31)
 
 /* TRF_CFG */
-#define PCH_TRF_CFG_SRC_MT_MASK		GENMASK(1, 0)
-#define PCH_TRF_CFG_SRC_MT(x)		((x) << 0)
-#define PCH_TRF_CFG_DST_MT_MASK		GENMASK(5, 4)
-#define PCH_TRF_CFG_DST_MT(x)		((x) << 4)
-#define PCH_TRF_CFG_TT_FC_MASK		GENMASK(9, 8)
-#define PCH_TRF_CFG_TT_FC(x)		((x) << 8)
-#define PCH_TRF_CFG_P2P_INFI_MASK	BIT(13)
-#define PCH_TRF_CFG_P2P_INFI_EN		BIT(13)
-#define PCH_TRF_CFG_P2P_INFI_DIS	0
-#define PCH_TRF_CFG_STRIDE_EN_MASK	BIT(14)
-#define PCH_TRF_CFG_STRIDE_EN		BIT(14)
-#define PCH_TRF_CFG_STRIDE_DIS		0
-#define PCH_TRF_CFG_STRIDE_INC_MASK	GENMASK(31, 15)
-#define PCH_TRF_CFG_STRIDE_INC(x)	((x) << 15)
+#define TRF_CFG_SRC_MT_MASK		GENMASK(1, 0)
+#define TRF_CFG_SRC_MT(x)		((x) << 0)
+#define TRF_CFG_DST_MT_MASK		GENMASK(5, 4)
+#define TRF_CFG_DST_MT(x)		((x) << 4)
+#define TRF_CFG_TT_FC_MASK		GENMASK(9, 8)
+#define TRF_CFG_TT_FC(x)		((x) << 8)
+#define TRF_CFG_STRIDE_EN_MASK		BIT(12)
+#define TRF_CFG_STRIDE_EN		BIT(12)
+#define TRF_CFG_STRIDE_DIS		0
+#define TRF_CFG_STRIDE_MODE_MASK	GENMASK(14, 13)
+#define TRF_CFG_STRIDE_MODE_TRANS	(0 << 13)
+#define TRF_CFG_STRIDE_MODE_SRC		(1 << 13)
+#define TRF_CFG_STRIDE_MODE_DST		(2 << 13)
 
 /* BLOCK_CS */
-#define PCH_BLOCK_CS_MASK		GENMASK(24, 0)
-#define PCH_BLOCK_CS(x)			((x) & GENMASK(24, 0))
-#define PCH_BLOCK_CS_ON_MASK		BIT(31)
-#define PCH_BLOCK_CS_ON			BIT(31)
-#define PCH_BLOCK_CS_IDLE		0
+#define BLOCK_CS_MASK			GENMASK(24, 0)
+#define BLOCK_CS(x)			((x) & GENMASK(24, 0))
+
+/* STRIDE_CH */
+#define STRIDE_CH_SIZE_MASK		GENMASK(11, 8)
+#define STRIDE_CH_SIZE(x)		((x) << 8)
+#define STRIDE_CH_NUM_MASK		GENMASK(7, 0)
+#define STRIDE_CH_NUM(x)		((x) << 0)
+
+/* STRIDE_INC */
+#define STRIDE_INC_MASK			GENMASK(23, 0)
+#define STRIDE_INC(x)			((x) << 0)
 
 #define to_rk_dma(dmadev) container_of(dmadev, struct rk_dma_dev, slave)
 
@@ -382,13 +384,21 @@ struct rk_desc_hw {
 	u32 dar;
 	u32 block_ts;
 	u32 llp_nxt;
-	u32 llp_cur;
+	u16 sar_high;
+	u16 dar_high;
+	u16 llp_nxt_high;
+	u16 lli_idx;
 	u32 trf_cfg;
 	u32 block_cs;
-	u32 rsv;
 	u32 sar_reload;
 	u32 dar_reload;
-	u32 rsvd[4];
+	u16 sar_reload_high;
+	u16 dar_reload_high;
+	u8  stride_ch_num;
+	u8  stride_ch_size;
+	u16 rsv0;
+	u32 stride_inc;
+	u32 rsv1;
 } __aligned(32);
 
 struct rk_dma_desc_sw {
@@ -447,7 +457,7 @@ static struct rk_dma_chan *to_rk_chan(struct dma_chan *chan)
 
 static void rk_dma_terminate_chan(struct rk_dma_lch *l, struct rk_dma_dev *d)
 {
-	writel(LCH_CTL_CH_DIS, RK_DMA_LCH_CTL);
+	writel(LCH_CTL0_CH_DIS, RK_DMA_LCH_CTL0);
 	writel(0x0, RK_DMA_LCH_IE);
 	writel(readl(RK_DMA_LCH_IS), RK_DMA_LCH_IS);
 }
@@ -456,7 +466,7 @@ static void rk_dma_set_desc(struct rk_dma_chan *c, struct rk_dma_desc_sw *ds)
 {
 	struct rk_dma_lch *l = c->lch;
 
-	writel(LCH_CTL_CH_EN, RK_DMA_LCH_CTL);
+	writel(LCH_CTL0_CH_EN, RK_DMA_LCH_CTL0);
 
 	if (c->cyclic)
 		writel(LCH_IE_BLOCK_DONE_IE_EN, RK_DMA_LCH_IE);
@@ -476,13 +486,13 @@ static void rk_dma_set_desc(struct rk_dma_chan *c, struct rk_dma_desc_sw *ds)
 
 static u32 rk_dma_get_chan_stat(struct rk_dma_lch *l)
 {
-	return readl(RK_DMA_LCH_CTL);
+	return readl(RK_DMA_LCH_CTL0);
 }
 
 static int rk_dma_init(struct rk_dma_dev *d)
 {
 	struct device *dev = d->slave.dev;
-	int i, lch, pch, buswidth, maxburst;
+	int i, lch, pch, buswidth, maxburst, dep, addrwidth;
 	u32 cap0, cap1, ver;
 
 	writel(CMN_CFG_EN | CMN_CFG_IE_EN, RK_DMA_CMN_CFG);
@@ -493,7 +503,9 @@ static int rk_dma_init(struct rk_dma_dev *d)
 
 	lch = CMN_LCH_NUM(cap0);
 	pch = CMN_PCH_NUM(cap0);
+	dep = CMN_BUF_DEPTH(cap0);
 
+	addrwidth = CMN_AXADDR_WIDTH(cap1);
 	buswidth = CMN_AXI_SIZE(cap1);
 	maxburst = CMN_AXI_LEN(cap1);
 
@@ -507,10 +519,10 @@ static int rk_dma_init(struct rk_dma_dev *d)
 	writel(0xffffffff, RK_DMA_CMN_IS1);
 
 	for (i = 0; i < pch; i++)
-		writel(PCH_CTL_CH_EN, RK_DMA_PCHn_CTL(i));
+		writel(CMN_PCH_EN(i), RK_DMA_CMN_PCH_EN);
 
-	dev_info(dev, "NR_LCH-%d NR_PCH-%d AXI_SIZE-%dBytes AXI_LEN-%d V%lu.%lu\n",
-		 lch, pch, buswidth, maxburst,
+	dev_info(dev, "NR_LCH-%d NR_PCH-%d PCH_BUF-%dx%dBytes AXI_LEN-%d ADDR-%dBits V%lu.%lu\n",
+		 lch, pch, dep, buswidth, maxburst, addrwidth,
 		 CMN_VER_MAJOR(ver), CMN_VER_MINOR(ver));
 
 	return 0;
@@ -745,10 +757,9 @@ static void rk_dma_fill_desc(struct rk_dma_desc_sw *ds, dma_addr_t dst,
 
 	ds->desc_hw[num].sar = src;
 	ds->desc_hw[num].dar = dst;
-	ds->desc_hw[num].block_ts = len;
+	ds->desc_hw[num].block_ts = BLOCK_TS(len);
 	ds->desc_hw[num].trf_ctl0 = cc0;
 	ds->desc_hw[num].trf_ctl1 = cc1;
-	ds->desc_hw[num].trf_cfg = ccfg;
 }
 
 static struct rk_dma_desc_sw *rk_alloc_desc_resource(int num, struct dma_chan *chan)
@@ -795,24 +806,6 @@ static enum rk_dma_burst_width rk_dma_burst_width(enum dma_slave_buswidth width)
 	}
 }
 
-static int rk_dma_set_perisel(struct dma_chan *chan, enum dma_transfer_direction dir)
-{
-	struct rk_dma_chan *c = to_rk_chan(chan);
-	struct rk_dma_dev *d = to_rk_dma(chan->device);
-	u64 perisel;
-
-	perisel = readq(RK_DMA_CMN_PERISEL0);
-
-	if (dir == DMA_MEM_TO_DEV)
-		perisel |= BIT(c->id);
-	else
-		perisel &= ~BIT(c->id);
-
-	writeq(perisel, RK_DMA_CMN_PERISEL0);
-
-	return 0;
-}
-
 static int rk_pre_config(struct dma_chan *chan, enum dma_transfer_direction dir)
 {
 	struct rk_dma_chan *c = to_rk_chan(chan);
@@ -822,24 +815,22 @@ static int rk_pre_config(struct dma_chan *chan, enum dma_transfer_direction dir)
 	enum rk_dma_burst_width dst_width;
 	u32 maxburst = 0;
 
-	rk_dma_set_perisel(chan, dir);
-
 	switch (dir) {
 	case DMA_MEM_TO_MEM:
 		/* DMAC use the min(addr_align, bus_width, len) automatically */
 		src_width = rk_dma_burst_width(d->bus_width);
-		c->ctl0 = PCH_TRF_CTL0_LLI_VALID | PCH_TRF_CTL0_MSIZE(0);
-		c->ctl1 = PCH_TRF_CTL1_AROSR(4) |
-			  PCH_TRF_CTL1_AWOSR(4) |
-			  PCH_TRF_CTL1_ARLEN(RK_MAX_BURST_LEN) |
-			  PCH_TRF_CTL1_AWLEN(RK_MAX_BURST_LEN) |
-			  PCH_TRF_CTL1_ARSIZE(src_width) |
-			  PCH_TRF_CTL1_AWSIZE(src_width) |
-			  PCH_TRF_CTL1_ARBURST_INCR |
-			  PCH_TRF_CTL1_AWBURST_INCR;
-		c->ccfg = PCH_TRF_CFG_TT_FC(DMA_MEM_TO_MEM) |
-			  PCH_TRF_CFG_DST_MT(DMA_MT_TRANSFER_LINK_LIST) |
-			  PCH_TRF_CFG_SRC_MT(DMA_MT_TRANSFER_LINK_LIST);
+		c->ctl0 = TRF_CTL0_LLI_VALID | TRF_CTL0_MSIZE(0);
+		c->ctl1 = TRF_CTL1_AROSR(4) |
+			  TRF_CTL1_AWOSR(4) |
+			  TRF_CTL1_ARLEN(RK_MAX_BURST_LEN) |
+			  TRF_CTL1_AWLEN(RK_MAX_BURST_LEN) |
+			  TRF_CTL1_ARSIZE(src_width) |
+			  TRF_CTL1_AWSIZE(src_width) |
+			  TRF_CTL1_ARBURST_INCR |
+			  TRF_CTL1_AWBURST_INCR;
+		c->ccfg = TRF_CFG_TT_FC(DMA_MEM_TO_MEM) |
+			  TRF_CFG_DST_MT(DMA_MT_TRANSFER_LINK_LIST) |
+			  TRF_CFG_SRC_MT(DMA_MT_TRANSFER_LINK_LIST);
 		break;
 	case DMA_MEM_TO_DEV:
 		c->dev_addr = cfg->dst_addr;
@@ -852,21 +843,21 @@ static int rk_pre_config(struct dma_chan *chan, enum dma_transfer_direction dir)
 		maxburst = cfg->dst_maxburst;
 		maxburst = maxburst < RK_MAX_BURST_LEN ? maxburst : RK_MAX_BURST_LEN;
 
-		c->ctl0 = PCH_TRF_CTL0_MSIZE(maxburst * cfg->dst_addr_width) |
-			  PCH_TRF_CTL0_LLI_VALID;
+		c->ctl0 = TRF_CTL0_MSIZE(maxburst * cfg->dst_addr_width) |
+			  TRF_CTL0_LLI_VALID;
 		if (c->cyclic)
-			c->ctl0 |= PCH_TRF_CTL0_IOC_EN;
-		c->ctl1 = PCH_TRF_CTL1_AROSR(4) |
-			  PCH_TRF_CTL1_AWOSR(4) |
-			  PCH_TRF_CTL1_ARLEN(maxburst) |
-			  PCH_TRF_CTL1_AWLEN(maxburst) |
-			  PCH_TRF_CTL1_ARSIZE(dst_width) |
-			  PCH_TRF_CTL1_AWSIZE(dst_width) |
-			  PCH_TRF_CTL1_ARBURST_INCR |
-			  PCH_TRF_CTL1_AWBURST_FIXED;
-		c->ccfg = PCH_TRF_CFG_TT_FC(DMA_MEM_TO_DEV) |
-			  PCH_TRF_CFG_DST_MT(DMA_MT_TRANSFER_LINK_LIST) |
-			  PCH_TRF_CFG_SRC_MT(DMA_MT_TRANSFER_LINK_LIST);
+			c->ctl0 |= TRF_CTL0_IOC_EN;
+		c->ctl1 = TRF_CTL1_AROSR(4) |
+			  TRF_CTL1_AWOSR(4) |
+			  TRF_CTL1_ARLEN(maxburst) |
+			  TRF_CTL1_AWLEN(maxburst) |
+			  TRF_CTL1_ARSIZE(dst_width) |
+			  TRF_CTL1_AWSIZE(dst_width) |
+			  TRF_CTL1_ARBURST_INCR |
+			  TRF_CTL1_AWBURST_FIXED;
+		c->ccfg = TRF_CFG_TT_FC(DMA_MEM_TO_DEV) |
+			  TRF_CFG_DST_MT(DMA_MT_TRANSFER_LINK_LIST) |
+			  TRF_CFG_SRC_MT(DMA_MT_TRANSFER_LINK_LIST);
 		break;
 	case DMA_DEV_TO_MEM:
 		c->dev_addr = cfg->src_addr;
@@ -875,21 +866,21 @@ static int rk_pre_config(struct dma_chan *chan, enum dma_transfer_direction dir)
 		maxburst = maxburst < RK_MAX_BURST_LEN ?
 				maxburst : RK_MAX_BURST_LEN;
 
-		c->ctl0 = PCH_TRF_CTL0_MSIZE(maxburst * cfg->src_addr_width) |
-			  PCH_TRF_CTL0_LLI_VALID;
+		c->ctl0 = TRF_CTL0_MSIZE(maxburst * cfg->src_addr_width) |
+			  TRF_CTL0_LLI_VALID;
 		if (c->cyclic)
-			c->ctl0 |= PCH_TRF_CTL0_IOC_EN;
-		c->ctl1 = PCH_TRF_CTL1_AROSR(4) |
-			  PCH_TRF_CTL1_AWOSR(4) |
-			  PCH_TRF_CTL1_ARLEN(maxburst) |
-			  PCH_TRF_CTL1_AWLEN(maxburst) |
-			  PCH_TRF_CTL1_ARSIZE(src_width) |
-			  PCH_TRF_CTL1_AWSIZE(src_width) |
-			  PCH_TRF_CTL1_ARBURST_FIXED |
-			  PCH_TRF_CTL1_AWBURST_INCR;
-		c->ccfg = PCH_TRF_CFG_TT_FC(DMA_DEV_TO_MEM) |
-			  PCH_TRF_CFG_DST_MT(DMA_MT_TRANSFER_LINK_LIST) |
-			  PCH_TRF_CFG_SRC_MT(DMA_MT_TRANSFER_LINK_LIST);
+			c->ctl0 |= TRF_CTL0_IOC_EN;
+		c->ctl1 = TRF_CTL1_AROSR(4) |
+			  TRF_CTL1_AWOSR(4) |
+			  TRF_CTL1_ARLEN(maxburst) |
+			  TRF_CTL1_AWLEN(maxburst) |
+			  TRF_CTL1_ARSIZE(src_width) |
+			  TRF_CTL1_AWSIZE(src_width) |
+			  TRF_CTL1_ARBURST_FIXED |
+			  TRF_CTL1_AWBURST_INCR;
+		c->ccfg = TRF_CFG_TT_FC(DMA_DEV_TO_MEM) |
+			  TRF_CFG_DST_MT(DMA_MT_TRANSFER_LINK_LIST) |
+			  TRF_CFG_SRC_MT(DMA_MT_TRANSFER_LINK_LIST);
 		break;
 	default:
 		return -EINVAL;
@@ -938,7 +929,7 @@ static struct dma_async_tx_descriptor *rk_dma_prep_memcpy(
 	} while (len);
 
 	ds->desc_hw[num - 1].llp_nxt = 0;
-	ds->desc_hw[num - 1].trf_ctl0 |= PCH_TRF_CTL0_LLI_LAST;
+	ds->desc_hw[num - 1].trf_ctl0 |= TRF_CTL0_LLI_LAST;
 
 	c->cyclic = 0;
 
@@ -1001,7 +992,7 @@ rk_dma_prep_slave_sg(struct dma_chan *chan, struct scatterlist *sgl, unsigned in
 	}
 
 	ds->desc_hw[num - 1].llp_nxt = 0;	/* end of link */
-	ds->desc_hw[num - 1].trf_ctl0 |= PCH_TRF_CTL0_LLI_LAST;
+	ds->desc_hw[num - 1].trf_ctl0 |= TRF_CTL0_LLI_LAST;
 	ds->size = total;
 	ds->dir = dir;
 	return vchan_tx_prep(&c->vc, &ds->vd, flags);
@@ -1049,6 +1040,7 @@ rk_dma_prep_dma_cyclic(struct dma_chan *chan, dma_addr_t dma_addr, size_t buf_le
 	}
 
 	ds->desc_hw[num - 1].llp_nxt = ds->desc_hw_lli + sizeof(struct rk_desc_hw);
+	ds->desc_hw[num - 1].trf_ctl0 |= TRF_CTL0_CNT_CLR;
 	ds->size = buf_len;
 	ds->dir = dir;
 	return vchan_tx_prep(&c->vc, &ds->vd, flags);
@@ -1181,8 +1173,8 @@ static int rk_dma_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	/* A DMA memory pool for LLIs, align on 4k-bytes boundary */
-	d->pool = dmam_pool_create(DRIVER_NAME, &pdev->dev, LLI_BLOCK_SIZE, SZ_4K, 0);
+	/* A DMA memory pool for LLIs, align on 64-bytes boundary */
+	d->pool = dmam_pool_create(DRIVER_NAME, &pdev->dev, LLI_BLOCK_SIZE, SZ_64, 0);
 	if (!d->pool)
 		return -ENOMEM;
 
