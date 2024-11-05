@@ -102,6 +102,37 @@
 		interrupt-affinity = <&cpu0>, <&cpu1>, <&cpu2>, <&cpu3>;
 	};
 
+	thermal_zones: thermal-zones {
+		cpu_thermal: cpu-thermal {
+			polling-delay-passive = <20>; /* milliseconds */
+			polling-delay = <1000>; /* milliseconds */
+			thermal-sensors = <&tsadc 0>;
+			trips {
+				soc_crit: soc-crit {
+					/* millicelsius */
+					temperature = <115000>;
+					/* millicelsius */
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+		npu_thermal: npu-thermal {
+			polling-delay-passive = <20>; /* milliseconds */
+			polling-delay = <1000>; /* milliseconds */
+			thermal-sensors = <&tsadc 1>;
+			trips {
+				bigcore_crit: bigcore-crit {
+					/* millicelsius */
+					temperature = <115000>;
+					/* millicelsius */
+					hysteresis = <2000>;
+					type = "critical";
+				};
+			};
+		};
+	};
+
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <GIC_PPI 13 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>,
@@ -206,6 +237,23 @@
 		clocks = <&cru ACLK_RKDMA>, <&cru PCLK_RKDMA>;
 		clock-names = "aclk", "pclk";
 		#dma-cells = <1>;
+	};
+
+	tsadc: tsadc@20bb0000 {
+		compatible = "rockchip,rv1126b-tsadc";
+		reg = <0x20bb0000 0x400>;
+		interrupts = <GIC_SPI 214 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_TSADC>, <&cru PCLK_TSADC>,
+			 <&cru CLK_TSADC_PHYCTRL>;
+		clock-names = "tsadc", "apb_pclk", "tsadc_phyctrl";
+		resets = <&cru SRST_RESETN_TSADC>, <&cru SRST_PRESETN_TSADC>,
+			 <&cru SRST_RESETN_TSADC_PHYCTRL>;
+		reset-names = "tsadc", "tsadc-apb", "tsadc-phy";
+		#thermal-sensor-cells = <1>;
+		rockchip,hw-tshut-temp = <120000>;
+		rockchip,hw-tshut-mode = <0>; /* tshut mode 0:CRU 1:GPIO */
+		rockchip,hw-tshut-polarity = <0>; /* tshut polarity 0:LOW 1:HIGH */
+		status = "disabled";
 	};
 
 	rktimer: timer@20c00000 {
