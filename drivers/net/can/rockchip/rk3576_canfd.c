@@ -59,6 +59,24 @@ enum rk3576_canfd_reg {
 	CANFD_TXDAT13 = 0x23c,
 	CANFD_TXDAT14 = 0x240,
 	CANFD_TXDAT15 = 0x244,
+	CANFD_BUF1_TXFIC = 0x280,
+	CANFD_BUF1_TXID = 0x284,
+	CANFD_BUF1_TXDAT0 = 0x288,
+	CANFD_BUF1_TXDAT1 = 0x28c,
+	CANFD_BUF1_TXDAT2 = 0x290,
+	CANFD_BUF1_TXDAT3 = 0x294,
+	CANFD_BUF1_TXDAT4 = 0x298,
+	CANFD_BUF1_TXDAT5 = 0x29c,
+	CANFD_BUF1_TXDAT6 = 0x2a0,
+	CANFD_BUF1_TXDAT7 = 0x2a4,
+	CANFD_BUF1_TXDAT8 = 0x2a8,
+	CANFD_BUF1_TXDAT9 = 0x2ac,
+	CANFD_BUF1_TXDAT10 = 0x2b0,
+	CANFD_BUF1_TXDAT11 = 0x2b4,
+	CANFD_BUF1_TXDAT12 = 0x2b8,
+	CANFD_BUF1_TXDAT13 = 0x2bc,
+	CANFD_BUF1_TXDAT14 = 0x2c0,
+	CANFD_BUF1_TXDAT15 = 0x2c4,
 	CANFD_RXFIC = 0x300,
 	CANFD_RXID = 0x304,
 	CANFD_RXTS = 0x308,
@@ -120,6 +138,11 @@ enum rk3576_canfd_reg {
 	CANFD_TXERRORCNT = 0x914,
 	CANFD_RX_RXSRAM_RDATA = 0xc00,
 	CANFD_RTL_VERSION = 0xf0c,
+};
+
+enum {
+	ROCKCHIP_RK3576_CANFD = 0,
+	ROCKCHIP_RV1126B_CANFD,
 };
 
 #define DATE_LENGTH_12_BYTE	(0x9)
@@ -692,6 +715,7 @@ static netdev_tx_t rk3576_canfd_start_xmit(struct sk_buff *skb,
 	struct canfd_frame *cf = (struct canfd_frame *)skb->data;
 	u32 id, dlc;
 	u32 cmd = CANFD_TX0_REQ;
+	u32 tx_fifo = CANFD_TXFIC, tx_id = CANFD_TXID, tx_data = CANFD_TXDAT0;
 	int i;
 
 	if (can_dropped_invalid_skb(ndev, skb))
@@ -699,8 +723,14 @@ static netdev_tx_t rk3576_canfd_start_xmit(struct sk_buff *skb,
 
 	netif_stop_queue(ndev);
 
-	if (rk3576_canfd_read(rcan, CANFD_CMD) & CANFD_TX0_REQ)
+	if (rk3576_canfd_read(rcan, CANFD_CMD) & CANFD_TX0_REQ) {
 		cmd = CANFD_TX1_REQ;
+		if (rcan->mode == ROCKCHIP_RV1126B_CANFD) {
+			tx_fifo = CANFD_BUF1_TXFIC;
+			tx_id = CANFD_BUF1_TXID;
+			tx_data = CANFD_BUF1_TXDAT0;
+		}
+	}
 
 	/* Watch carefully on the bit sequence */
 	if (cf->can_id & CAN_EFF_FLAG) {
@@ -728,11 +758,11 @@ static netdev_tx_t rk3576_canfd_start_xmit(struct sk_buff *skb,
 			dlc |= TX_FD_BRS_ENABLE;
 	}
 
-	rk3576_canfd_write(rcan, CANFD_TXID, id);
-	rk3576_canfd_write(rcan, CANFD_TXFIC, dlc);
+	rk3576_canfd_write(rcan, tx_id, id);
+	rk3576_canfd_write(rcan, tx_fifo, dlc);
 
 	for (i = 0; i < cf->len; i += 4)
-		rk3576_canfd_write(rcan, CANFD_TXDAT0 + i,
+		rk3576_canfd_write(rcan, tx_data + i,
 				   *(u32 *)(cf->data + i));
 
 	can_put_echo_skb(skb, ndev, 0, 0);
@@ -1156,6 +1186,11 @@ static const struct dev_pm_ops rk3576_canfd_dev_pm_ops = {
 static const struct of_device_id rk3576_canfd_of_match[] = {
 	{
 		.compatible = "rockchip,rk3576-canfd",
+		.data = (void *)ROCKCHIP_RK3576_CANFD
+	},
+	{
+		.compatible = "rockchip,rv1126b-canfd",
+		.data = (void *)ROCKCHIP_RV1126B_CANFD
 	},
 	{},
 };
