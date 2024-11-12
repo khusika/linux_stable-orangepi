@@ -215,6 +215,28 @@
 		interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
 	};
 
+	hw_decompress: decompress@22100000 {
+		compatible = "rockchip,hw-decompress";
+		reg = <0x22100000 0x1000>;
+		interrupts = <GIC_SPI 131 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru ACLK_DECOM>, <&cru DCLK_DECOM>, <&cru PCLK_DECOM>;
+		clock-names = "aclk", "dclk", "pclk";
+		resets = <&cru SRST_DRESETN_DECOM>;
+		reset-names = "dresetn";
+		status = "disabled";
+	};
+
+	decom_mmu: iommu@22180000 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x22180000 0x100>;
+		interrupts = <GIC_SPI 132 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "decom_mmu";
+		clocks = <&cru ACLK_RKMMU_DECOM>, <&cru HCLK_RKMMU_DECOM>;
+		clock-names = "aclk", "iface";
+		#iommu-cells = <0>;
+		status = "disabled";
+	};
+
 	system_sram: sram@3ffb0000 {
 		compatible = "mmio-sram";
 		reg = <0x3ffb0000 0x10000>;
