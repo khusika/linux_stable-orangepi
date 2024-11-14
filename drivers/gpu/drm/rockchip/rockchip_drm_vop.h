@@ -1404,11 +1404,43 @@ struct vop_grf_ctrl {
 	struct vop_reg grf_mipi_1to4_en;
 };
 
+struct vop_wb_regs {
+	struct vop_reg cfg_done;
+	struct vop_reg enable;
+	struct vop_reg format;
+	struct vop_reg dither_en;
+	struct vop_reg r2y_en;
+	struct vop_reg yrgb_mst;
+	struct vop_reg uv_mst;
+	struct vop_reg fifo_throd;
+	struct vop_reg scale_x_factor;
+	struct vop_reg scale_x_en;
+	struct vop_reg scale_y_en;
+	struct vop_reg axi_yrgb_id;
+	struct vop_reg axi_uv_id;
+	struct vop_reg vir_stride;
+	struct vop_reg vir_stride_en;
+	struct vop_reg act_width;
+	struct vop_reg post_empty_stop_en;
+	struct vop_reg one_frame_mode;
+	struct vop_reg xgt2_en;
+};
+
+struct vop_wb_data {
+	uint32_t nformats;
+	const uint32_t *formats;
+	struct vop_rect max_output;
+	const struct vop_wb_regs *regs;
+	uint32_t fifo_depth;
+};
+
 struct vop_data {
 	const struct vop_reg_data *init_table;
 	unsigned int table_size;
 	const struct vop_ctrl *ctrl;
 	const struct vop_intr *intr;
+	const struct vop_intr *wb_intr;
+	const struct vop_wb_data *wb;
 	const struct vop_win_data *win;
 	const struct vop_csc_table *csc_table;
 	const struct vop_hdr_table *hdr_table;
@@ -1710,6 +1742,11 @@ struct vop2_data {
 #define FS_INTR_CLR			(1 << (INTR_CLR_SHIFT + 1))
 #define LINE_FLAG_INTR_CLR		(1 << (INTR_CLR_SHIFT + 2))
 #define BUS_ERROR_INTR_CLR		(1 << (INTR_CLR_SHIFT + 3))
+
+/* RV1126 VOP Lite WB intr define */
+#define VOPL_WB_YRGB_FIFO_FULL_INTR	BIT(0)
+#define VOPL_WB_UV_FIFO_FULL_INTR	BIT(1)
+#define VOPL_WB_COMPLETE_INTR		BIT(4)
 
 #define DSP_LINE_NUM(x)			(((x) & 0x1fff) << 12)
 #define DSP_LINE_NUM_MASK		(0x1fff << 12)

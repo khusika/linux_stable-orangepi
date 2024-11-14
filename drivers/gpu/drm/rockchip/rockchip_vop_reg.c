@@ -159,6 +159,13 @@ static const uint64_t format_modifiers_afbc[] = {
 	DRM_FORMAT_MOD_INVALID,
 };
 
+static const u32 formats_wb[] = {
+	DRM_FORMAT_RGB888,
+	DRM_FORMAT_ARGB8888,
+	DRM_FORMAT_RGB565,
+	DRM_FORMAT_NV12,
+};
+
 static const struct vop_scl_extension rk3288_win_full_scl_ext = {
 	.cbcr_vsd_mode = VOP_REG(RK3288_WIN0_CTRL1, 0x1, 31),
 	.cbcr_vsu_mode = VOP_REG(RK3288_WIN0_CTRL1, 0x1, 30),
@@ -1982,6 +1989,54 @@ static const struct vop_grf_ctrl rv1126b_grf_ctrl = {
 	.grf_dclk_inv = VOP_REG(RV1126B_GRF_VOP_LCDC_CON, 0x1, 0),
 };
 
+static const struct vop_wb_regs rv1126b_vop_wb_regs = {
+	.cfg_done = VOP_REG_MASK(0, 0x1, 5),
+
+	.enable = VOP_REG(RV1126B_WB_CTRL, 0x1, 0),
+	.format = VOP_REG(RV1126B_WB_CTRL, 0x7, 1),
+	.dither_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 4),
+	.r2y_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 5),
+	.scale_x_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 7),
+	.scale_y_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 8),
+	.post_empty_stop_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 11),
+	.one_frame_mode = VOP_REG(RV1126B_WB_CTRL, 0x1, 12),
+	.xgt2_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 18),
+	.axi_yrgb_id = VOP_REG(RV1126B_WB_CTRL, 0xff, 20),
+	.axi_uv_id = VOP_REG(RV1126B_WB_CTRL, 0x1f, 24),
+
+	.fifo_throd = VOP_REG(RV1126B_WB_XSCAL_FACTOR, 0x3ff, 0),
+	.scale_x_factor = VOP_REG(RV1126B_WB_XSCAL_FACTOR, 0x3fff, 16),
+
+	.yrgb_mst = VOP_REG(RV1126B_WB_YRGB_MST, 0xffffffff, 0),
+	.uv_mst = VOP_REG(RV1126B_WB_CBR_MST, 0xffffffff, 0),
+
+	.vir_stride = VOP_REG(RV1126B_WB_VIR_STRIDE, 0x1fff, 0),
+	.vir_stride_en = VOP_REG(RV1126B_WB_VIR_STRIDE, 0x1, 15),
+	.act_width = VOP_REG(RV1126B_WB_VIR_STRIDE, 0x1fff, 16),
+};
+
+static const int rv1126_wb_intrs[] = {
+	VOPL_WB_UV_FIFO_FULL_INTR,
+	VOPL_WB_YRGB_FIFO_FULL_INTR,
+	VOPL_WB_COMPLETE_INTR,
+};
+
+static const struct vop_intr rv1126b_wb_intr = {
+	.intrs = rv1126_wb_intrs,
+	.nintrs = ARRAY_SIZE(rv1126_wb_intrs),
+	.status = VOP_REG_MASK(RV1126B_WB_INTR_STATUS, 0xffff, 0),
+	.enable = VOP_REG_MASK(RV1126B_WB_INTR_EN, 0xffff, 0),
+	.clear = VOP_REG_MASK(RV1126B_WB_INTR_CLEAR, 0xffff, 0),
+};
+
+static const struct vop_wb_data rv1126b_vop_wb_data = {
+	.formats = formats_wb,
+	.nformats = ARRAY_SIZE(formats_wb),
+	.max_output = { 1920, 1080 },
+	.fifo_depth =  1920 * 4 / 16,
+	.regs = &rv1126b_vop_wb_regs,
+};
+
 static const struct vop_data rv1126b_vop = {
 	.soc_id = 0x1126b,
 	.vop_id = 0,
@@ -1990,6 +2045,8 @@ static const struct vop_data rv1126b_vop = {
 	.max_output = {1920, 1080},
 	.ctrl = &rv1126b_ctrl_data,
 	.intr = &rk3366_lit_intr,
+	.wb = &rv1126b_vop_wb_data,
+	.wb_intr = &rv1126b_wb_intr,
 	.grf = &rv1126b_grf_ctrl,
 	.win = rv1126_vop_win_data,
 	.win_size = ARRAY_SIZE(rv1126_vop_win_data),
