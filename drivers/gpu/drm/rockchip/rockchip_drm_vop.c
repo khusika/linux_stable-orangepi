@@ -2920,6 +2920,7 @@ static int vop_crtc_debugfs_init(struct drm_minor *minor, struct drm_crtc *crtc)
 #if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
 	rockchip_drm_add_dump_buffer(crtc, vop->debugfs);
 	rockchip_drm_debugfs_add_regs_write(crtc, vop->debugfs);
+	rockchip_drm_debugfs_add_color_bar(crtc, vop->debugfs);
 #endif
 	for (i = 0; i < ARRAY_SIZE(vop_debugfs_files); i++)
 		vop->debugfs_files[i].data = vop;
@@ -3309,6 +3310,47 @@ static void vop_crtc_te_handler(struct drm_crtc *crtc)
 		VOP_CTRL_SET(vop, mcu_frame_st, 1);
 }
 
+#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
+static int vop_crtc_set_color_bar(struct drm_crtc *crtc, enum rockchip_color_bar_mode mode)
+{
+	struct vop *vop = to_vop(crtc);
+	int ret = 0;
+
+	if (!crtc->state->active) {
+		DRM_INFO("VOP disabled\n");
+		return -EINVAL;
+	}
+
+	if (!VOP_CTRL_SUPPORT(vop, color_bar_en)) {
+		DRM_INFO("color bar not support\n");
+		return -EINVAL;
+	}
+
+	switch (mode) {
+	case ROCKCHIP_COLOR_BAR_OFF:
+		VOP_CTRL_SET(vop, color_bar_en, 0);
+		vop_cfg_done(vop);
+		break;
+	case ROCKCHIP_COLOR_BAR_HORIZONTAL:
+		VOP_CTRL_SET(vop, color_bar_mode, 0);
+		VOP_CTRL_SET(vop, color_bar_en, 1);
+		vop_cfg_done(vop);
+		break;
+	case ROCKCHIP_COLOR_BAR_VERTICAL:
+		VOP_CTRL_SET(vop, color_bar_mode, 1);
+		VOP_CTRL_SET(vop, color_bar_en, 1);
+		vop_cfg_done(vop);
+		break;
+	default:
+		DRM_INFO("Unsupported color bar mode\n");
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret;
+}
+#endif
+
 static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.loader_protect = vop_crtc_loader_protect,
 	.cancel_pending_vblank = vop_crtc_cancel_pending_vblank,
@@ -3322,6 +3364,9 @@ static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.crtc_send_mcu_cmd = vop_crtc_send_mcu_cmd,
 	.wait_vact_end = vop_crtc_wait_vact_end,
 	.te_handler = vop_crtc_te_handler,
+#if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
+	.crtc_set_color_bar = vop_crtc_set_color_bar,
+#endif
 };
 
 static bool vop_crtc_mode_fixup(struct drm_crtc *crtc,

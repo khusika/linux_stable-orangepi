@@ -472,6 +472,10 @@ struct vop_ctrl {
 	struct vop_reg enable;
 	struct vop_reg inf_out_en;
 	struct vop_reg out_dresetn;
+
+	/* color bar */
+	struct vop_reg color_bar_en;
+	struct vop_reg color_bar_mode;
 };
 
 struct vop_intr {
