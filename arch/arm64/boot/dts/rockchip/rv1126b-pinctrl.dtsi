@@ -2627,3 +2627,34 @@
 		};
 	};
 };
+
+/*
+ * This part is edited handly.
+ */
+&pinctrl {
+	sdmmc0 {
+		/omit-if-no-ref/
+		sdmmc0_idle_pins: sdmmc0-idle-pins {
+			rockchip,pins =
+				<2 RK_PA0 RK_FUNC_GPIO &pcfg_pull_down>,
+				<2 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>,
+				<2 RK_PA2 RK_FUNC_GPIO &pcfg_pull_down>,
+				<2 RK_PA3 RK_FUNC_GPIO &pcfg_pull_down>,
+				<2 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>,
+				<2 RK_PA5 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+	};
+
+	sdmmc1 {
+		/omit-if-no-ref/
+		sdmmc1_idle_pins: sdmmc1-idle-pins {
+			rockchip,pins =
+				<3 RK_PA0 RK_FUNC_GPIO &pcfg_pull_down>,
+				<3 RK_PA1 RK_FUNC_GPIO &pcfg_pull_down>,
+				<3 RK_PA2 RK_FUNC_GPIO &pcfg_pull_down>,
+				<3 RK_PA3 RK_FUNC_GPIO &pcfg_pull_down>,
+				<3 RK_PA4 RK_FUNC_GPIO &pcfg_pull_down>,
+				<3 RK_PA5 RK_FUNC_GPIO &pcfg_pull_down>;
+		};
+	};
+};
