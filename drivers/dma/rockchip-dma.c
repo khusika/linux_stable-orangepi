@@ -8,6 +8,7 @@
 #include <linux/dmaengine.h>
 #include <linux/dma-mapping.h>
 #include <linux/dmapool.h>
+#include <linux/genalloc.h>
 #include <linux/interrupt.h>
 #include <linux/io-64-nonatomic-hi-lo.h>
 #include <linux/module.h>
@@ -441,6 +442,7 @@ struct rk_dma_dev {
 	struct rk_dma_chan	*chans;
 	struct clk		*clk;
 	struct dma_pool		*pool;
+	struct gen_pool		*gpool;
 	void __iomem		*base;
 	int			irq;
 	u32			bus_width;
@@ -762,6 +764,16 @@ static void rk_dma_fill_desc(struct rk_dma_desc_sw *ds, dma_addr_t dst,
 	ds->desc_hw[num].trf_ctl1 = cc1;
 }
 
+static void *rk_dma_pool_alloc(struct rk_dma_dev *d, struct rk_dma_desc_sw *ds)
+{
+	size_t size = ds->desc_num * sizeof(struct rk_desc_hw);
+
+	if (d->gpool)
+		return gen_pool_dma_zalloc(d->gpool, size, &ds->desc_hw_lli);
+
+	return dma_pool_zalloc(d->pool, GFP_NOWAIT, &ds->desc_hw_lli);
+}
+
 static struct rk_dma_desc_sw *rk_alloc_desc_resource(int num, struct dma_chan *chan)
 {
 	struct rk_dma_chan *c = to_rk_chan(chan);
@@ -779,13 +791,13 @@ static struct rk_dma_desc_sw *rk_alloc_desc_resource(int num, struct dma_chan *c
 	if (!ds)
 		return NULL;
 
-	ds->desc_hw = dma_pool_zalloc(d->pool, GFP_NOWAIT, &ds->desc_hw_lli);
+	ds->desc_num = num;
+	ds->desc_hw = rk_dma_pool_alloc(d, ds);
 	if (!ds->desc_hw) {
 		dev_err(chan->device->dev, "vch-%px: dma alloc fail\n", &c->vc);
 		kfree(ds);
 		return NULL;
 	}
-	ds->desc_num = num;
 
 	dev_dbg(chan->device->dev, "vch-%px, desc_sw: %px, desc_hw_lli: %pad\n",
 		&c->vc, ds, &ds->desc_hw_lli);
@@ -1107,6 +1119,16 @@ static int rk_dma_transfer_resume(struct dma_chan *chan)
 	return 0;
 }
 
+static void rk_dma_pool_free(struct rk_dma_dev *d, struct rk_dma_desc_sw *ds)
+{
+	size_t size = ds->desc_num * sizeof(struct rk_desc_hw);
+
+	if (d->gpool)
+		return gen_pool_free(d->gpool, (unsigned long)ds->desc_hw, size);
+
+	return dma_pool_free(d->pool, ds->desc_hw, ds->desc_hw_lli);
+}
+
 static void rk_dma_free_desc(struct virt_dma_desc *vd)
 {
 	struct rk_dma_dev *d = to_rk_dma(vd->tx.chan->device);
@@ -1114,7 +1136,7 @@ static void rk_dma_free_desc(struct virt_dma_desc *vd)
 
 	dev_dbg(d->slave.dev, "desc_sw: %px free\n", ds);
 
-	dma_pool_free(d->pool, ds->desc_hw, ds->desc_hw_lli);
+	rk_dma_pool_free(d, ds);
 	kfree(ds);
 }
 
@@ -1149,6 +1171,22 @@ static struct dma_chan *rk_of_dma_simple_xlate(struct of_phandle_args *dma_spec,
 	return chan;
 }
 
+static int rk_dma_pool_create(struct rk_dma_dev *d, struct device *dev)
+{
+	d->gpool = of_gen_pool_get(dev->of_node, "sram", 0);
+	if (d->gpool) {
+		dev_info(dev, "Use sram for dma desc\n");
+		return 0;
+	}
+
+	/* A DMA memory pool for LLIs, align on 64-bytes boundary */
+	d->pool = dmam_pool_create(DRIVER_NAME, dev, LLI_BLOCK_SIZE, SZ_64, 0);
+	if (!d->pool)
+		return -ENOMEM;
+
+	return 0;
+}
+
 static int rk_dma_probe(struct platform_device *pdev)
 {
 	struct rk_dma_dev *d;
@@ -1173,10 +1211,9 @@ static int rk_dma_probe(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	/* A DMA memory pool for LLIs, align on 64-bytes boundary */
-	d->pool = dmam_pool_create(DRIVER_NAME, &pdev->dev, LLI_BLOCK_SIZE, SZ_64, 0);
-	if (!d->pool)
-		return -ENOMEM;
+	ret = rk_dma_pool_create(d, &pdev->dev);
+	if (ret)
+		return ret;
 
 	spin_lock_init(&d->lock);
 	INIT_LIST_HEAD(&d->chan_pending);
