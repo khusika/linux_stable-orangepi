@@ -68,12 +68,21 @@
 #define RV1103B_RTC_CNT_2		RTC_REG(0x88)
 #define RV1103B_RTC_CNT_3		RTC_REG(0x8c)
 
+#define RV1126B_RTC_TEST_ST		RTC_REG(0x78)
+#define RV1126B_RTC_TEST_LEN		RTC_REG(0x7c)
+#define RV1126B_RTC_CNT_0		RTC_REG(0x80)
+#define RV1126B_RTC_CNT_1		RTC_REG(0x84)
+#define RV1126B_RTC_CNT_2		RTC_REG(0x88)
+#define RV1126B_RTC_CNT_3		RTC_REG(0x8c)
+
 #define RTC_MAX_REGISTER		RV1106_RTC_CNT_3
 
 #define RV1106_VI_GRF_VI_MISC_CON0	0x50000
 #define RV1106_RTC_CLAMP_EN		BIT(6)
 #define RV1103B_GRF_PMU_SOC_CON0	0x60000
 #define RV1103B_RTC_CLAMP_EN		BIT(15)
+#define RV1126B_GRF_PMU_SOC_CON0	0x30000
+#define RV1126B_RTC_CLAMP_EN		BIT(15)
 
 /* RTC_CTRL_REG bitfields */
 #define RTC_CTRL_REG_START_RTC		BIT(0)
@@ -152,6 +161,14 @@
 #define RV1103B_CLK32K_TEST_START	BIT(0)
 #define RV1103B_CLK32K_TEST_STATUS	BIT(1)
 #define RV1103B_CLK32K_TEST_DONE	BIT(2)
+
+/* RV1126B_RTC_CTRL bitfields */
+#define RV1126B_COMP_MODE		BIT(4)
+
+/* RV1126B_RTC_TEST bitfields */
+#define RV1126B_CLK32K_TEST_START	BIT(0)
+#define RV1126B_CLK32K_TEST_STATUS	BIT(1)
+#define RV1126B_CLK32K_TEST_DONE	BIT(2)
 
 enum {
 	ROCKCHIP_RV1106_RTC = 1,
@@ -569,6 +586,19 @@ static void rv1106_rtc_clamp(struct regmap *grf, bool en)
 			     (RV1106_RTC_CLAMP_EN << 16) | RV1106_RTC_CLAMP_EN);
 }
 
+static void rv1126b_rtc_clamp(struct regmap *grf, bool en)
+{
+	if (!grf)
+		return;
+
+	if (en)
+		regmap_write(grf, RV1126B_GRF_PMU_SOC_CON0,
+			     (RV1126B_RTC_CLAMP_EN << 16));
+	else
+		regmap_write(grf, RV1126B_GRF_PMU_SOC_CON0,
+			     (RV1126B_RTC_CLAMP_EN << 16) | RV1126B_RTC_CLAMP_EN);
+}
+
 static int rv1106_rtc_test_start(struct regmap *regmap)
 {
 	u64 camp;
@@ -673,6 +703,92 @@ static int rv1106_rtc_test_start(struct regmap *regmap)
 
 	ret = rockchip_rtc_update_bits(regmap, RTC_CTRL,
 				       CLK32K_COMP_EN, CLK32K_COMP_EN);
+	if (ret) {
+		pr_err("%s:Failed to update RTC CTRL : %d\n", __func__, ret);
+		return ret;
+	}
+	return ret;
+}
+
+static int rv1126b_rtc_test_start(struct regmap *regmap)
+{
+	u64 camp, tcamp;
+	u32 count[4], counts, ref;
+	int ret, done = 0, trim_dir, c_hour, c_day, c_mon;
+
+	ret = rockchip_rtc_write(regmap, RV1126B_RTC_TEST_LEN,
+				 CLK32K_TEST_LEN);
+	if (ret) {
+		pr_err("%s:Failed to update RTC CLK32K TEST LEN: %d\n",
+		       __func__, ret);
+		return ret;
+	}
+
+	ret = rockchip_rtc_update_bits(regmap, RV1126B_RTC_TEST_ST,
+				       RV1126B_CLK32K_TEST_START,
+				       RV1126B_CLK32K_TEST_START);
+	if (ret) {
+		pr_err("%s:Failed to update RTC CLK32K TEST STATUS : %d\n",
+		       __func__, ret);
+		return ret;
+	}
+
+	ret = regmap_read_poll_timeout(regmap, RV1126B_RTC_TEST_ST, done,
+				       (done & RV1126B_CLK32K_TEST_DONE), 20000, RTC_TIMEOUT);
+	if (ret)
+		pr_err("%s:timeout waiting for RTC TEST STATUS : %d\n", __func__, ret);
+
+	ret = regmap_bulk_read(regmap,
+			       RV1126B_RTC_CNT_0,
+			       count, 4);
+	if (ret) {
+		pr_err("Failed to read RTC count REG: %d\n", ret);
+		return ret;
+	}
+
+	counts = count[0] | (count[1] << 8) |
+		 (count[2] << 16) | (count[3] << 24);
+	ref = CLK32K_TEST_REF_CLK * (CLK32K_TEST_LEN + 1);
+
+	if (counts > ref) {
+		trim_dir = 0;
+		camp = (60ULL / (CLK32K_TEST_LEN + 1)) * (32768 * (counts - ref));
+		do_div(camp, (CLK32K_TEST_REF_CLK / 1000));
+	} else {
+		trim_dir = CLK32K_COMP_DIR_ADD;
+		camp = (60ULL / (CLK32K_TEST_LEN + 1)) * (32768 * (counts - ref));
+		do_div(camp, (CLK32K_TEST_REF_CLK / 1000));
+	}
+	tcamp = camp;
+	do_div(tcamp, 1000);
+	c_hour = tcamp & 0xff;
+	c_day = (tcamp & 0x7f00) >> 8;
+	if (c_hour > 1)
+		rockchip_rtc_write(regmap, RTC_COMP_H, bin2bcd(c_hour));
+	else
+		rockchip_rtc_write(regmap, RTC_COMP_H, CLK32K_NO_COMP);
+	if (c_day > 1)
+		rockchip_rtc_write(regmap, RTC_COMP_D, bin2bcd(c_day) | trim_dir);
+	else
+		rockchip_rtc_write(regmap, RTC_COMP_D, CLK32K_NO_COMP | trim_dir);
+
+	c_mon = do_div(camp, 1000);
+	if (c_mon > 0xff)
+		c_mon = 0xff;
+	if (c_mon > 1)
+		rockchip_rtc_write(regmap, RTC_COMP_M, bin2bcd(c_mon));
+	else
+		rockchip_rtc_write(regmap, RTC_COMP_M, CLK32K_NO_COMP);
+
+	ret = regmap_read(regmap, RTC_CTRL, &done);
+	if (ret) {
+		pr_err("Failed to read RTC_CTRL: %d\n", ret);
+		return ret;
+	}
+
+	ret = rockchip_rtc_update_bits(regmap, RTC_CTRL,
+				       CLK32K_COMP_EN | RV1126B_COMP_MODE,
+				       CLK32K_COMP_EN | RV1126B_COMP_MODE);
 	if (ret) {
 		pr_err("%s:Failed to update RTC CTRL : %d\n", __func__, ret);
 		return ret;
@@ -806,6 +922,12 @@ static const struct rockchip_rtc_chip rv1103b_rtc_data = {
 	.clamp_en = rv1103b_rtc_clamp,
 };
 
+static const struct rockchip_rtc_chip rv1126b_rtc_data = {
+	.initialize = rv1103b_rtc_init,
+	.clamp_en = rv1126b_rtc_clamp,
+	.test_start = rv1126b_rtc_test_start,
+};
+
 static const struct of_device_id rockchip_rtc_of_match[] = {
 #ifdef CONFIG_CPU_RV1106
 	{
@@ -817,6 +939,12 @@ static const struct of_device_id rockchip_rtc_of_match[] = {
 	{
 		.compatible = "rockchip,rv1103b-rtc",
 		.data = (void *)&rv1103b_rtc_data,
+	},
+#endif
+#ifdef CONFIG_CPU_RV1126B
+	{
+		.compatible = "rockchip,rv1126b-rtc",
+		.data = (void *)&rv1126b_rtc_data,
 	},
 #endif
 	{},
