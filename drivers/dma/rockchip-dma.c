@@ -446,6 +446,7 @@ struct rk_dma_dev {
 	void __iomem		*base;
 	int			irq;
 	u32			bus_width;
+	u32			buf_dep;
 	u32			dma_channels;
 	u32			dma_requests;
 	u32			version;
@@ -513,6 +514,7 @@ static int rk_dma_init(struct rk_dma_dev *d)
 
 	d->version = ver;
 	d->bus_width = buswidth;
+	d->buf_dep = dep;
 	d->dma_channels = CMN_LCH_NUM(cap0);
 	d->dma_requests = CMN_LCH_NUM(cap0);
 
@@ -812,6 +814,7 @@ static enum rk_dma_burst_width rk_dma_burst_width(enum dma_slave_buswidth width)
 	case DMA_SLAVE_BUSWIDTH_2_BYTES:
 	case DMA_SLAVE_BUSWIDTH_4_BYTES:
 	case DMA_SLAVE_BUSWIDTH_8_BYTES:
+	case DMA_SLAVE_BUSWIDTH_16_BYTES:
 		return ffs(width) - 1;
 	default:
 		return DMA_BURST_WIDTH_4_BYTES;
@@ -831,11 +834,12 @@ static int rk_pre_config(struct dma_chan *chan, enum dma_transfer_direction dir)
 	case DMA_MEM_TO_MEM:
 		/* DMAC use the min(addr_align, bus_width, len) automatically */
 		src_width = rk_dma_burst_width(d->bus_width);
+		maxburst = min_t(u32, d->buf_dep, RK_MAX_BURST_LEN);
 		c->ctl0 = TRF_CTL0_LLI_VALID | TRF_CTL0_MSIZE(0);
 		c->ctl1 = TRF_CTL1_AROSR(4) |
 			  TRF_CTL1_AWOSR(4) |
-			  TRF_CTL1_ARLEN(RK_MAX_BURST_LEN) |
-			  TRF_CTL1_AWLEN(RK_MAX_BURST_LEN) |
+			  TRF_CTL1_ARLEN(maxburst) |
+			  TRF_CTL1_AWLEN(maxburst) |
 			  TRF_CTL1_ARSIZE(src_width) |
 			  TRF_CTL1_AWSIZE(src_width) |
 			  TRF_CTL1_ARBURST_INCR |
@@ -852,8 +856,7 @@ static int rk_pre_config(struct dma_chan *chan, enum dma_transfer_direction dir)
 		 * burst also require identical src/dst data width.
 		 */
 		dst_width = rk_dma_burst_width(cfg->dst_addr_width);
-		maxburst = cfg->dst_maxburst;
-		maxburst = maxburst < RK_MAX_BURST_LEN ? maxburst : RK_MAX_BURST_LEN;
+		maxburst = min3(cfg->dst_maxburst, d->buf_dep, (u32)RK_MAX_BURST_LEN);
 
 		c->ctl0 = TRF_CTL0_MSIZE(maxburst * cfg->dst_addr_width) |
 			  TRF_CTL0_LLI_VALID;
@@ -874,9 +877,7 @@ static int rk_pre_config(struct dma_chan *chan, enum dma_transfer_direction dir)
 	case DMA_DEV_TO_MEM:
 		c->dev_addr = cfg->src_addr;
 		src_width = rk_dma_burst_width(cfg->src_addr_width);
-		maxburst = cfg->src_maxburst;
-		maxburst = maxburst < RK_MAX_BURST_LEN ?
-				maxburst : RK_MAX_BURST_LEN;
+		maxburst = min3(cfg->src_maxburst, d->buf_dep, (u32)RK_MAX_BURST_LEN);
 
 		c->ctl0 = TRF_CTL0_MSIZE(maxburst * cfg->src_addr_width) |
 			  TRF_CTL0_LLI_VALID;
