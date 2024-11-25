@@ -289,6 +289,27 @@
 		};
 	};
 
+	crypto: crypto@20940000 {
+		compatible = "rockchip,crypto-ce";
+		reg = <0x20940000 0x2000>;
+		interrupts = <GIC_SPI 168 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru ACLK_NSRKCE>, <&cru HCLK_NS_RKCE>,
+			 <&cru CLK_PKA_NSRKCE>;
+		clock-names = "aclk", "hclk", "pka";
+		resets = <&cru SRST_HRESETN_NS_RKCE>;
+		reset-names = "crypto-rst";
+		status = "disabled";
+	};
+
+	rng: rng@20950000 {
+		compatible = "rockchip,rkrng";
+		reg = <0x20950000 0x200>;
+		interrupts = <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>;
+		resets = <&cru SRST_HRESETN_RKRNG_NS>;
+		reset-names = "reset";
+		status = "disabled";
+	};
+
 	sai0: sai@20960000 {
 		compatible = "rockchip,rv1126b-sai", "rockchip,sai-v1";
 		reg = <0x20960000 0x1000>;
