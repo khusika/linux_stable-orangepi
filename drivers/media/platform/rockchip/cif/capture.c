@@ -5716,6 +5716,7 @@ void rkcif_free_rx_buf(struct rkcif_stream *stream, int buf_num)
 			if (buf->dbufs.is_init)
 				v4l2_subdev_call(sd, core, ioctl,
 						 RKISP_VICAP_CMD_RX_BUFFER_FREE, &buf->dbufs);
+			memset(buf, 0, sizeof(*buf));
 			buf->dummy.is_free = true;
 		}
 
@@ -5772,10 +5773,13 @@ void rkcif_free_rx_buf(struct rkcif_stream *stream, int buf_num)
 		if (buf->dbufs.is_init)
 			v4l2_subdev_call(sd, core, ioctl,
 					 RKISP_VICAP_CMD_RX_BUFFER_FREE, &buf->dbufs);
-		if (!dev->is_thunderboot)
+		if (!dev->is_thunderboot) {
 			rkcif_free_buffer(dev, &buf->dummy);
-		else
+			memset(buf, 0, sizeof(*buf));
+			buf->dummy.is_free = true;
+		} else {
 			list_add_tail(&buf->list_free, &priv->buf_free_list);
+		}
 		atomic_dec(&stream->buf_cnt);
 		stream->total_buf_num--;
 	}
@@ -5857,6 +5861,8 @@ int rkcif_init_rx_buf(struct rkcif_stream *stream, int buf_num)
 		else
 			return -EINVAL;
 	}
+
+	INIT_LIST_HEAD(&stream->rx_buf_head);
 	while (true) {
 		buf = &stream->rx_buf[i];
 		memset(buf, 0, sizeof(*buf));

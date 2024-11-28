@@ -98,6 +98,8 @@ static void sditf_buffree_work(struct work_struct *work)
 		if (rx_buf) {
 			list_del(&rx_buf->list_free);
 			rkcif_free_reserved_mem_buf(priv->cif_dev, rx_buf);
+			memset(rx_buf, 0, sizeof(*rx_buf));
+			rx_buf->dummy.is_free = true;
 		}
 	}
 	spin_unlock_irqrestore(&priv->cif_dev->buffree_lock, flags);
@@ -1320,7 +1322,7 @@ static int sditf_s_rx_buffer(struct v4l2_subdev *sd,
 		is_free = true;
 	}
 
-	if (!is_free && (!dbufs->is_switch)) {
+	if (!is_free && (!dbufs->is_switch) && stream->state == RKCIF_STATE_STREAMING) {
 		list_add_tail(&rx_buf->list, &stream->rx_buf_head);
 		rkcif_assign_check_buffer_update_toisp(stream);
 		if (cif_dev->resume_mode != RKISP_RTT_MODE_ONE_FRAME) {
