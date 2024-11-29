@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2024 Rockchip Electronics Co., Ltd.
+ */
+
+/dts-v1/;
+
+#include "rk3308-evb-audio-v10-partybox.dts"
+#include "rk3308-evb-audio-v11.dtsi"
+
+/ {
+	model = "Rockchip RK3308 EVB AUDIO V11 PARTYBOX";
+	compatible = "rockchip,rk3308-evb-audio-v11-partybox", "rockchip,rk3308";
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0xff0c0000 console=ttyFIQ0 root=PARTUUID=614e0000-0000 rootfstype=squashfs rootwait snd_aloop.index=7 snd_aloop.use_raw_jiffies=1 isolcpus=2,3 nohz_full=2,3";
+	};
+};
