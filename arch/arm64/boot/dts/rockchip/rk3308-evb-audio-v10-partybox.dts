@@ -25,6 +25,10 @@
 	rockchip,adc-grps-route = <0 1 2 3>;
 };
 
+&bluetooth_sound {
+	status = "disabled";
+};
+
 &cpu0_opp_table {
 	opp-408000000 {
 		status = "disabled";
@@ -53,4 +57,17 @@
 	opp-1104000000 {
 		status = "okay";
 	};
+};
+
+&spdif_rx {
+	status = "okay";
+};
+
+&spdif_rx_sound {
+	status = "okay";
+	rockchip,wait-card-locked = <0>;
+};
+
+&vad_acodec_sound {
+	status = "okay";
 };
