@@ -13705,7 +13705,7 @@ int rkcif_stream_resume(struct rkcif_device *cif_dev, int mode)
 			capture_mode = RKCIF_STREAM_MODE_CAPTURE;
 		}
 	}
-	if (priv && priv->mode.rdbk_mode == RKISP_VICAP_ONLINE && mode == RKCIF_RESUME_CIF)
+	if (priv && priv->mode.rdbk_mode < RKISP_VICAP_RDBK_AIQ && mode == RKCIF_RESUME_CIF)
 		goto out_resume;
 
 	for (i = 0; i < RKCIF_MAX_STREAM_MIPI; i++) {
