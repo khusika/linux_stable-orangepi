@@ -1216,6 +1216,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rk3288-veyron-speedy.dtb \
 	rk3288-veyron-tiger.dtb \
 	rk3288-vyasa.dtb \
+	rk3308-evb-audio-v10-amp-display-rgb-aarch32.dtb \
 	rk3308-evb-audio-v10-display-rgb-aarch32.dtb \
 	rk3308-evb-audio-v11-display-rgb-aarch32.dtb \
 	rk3308bs-evb-amic-v11-aarch32.dtb \
