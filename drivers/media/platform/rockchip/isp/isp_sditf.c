@@ -91,6 +91,8 @@ void rkisp_sditf_reset_notify_vpss(struct rkisp_device *dev)
 {
 	struct rkisp_sditf_device *sditf = dev->sditf_dev;
 
+	if (!sditf || !sditf->is_on || !sditf->remote_sd)
+		return;
 	v4l2_info(&dev->v4l2_dev, "%s\n", __func__);
 	v4l2_subdev_call(sditf->remote_sd, core, ioctl, RKISP_VPSS_RESET_NOTIFY_VPSS, NULL);
 }

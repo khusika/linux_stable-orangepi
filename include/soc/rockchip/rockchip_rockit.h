@@ -125,7 +125,9 @@ struct rockit_rkcif_cfg {
 	int (*rkcif_rockit_mpibuf_done)(struct rockit_rkcif_cfg *rockit_cif_cfg);
 };
 
-#if IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V32) || IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V33)
+#if IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V32) || \
+IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V33) || \
+IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V35)
 
 void *rkisp_rockit_function_register(void *function, int cmd);
 int rkisp_rockit_get_ispdev(char **name);

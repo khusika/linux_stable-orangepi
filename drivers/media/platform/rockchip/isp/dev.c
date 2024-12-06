@@ -1,5 +1,5 @@
 /*
- * Rockchip isp1 driver
+ * Rockchip isp driver
  *
  * Copyright (C) 2017 Rockchip Electronics Co., Ltd.
  *
@@ -308,7 +308,8 @@ static int rkisp_pipeline_open(struct rkisp_pipeline *p,
 			rkisp_vicap_buf[dev->dev_id] = RKISP_VICAP_BUF_CNT_MAX;
 		dev->vicap_buf_cnt = rkisp_vicap_buf[dev->dev_id];
 		dev->is_m_online = rkisp_m_online[dev->dev_id];
-		if (hw->isp_ver != ISP_V33 || hw->is_single) {
+		if (hw->is_single ||
+		    (hw->isp_ver != ISP_V33 && hw->isp_ver != ISP_V35)) {
 			dev->is_m_online = false;
 			rkisp_m_online[dev->dev_id] = false;
 		}
@@ -324,7 +325,7 @@ static int rkisp_pipeline_open(struct rkisp_pipeline *p,
 				v4l2_subdev_call(dev->active_sensor->sd, core,
 						 ioctl, RKISP_VICAP_CMD_MULTI_ONLINE, &ret);
 		}
-		if (hw->isp_ver == ISP_V33) {
+		if (hw->isp_ver == ISP_V33 || hw->isp_ver == ISP_V35) {
 			if (dev->unite_div != ISP_UNITE_DIV1)
 				rkisp_hdr_wrap_line[dev->dev_id] = 0;
 			dev->hdr_wrap_line = rkisp_hdr_wrap_line[dev->dev_id];
@@ -1276,7 +1277,7 @@ static int rkisp_pm_resume(struct device *dev)
 {
 	struct rkisp_device *isp_dev = dev_get_drvdata(dev);
 
-	if (isp_dev->isp_ver == ISP_V33)
+	if (isp_dev->isp_ver == ISP_V33 || isp_dev->isp_ver == ISP_V35)
 		return rkisp_resume(dev);
 	return 0;
 }
@@ -1285,7 +1286,7 @@ static void rkisp_pm_complete(struct device *dev)
 {
 	struct rkisp_device *isp_dev = dev_get_drvdata(dev);
 
-	if (isp_dev->isp_ver == ISP_V33)
+	if (isp_dev->isp_ver == ISP_V33 || isp_dev->isp_ver == ISP_V35)
 		return;
 	rkisp_resume(dev);
 }

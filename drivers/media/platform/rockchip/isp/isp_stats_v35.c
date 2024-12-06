@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0
-/* Copyright (c) 2024 Rockchip Electronics Co., Ltd. */
+/* Copyright (c) 2025 Rockchip Electronics Co., Ltd. */
 
 #include <linux/delay.h>
 #include <linux/kfifo.h>
@@ -11,10 +11,10 @@
 #include "regs.h"
 #include "common.h"
 #include "isp_stats.h"
-#include "isp_stats_v33.h"
-#include "isp_params_v33.h"
+#include "isp_stats_v35.h"
+#include "isp_params_v35.h"
 
-#define ISP33_3A_MEAS_DONE		BIT(31)
+#define ISP35_3A_MEAS_DONE BIT(31)
 
 static void isp3_module_done(struct rkisp_isp_stats_vdev *stats_vdev, u32 reg, u32 value)
 {
@@ -36,7 +36,7 @@ static void isp3_stats_write(struct rkisp_isp_stats_vdev *stats_vdev,
 
 static int
 rkisp_stats_get_sharp_stats(struct rkisp_isp_stats_vdev *stats_vdev,
-			    struct rkisp33_stat_buffer *pbuf)
+			    struct rkisp35_stat_buffer *pbuf)
 {
 	struct isp33_sharp_stat *sharp;
 	u32 i, val;
@@ -47,21 +47,21 @@ rkisp_stats_get_sharp_stats(struct rkisp_isp_stats_vdev *stats_vdev,
 	val = isp3_stats_read(stats_vdev, ISP3X_SHARP_EN);
 	if (val & 0x1) {
 		sharp = &pbuf->stat.sharp;
-		for (i = 0; i < ISP33_SHARP_NOISE_CURVE_NUM / 2; i++) {
+		for (i = 0; i < ISP35_SHARP_NOISE_CURVE_NUM / 2; i++) {
 			val = isp3_stats_read(stats_vdev, ISP33_SHARP_NOISE_CURVE0 + i * 4);
 			sharp->noise_curve[i * 2] = val & 0x7ff;
 			sharp->noise_curve[i * 2 + 1] = (val >> 16) & 0x7ff;
 		}
 		val = isp3_stats_read(stats_vdev, ISP33_SHARP_NOISE_CURVE8);
 		sharp->noise_curve[i * 2] = val & 0x7ff;
-		pbuf->meas_type |= ISP33_STAT_SHARP;
+		pbuf->meas_type |= ISP35_STAT_SHARP;
 	}
 	return 0;
 }
 
 static int
 rkisp_stats_get_bay3d_stats(struct rkisp_isp_stats_vdev *stats_vdev,
-			    struct rkisp33_stat_buffer *pbuf)
+			    struct rkisp35_stat_buffer *pbuf)
 {
 	struct isp33_bay3d_stat *bay3d;
 	u32 i, val;
@@ -73,24 +73,24 @@ rkisp_stats_get_bay3d_stats(struct rkisp_isp_stats_vdev *stats_vdev,
 		bay3d = &pbuf->stat.bay3d;
 		val = isp3_stats_read(stats_vdev, ISP33_BAY3D_TNRSUM);
 		bay3d->sigma_num = val;
-		for (i = 0; i < ISP33_BAY3D_TNRSIG_NUM / 2; i++) {
+		for (i = 0; i < ISP35_BAY3D_TNRSIG_NUM / 2; i++) {
 			val = isp3_stats_read(stats_vdev, ISP33_BAY3D_TNRYO0 + i * 4);
 			bay3d->sigma_y[i * 2] = val & 0xfff;
 			bay3d->sigma_y[i * 2 + 1] = (val >> 16) & 0xfff;
 		}
-		pbuf->meas_type |= ISP33_STAT_BAY3D;
+		pbuf->meas_type |= ISP35_STAT_BAY3D;
 	}
 	return 0;
 }
 
 static int
 rkisp_stats_get_hist_stats(struct rkisp_isp_stats_vdev *stats_vdev,
-			   struct rkisp33_stat_buffer *pbuf)
+			   struct rkisp35_stat_buffer *pbuf)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
 	struct rkisp_isp_params_vdev *params = &dev->params_vdev;
-	struct rkisp_isp_params_val_v33 *priv_val = params->priv_val;
-	struct isp33_isp_params_cfg *params_rec = params->isp33_params + dev->unite_index;
+	struct rkisp_isp_params_val_v35 *priv_val = params->priv_val;
+	struct isp35_isp_params_cfg *params_rec = params->isp35_params + dev->unite_index;
 	struct isp33_hist_cfg *arg_rec = &params_rec->others.hist_cfg;
 	struct isp33_hist_stat *hist;
 	int val, i, j, timeout;
@@ -114,7 +114,7 @@ rkisp_stats_get_hist_stats(struct rkisp_isp_stats_vdev *stats_vdev,
 				v4l2_warn(&dev->v4l2_dev, "%s hist read:%d timeout\n", __func__, i);
 				return 0;
 			}
-			for (j = 0; j < ISP33_HIST_IIR_NUM / 2; j++) {
+			for (j = 0; j < ISP35_HIST_IIR_NUM / 2; j++) {
 				val = isp3_stats_read(stats_vdev, ISP33_HIST_IIR0 + 4 * j);
 				arg_rec->iir[i][2 * j] = val & 0x3FF;
 				arg_rec->iir[i][2 * j + 1] = val >> 16;
@@ -125,7 +125,7 @@ rkisp_stats_get_hist_stats(struct rkisp_isp_stats_vdev *stats_vdev,
 		if (pbuf) {
 			hist = &pbuf->stat.hist;
 			memcpy(hist->iir, arg_rec->iir, sizeof(hist->iir));
-			pbuf->meas_type |= ISP33_STAT_HIST;
+			pbuf->meas_type |= ISP35_STAT_HIST;
 		}
 	}
 	return 0;
@@ -133,19 +133,18 @@ rkisp_stats_get_hist_stats(struct rkisp_isp_stats_vdev *stats_vdev,
 
 static int
 rkisp_stats_get_enh_stats(struct rkisp_isp_stats_vdev *stats_vdev,
-			  struct rkisp33_stat_buffer *pbuf)
+			  struct rkisp35_stat_buffer *pbuf)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
 	struct rkisp_isp_params_vdev *params = &dev->params_vdev;
-	struct rkisp_isp_params_val_v33 *priv_val = params->priv_val;
-	struct isp33_isp_params_cfg *params_rec = params->isp33_params + dev->unite_index;
+	struct rkisp_isp_params_val_v35 *priv_val = params->priv_val;
+	struct isp35_isp_params_cfg *params_rec = params->isp35_params + dev->unite_index;
 	struct isp33_enh_cfg *arg_rec = &params_rec->others.enh_cfg;
 	struct isp33_enh_stat *enh;
 	int val, i, j, timeout;
 
 	val = isp3_stats_read(stats_vdev, ISP33_ENH_CTRL);
 	if (val & 0x1) {
-		enh = &pbuf->stat.enh;
 		val = isp3_stats_read(stats_vdev, ISP33_ENH_PRE_FRAME);
 		arg_rec->pre_wet_frame_cnt0 = val & 0xf;
 		arg_rec->pre_wet_frame_cnt1 = (val & 0xf0) >> 4;
@@ -176,7 +175,7 @@ rkisp_stats_get_enh_stats(struct rkisp_isp_stats_vdev *stats_vdev,
 		if (pbuf) {
 			enh = &pbuf->stat.enh;
 			memcpy(enh->iir, arg_rec->iir, sizeof(enh->iir));
-			pbuf->meas_type |= ISP33_STAT_ENH;
+			pbuf->meas_type |= ISP35_STAT_ENH;
 		}
 	}
 	return 0;
@@ -225,24 +224,83 @@ rkisp_stats_update_buf(struct rkisp_isp_stats_vdev *stats_vdev)
 			rkisp_idx_write(dev, ISP39_W3A_AE0_ADDR, val, i, false);
 
 			val += offset;
+			rkisp_idx_write(dev, ISP39_W3A_AF_ADDR, val, i, false);
+
+			offset = sizeof(struct isp39_rawaf_stat);
+			val += offset;
 			rkisp_idx_write(dev, ISP39_W3A_AWB_ADDR, val, i, false);
 		}
 		v4l2_dbg(4, rkisp_debug, &dev->v4l2_dev,
-			 "%s BASE:0x%x SHD AEBIG:0x%x AE0:0x%x AWB:0x%x\n",
+			 "%s BASE:0x%x SHD AEBIG:0x%x AE0:0x%x AF:0x%x AWB:0x%x\n",
 			 __func__, addr,
 			 isp3_stats_read(stats_vdev, ISP39_W3A_AEBIG_ADDR_SHD),
 			 isp3_stats_read(stats_vdev, ISP39_W3A_AE0_ADDR_SHD),
+			 isp3_stats_read(stats_vdev, ISP39_W3A_AF_ADDR_SHD),
 			 isp3_stats_read(stats_vdev, ISP39_W3A_AWB_ADDR_SHD));
 	}
 	return ret;
 }
 
 static void
-rkisp_stats_info2ddr(struct rkisp_isp_stats_vdev *stats_vdev,
-		     struct rkisp33_stat_buffer *pbuf)
+rkisp_stats_get_aiawb_stats(struct rkisp_isp_stats_vdev *stats_vdev,
+		  struct rkisp35_stat_buffer *pbuf)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
-	struct rkisp_isp_params_val_v33 *priv_val;
+	struct rkisp_isp_params_vdev *params_vdev = &dev->params_vdev;
+	struct rkisp_isp_params_val_v35 *priv_val = params_vdev->priv_val;
+	u32 ctrl = rkisp_read(dev, ISP35_AIAWB_CTRL0, false);
+	u32 buf_idx, val;
+
+	if (!pbuf || !(ctrl & ISP35_AIAWB_EN) || !priv_val->buf_aiawb_cnt)
+		return;
+	pbuf->meas_type |= ISP35_STAT_AIAWB;
+	buf_idx = priv_val->buf_aiawb_idx;
+	pbuf->stat.buf_aiawb_index = priv_val->buf_aiawb[buf_idx].index;
+	buf_idx = (buf_idx + 1) % priv_val->buf_aiawb_cnt;
+	val = priv_val->buf_aiawb[buf_idx].dma_addr;
+	rkisp_write(dev, ISP35_AIAWB_WR_BASE, val, false);
+	rkisp_write(dev, ISP35_AIAWB_CTRL0, ctrl | ISP35_AIAWB_SELF_UPD, false);
+	priv_val->buf_aiawb_idx = buf_idx;
+}
+
+static void
+rkisp_stats_get_awbsync_stats(struct rkisp_isp_stats_vdev *stats_vdev,
+		  struct rkisp35_stat_buffer *pbuf)
+{
+	struct isp35_awbsync_stat *awbsync;
+	u32 ctrl = isp3_stats_read(stats_vdev, ISP35_AWBSYNC_CTRL);
+	u64 msb, lsb;
+	int i;
+
+	if (!(ctrl & ISP35_3A_MEAS_DONE)) {
+		v4l2_dbg(1, rkisp_debug, &stats_vdev->dev->v4l2_dev,
+			 "%s fail, ctrl:0x%x\n", __func__, ctrl);
+		return;
+	}
+	if (!pbuf)
+		goto out;
+	awbsync = &pbuf->stat.awbsync;
+	for (i = 0; i < ISP35_AWBSYNC_WIN_MAX; i++) {
+		msb = isp3_stats_read(stats_vdev, ISP35_AWBSYNC_WIN0_SUMP + i * 0x10);
+		awbsync->sump[i] = msb & 0x3ffffff;
+		lsb = isp3_stats_read(stats_vdev, ISP35_AWBSYNC_WIN0_SUMR + i * 0x10);
+		awbsync->sumr[i] = lsb | ((msb & 0xc0000000) << 2);
+		lsb = isp3_stats_read(stats_vdev, ISP35_AWBSYNC_WIN0_SUMG + i * 0x10);
+		awbsync->sumg[i] = lsb | ((msb & 0x30000000) << 4);
+		lsb = isp3_stats_read(stats_vdev, ISP35_AWBSYNC_WIN0_SUMB + i * 0x10);
+		awbsync->sumg[i] = lsb | ((msb & 0xc000000) << 6);
+	}
+	pbuf->meas_type |= ISP35_STAT_AWBSYNC;
+out:
+	isp3_module_done(stats_vdev, ISP35_AWBSYNC_CTRL, ctrl);
+}
+
+static void
+rkisp_stats_info2ddr(struct rkisp_isp_stats_vdev *stats_vdev,
+		     struct rkisp35_stat_buffer *pbuf)
+{
+	struct rkisp_device *dev = stats_vdev->dev;
+	struct rkisp_isp_params_val_v35 *priv_val;
 	struct rkisp_dummy_buffer *buf;
 	int idx, buf_fd = -1;
 	u32 reg = 0, ctrl, mask;
@@ -280,7 +338,7 @@ rkisp_stats_info2ddr(struct rkisp_isp_stats_vdev *stats_vdev,
 		     !(rkisp_read(dev, reg, true) & ISP32_RAWAWB_2DDR_PATH_ERR))) {
 			pbuf->stat.info2ddr.buf_fd = buf->dma_fd;
 			pbuf->stat.info2ddr.owner = priv_val->buf_info_owner;
-			pbuf->meas_type |= ISP33_STAT_INFO2DDR;
+			pbuf->meas_type |= ISP35_STAT_INFO2DDR;
 			buf_fd = buf->dma_fd;
 		} else if (reg == ISP3X_RAWAWB_CTRL &&
 			   rkisp_read(dev, reg, true) & ISP32_RAWAWB_2DDR_PATH_ERR) {
@@ -318,21 +376,17 @@ rkisp_stats_info2ddr(struct rkisp_isp_stats_vdev *stats_vdev,
 }
 
 static void
-rkisp_stats_send_meas_v33(struct rkisp_isp_stats_vdev *stats_vdev,
+rkisp_stats_send_meas_v35(struct rkisp_isp_stats_vdev *stats_vdev,
 			  struct rkisp_isp_readout_work *meas_work)
 {
 	struct rkisp_isp_params_vdev *params_vdev = &stats_vdev->dev->params_vdev;
 	struct rkisp_device *dev = stats_vdev->dev;
 	struct rkisp_buffer *cur_buf = stats_vdev->cur_buf;
-	struct rkisp33_stat_buffer *cur_stat_buf = NULL;
+	struct rkisp35_stat_buffer *cur_stat_buf = NULL;
 	u32 size = stats_vdev->vdev_fmt.fmt.meta.buffersize;
-	u32 val, w3a_int, cur_frame_id = meas_work->frame_id;
+	u32 cur_frame_id = meas_work->frame_id;
 	bool is_dummy = false;
 	unsigned long flags = 0;
-
-	w3a_int = isp3_stats_read(stats_vdev, ISP39_W3A_INT_STAT);
-	if (w3a_int)
-		isp3_stats_write(stats_vdev, ISP39_W3A_INT_STAT, w3a_int);
 
 	if (!stats_vdev->rdbk_drop) {
 		if (!cur_buf && stats_vdev->stats_buf[0].mem_priv) {
@@ -372,51 +426,35 @@ rkisp_stats_send_meas_v33(struct rkisp_isp_stats_vdev *stats_vdev,
 		cur_buf = NULL;
 	}
 
-	if (w3a_int & ISP39_W3A_INT_ERR_MASK) {
-		val = isp3_stats_read(stats_vdev, ISP3X_RAWAE_BIG1_BASE);
-		if (val & ISP33_3A_MEAS_DONE)
-			isp3_module_done(stats_vdev, ISP3X_RAWAE_BIG1_BASE, val);
-
-		val = isp3_stats_read(stats_vdev, ISP3X_RAWAE_LITE_BASE);
-		if (val & ISP33_3A_MEAS_DONE)
-			isp3_module_done(stats_vdev, ISP3X_RAWAE_LITE_BASE, val);
-
-		val = isp3_stats_read(stats_vdev, ISP3X_RAWHIST_BIG1_BASE);
-		if (val & ISP33_3A_MEAS_DONE)
-			isp3_module_done(stats_vdev, ISP3X_RAWHIST_BIG1_BASE, val);
-
-		val = isp3_stats_read(stats_vdev, ISP3X_RAWHIST_LITE_BASE);
-		if (val & ISP33_3A_MEAS_DONE)
-			isp3_module_done(stats_vdev, ISP3X_RAWHIST_LITE_BASE, val);
-
-		val = isp3_stats_read(stats_vdev, ISP3X_RAWAWB_BASE);
-		if (val & ISP33_3A_MEAS_DONE)
-			isp3_module_done(stats_vdev, ISP3X_RAWAWB_BASE, val);
-
-		v4l2_warn(&dev->v4l2_dev,
-			  "id:%d stats seq:%d error:0x%x overflow(aebig:%d ae0:%d awb:%d wcfifo(wr:%d rd:%d))\n",
-			  dev->unite_index, cur_frame_id, w3a_int,
-			  !!(w3a_int & ISP39_W3A_INT_AEBIG_OVF),
-			  !!(w3a_int & ISP39_W3A_INT_AE0_OVF),
-			  !!(w3a_int & ISP39_W3A_INT_AWB_OVF),
-			  !!(w3a_int & ISP39_W3A_INT_WCFIFO_WR_ERR),
-			  !!(w3a_int & ISP39_W3A_INT_WCFIFO_RD_ERR));
-	} else {
-		if (meas_work->isp3a_ris & ISP3X_3A_RAWAWB && cur_stat_buf)
-			cur_stat_buf->meas_type |= ISP33_STAT_RAWAWB;
-
-		if (meas_work->isp3a_ris & ISP3X_3A_RAWAE_BIG && cur_stat_buf)
-			cur_stat_buf->meas_type |= ISP33_STAT_RAWAE3;
-
-		if (meas_work->isp3a_ris & ISP3X_3A_RAWHIST_BIG && cur_stat_buf)
-			cur_stat_buf->meas_type |= ISP33_STAT_RAWHST3;
-
-		if (meas_work->isp3a_ris & ISP3X_3A_RAWAE_CH0 && cur_stat_buf)
-			cur_stat_buf->meas_type |= ISP33_STAT_RAWAE0;
-
-		if (meas_work->isp3a_ris & ISP3X_3A_RAWHIST_CH0 && cur_stat_buf)
-			cur_stat_buf->meas_type |= ISP33_STAT_RAWHST0;
+	if (cur_stat_buf) {
+		cur_stat_buf->stat.buf_aiawb_index = -1;
+		cur_stat_buf->stat.info2ddr.buf_fd = -1;
+		cur_stat_buf->stat.info2ddr.owner = 0;
 	}
+
+	if (meas_work->isp3a_ris & ISP3X_3A_RAWAWB && cur_stat_buf)
+		cur_stat_buf->meas_type |= ISP35_STAT_RAWAWB;
+
+	if (meas_work->isp3a_ris & ISP3X_3A_RAWAF && cur_stat_buf)
+		cur_stat_buf->meas_type |= ISP35_STAT_RAWAF;
+
+	if (meas_work->isp3a_ris & ISP3X_3A_RAWAE_BIG && cur_stat_buf)
+		cur_stat_buf->meas_type |= ISP35_STAT_RAWAE3;
+
+	if (meas_work->isp3a_ris & ISP3X_3A_RAWHIST_BIG && cur_stat_buf)
+		cur_stat_buf->meas_type |= ISP35_STAT_RAWHST3;
+
+	if (meas_work->isp3a_ris & ISP3X_3A_RAWAE_CH0 && cur_stat_buf)
+		cur_stat_buf->meas_type |= ISP35_STAT_RAWAE0;
+
+	if (meas_work->isp3a_ris & ISP3X_3A_RAWHIST_CH0 && cur_stat_buf)
+		cur_stat_buf->meas_type |= ISP35_STAT_RAWHST0;
+
+	if (meas_work->isp3a_ris & ISP35_AIAWB_DONE && cur_stat_buf)
+		rkisp_stats_get_aiawb_stats(stats_vdev, cur_stat_buf);
+	if (meas_work->isp3a_ris & ISP35_AWBSYNC_DONE && cur_stat_buf)
+		rkisp_stats_get_awbsync_stats(stats_vdev, cur_stat_buf);
+
 	if (meas_work->isp_ris & ISP3X_FRAME) {
 		rkisp_stats_get_bay3d_stats(stats_vdev, cur_stat_buf);
 		rkisp_stats_get_sharp_stats(stats_vdev, cur_stat_buf);
@@ -425,7 +463,7 @@ rkisp_stats_send_meas_v33(struct rkisp_isp_stats_vdev *stats_vdev,
 	}
 
 	if (cur_stat_buf && (dev->is_first_double || dev->is_wait_aiq)) {
-		cur_stat_buf->meas_type |= ISP33_STAT_RTT_FST;
+		cur_stat_buf->meas_type |= ISP35_STAT_RTT_FST;
 		dev_info(dev->dev, "stats seq:%d meas_type:0x%x for fast\n",
 			 cur_frame_id, cur_stat_buf->meas_type);
 	}
@@ -455,14 +493,15 @@ rkisp_stats_send_meas_v33(struct rkisp_isp_stats_vdev *stats_vdev,
 		vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
 	}
 	v4l2_dbg(4, rkisp_debug, &stats_vdev->dev->v4l2_dev,
-		 "%s seq:%d params_id:%d ris:0x%x buf:%p meas_type:0x%x\n",
-		 __func__,
-		 cur_frame_id, params_vdev->cur_frame_id, meas_work->isp3a_ris,
-		 cur_buf, !cur_stat_buf ? 0 : cur_stat_buf->meas_type);
+		 "%s seq:%d params_id:%d ris:0x%x buf:%p meas_type:0x%x aiawb(fd:%d 0x%x)\n",
+		 __func__, cur_frame_id, params_vdev->cur_frame_id, meas_work->isp3a_ris,
+		 cur_buf, !cur_stat_buf ? 0 : cur_stat_buf->meas_type,
+		 !cur_stat_buf ? -1 : cur_stat_buf->stat.buf_aiawb_index,
+		 isp3_stats_read(stats_vdev, ISP35_AIAWB_WR_BASE_SHD));
 }
 
 static void
-rkisp_stats_isr_v33(struct rkisp_isp_stats_vdev *stats_vdev,
+rkisp_stats_isr_v35(struct rkisp_isp_stats_vdev *stats_vdev,
 		    u32 isp_ris, u32 isp3a_ris)
 {
 	struct rkisp_isp_readout_work work;
@@ -473,15 +512,10 @@ rkisp_stats_isr_v33(struct rkisp_isp_stats_vdev *stats_vdev,
 
 	temp_isp3a_ris = isp3_stats_read(stats_vdev, ISP3X_ISP_3A_RIS);
 	isp_mis_tmp = temp_isp3a_ris;
-	if (isp_mis_tmp) {
+	if (isp_mis_tmp)
 		isp3_stats_write(stats_vdev, ISP3X_ISP_3A_ICR, isp_mis_tmp);
 
-		isp_mis_tmp &= isp3_stats_read(stats_vdev, ISP3X_ISP_3A_MIS);
-		if (isp_mis_tmp)
-			v4l2_err(stats_vdev->vnode.vdev.v4l2_dev,
-				 "isp3A icr 3A info err: 0x%x 0x%x\n",
-				 isp_mis_tmp, isp3a_ris);
-	}
+	rkisp_pdaf_isr(stats_vdev->dev);
 
 	if (isp_ris & ISP3X_FRAME) {
 		work.readout = RKISP_ISP_READOUT_MEAS;
@@ -489,27 +523,27 @@ rkisp_stats_isr_v33(struct rkisp_isp_stats_vdev *stats_vdev,
 		work.isp_ris = isp_ris;
 		work.isp3a_ris = temp_isp3a_ris;
 		work.timestamp = ktime_get_ns();
-		rkisp_stats_send_meas_v33(stats_vdev, &work);
+		rkisp_stats_send_meas_v35(stats_vdev, &work);
 	}
 }
 
 static void
-rkisp_get_stat_size_v33(struct rkisp_isp_stats_vdev *stats_vdev,
+rkisp_get_stat_size_v35(struct rkisp_isp_stats_vdev *stats_vdev,
 			unsigned int sizes[])
 {
 	int mult = stats_vdev->dev->unite_div;
 
-	sizes[0] = ALIGN(sizeof(struct rkisp33_stat_buffer), 16);
+	sizes[0] = ALIGN(sizeof(struct rkisp35_stat_buffer), 16);
 	sizes[0] *= mult;
 	stats_vdev->vdev_fmt.fmt.meta.buffersize = sizes[0];
 }
 
 static int
-rkisp_stats_tb_v33(struct rkisp_isp_stats_vdev *stats_vdev,
+rkisp_stats_tb_v35(struct rkisp_isp_stats_vdev *stats_vdev,
 		   struct rkisp_buffer *stats_buf)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
-	struct rkisp33_stat_buffer *buf = stats_vdev->stats_buf[0].vaddr;
+	struct rkisp35_stat_buffer *buf = stats_vdev->stats_buf[0].vaddr;
 	u32 size = stats_vdev->vdev_fmt.fmt.meta.buffersize;
 	int ret = -EINVAL;
 
@@ -526,15 +560,16 @@ rkisp_stats_tb_v33(struct rkisp_isp_stats_vdev *stats_vdev,
 }
 
 static void
-rkisp_stats_first_ddr_config_v33(struct rkisp_isp_stats_vdev *stats_vdev)
+rkisp_stats_first_ddr_config_v35(struct rkisp_isp_stats_vdev *stats_vdev)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
+	struct rkisp_pdaf_vdev *pdaf_vdev = dev->pdaf_vdev;
 	u32 val, size = 0, div = dev->unite_div;
 
 	if (dev->isp_sdev.in_fmt.fmt_type == FMT_YUV)
 		return;
 
-	rkisp_get_stat_size_v33(stats_vdev, &size);
+	rkisp_get_stat_size_v35(stats_vdev, &size);
 	stats_vdev->stats_buf[0].is_need_vaddr = true;
 	stats_vdev->stats_buf[0].size = size;
 	if (rkisp_alloc_buffer(dev, &stats_vdev->stats_buf[0]))
@@ -545,8 +580,18 @@ rkisp_stats_first_ddr_config_v33(struct rkisp_isp_stats_vdev *stats_vdev)
 		v4l2_err(&dev->v4l2_dev, "no stats buf to enable w3a\n");
 		return;
 	}
-	rkisp_unite_set_bits(dev, ISP3X_SWS_CFG, 0, ISP3X_3A_DDR_WRITE_EN, false);
-	val = ISP39_W3A_EN | ISP39_W3A_AUTO_CLR_EN | ISP39_W3A_FORCE_UPD;
+	if (dev->hw_dev->is_single)
+		rkisp_unite_set_bits(dev, ISP3X_SWS_CFG, 0, ISP3X_3A_DDR_WRITE_EN, false);
+	val = rkisp_read(dev, ISP39_W3A_CTRL0, false);
+	val |= ISP39_W3A_EN | ISP39_W3A_AUTO_CLR_EN | ISP39_W3A_FORCE_UPD;
+	if (pdaf_vdev && pdaf_vdev->streaming) {
+		val |= ISP39_W3A_PDAF_EN;
+		rkisp_pdaf_update_buf(dev);
+		if (pdaf_vdev->next_buf) {
+			pdaf_vdev->curr_buf = pdaf_vdev->next_buf;
+			pdaf_vdev->next_buf = NULL;
+		}
+	}
 	rkisp_unite_write(dev, ISP39_W3A_CTRL0, val, false);
 	rkisp_unite_write(dev, ISP39_W3A_WR_SIZE, size / div, false);
 	if (stats_vdev->nxt_buf) {
@@ -556,33 +601,36 @@ rkisp_stats_first_ddr_config_v33(struct rkisp_isp_stats_vdev *stats_vdev)
 }
 
 static void
-rkisp_stats_next_ddr_config_v33(struct rkisp_isp_stats_vdev *stats_vdev)
+rkisp_stats_next_ddr_config_v35(struct rkisp_isp_stats_vdev *stats_vdev)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
 	struct rkisp_hw_dev *hw = dev->hw_dev;
+	struct rkisp_pdaf_vdev *pdaf_vdev = dev->pdaf_vdev;
 
 	if (!stats_vdev->streamon || dev->isp_sdev.in_fmt.fmt_type == FMT_YUV)
 		return;
 	/* pingpong buf */
-	if (hw->is_single)
+	if (hw->is_single) {
 		rkisp_stats_update_buf(stats_vdev);
+		if (pdaf_vdev && pdaf_vdev->streaming)
+			rkisp_pdaf_update_buf(dev);
+	}
 }
 
 static struct rkisp_isp_stats_ops rkisp_isp_stats_ops_tbl = {
-	.isr_hdl = rkisp_stats_isr_v33,
-	.send_meas = rkisp_stats_send_meas_v33,
-	.get_stat_size = rkisp_get_stat_size_v33,
-	.stats_tb = rkisp_stats_tb_v33,
-	.first_ddr_cfg = rkisp_stats_first_ddr_config_v33,
-	.next_ddr_cfg = rkisp_stats_next_ddr_config_v33,
+	.isr_hdl = rkisp_stats_isr_v35,
+	.get_stat_size = rkisp_get_stat_size_v35,
+	.stats_tb = rkisp_stats_tb_v35,
+	.first_ddr_cfg = rkisp_stats_first_ddr_config_v35,
+	.next_ddr_cfg = rkisp_stats_next_ddr_config_v35,
 };
 
-void rkisp_init_stats_vdev_v33(struct rkisp_isp_stats_vdev *stats_vdev)
+void rkisp_init_stats_vdev_v35(struct rkisp_isp_stats_vdev *stats_vdev)
 {
 	stats_vdev->ops = &rkisp_isp_stats_ops_tbl;
 }
 
-void rkisp_uninit_stats_vdev_v33(struct rkisp_isp_stats_vdev *stats_vdev)
+void rkisp_uninit_stats_vdev_v35(struct rkisp_isp_stats_vdev *stats_vdev)
 {
 
 }

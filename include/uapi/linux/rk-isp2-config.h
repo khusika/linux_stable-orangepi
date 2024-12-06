@@ -91,6 +91,15 @@
 
 #define RKISP_CMD_INIT_BNR_BUF \
 	_IOWR('V', BASE_VIDIOC_PRIVATE + 26, struct rkisp_bnr_buf_info)
+
+#define RKISP_CMD_GET_TB_HEAD \
+	_IOR('V', BASE_VIDIOC_PRIVATE + 27, struct rkisp_thunderboot_resmem_head)
+#define RKISP_CMD_SET_TB_HEAD \
+	_IOW('V', BASE_VIDIOC_PRIVATE + 28, struct rkisp_thunderboot_resmem_head)
+
+#define RKISP_CMD_AIAWB_BUF \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 29, struct rkisp_aiawb_buffd)
+
 /****************ISP VIDEO IOCTL******************************/
 
 #define RKISP_CMD_GET_CSI_MEMORY_MODE \
@@ -141,6 +150,7 @@
 /* BASE_VIDIOC_PRIVATE + 115 for RKISP_CMD_GET_PARAMS_V39 */
 /* BASE_VIDIOC_PRIVATE + 116 for RKISP_CMD_GET_PARAMS_V33 */
 /* BASE_VIDIOC_PRIVATE + 117 for RKISP_CMD_SET_QUICK_STREAM */
+/* BASE_VIDIOC_PRIVATE + 119 for RKISP_CMD_GET_PARAMS_V35 */
 
 /* frame information attach to image tail, see struct rkisp_frame_info
  * set this before VIDIOC_REQBUFS then VIDIOC_QUERYBUF to get buf size
@@ -330,6 +340,21 @@ struct rkisp_buf_info {
 	int buf_fd[RKISP_BUFFER_MAX];
 } __attribute__ ((packed));
 
+enum rkisp_aiawb_ds {
+	RKISP_AIAWB_DS_4X4,
+	RKISP_AIAWB_DS_8X4,
+	RKISP_AIAWB_DS_8X8,
+	RKISP_AIAWB_DS_16X16,
+};
+
+/* struct rkisp_aiawb_buffd
+ * set aiawb buf count and get buf fd result
+ */
+struct rkisp_aiawb_buffd {
+	enum rkisp_aiawb_ds ds;
+	struct rkisp_buf_info info;
+} __attribute__ ((packed));
+
 enum rkisp_isp_mode {
 	/* frame input related */
 	RKISP_ISP_NORMAL = _BITUL(0),
@@ -372,6 +397,7 @@ struct rkisp_meshbuf_size {
 struct isp2x_mesh_head {
 	enum isp2x_mesh_buf_stat stat;
 	__u32 data_oft;
+	__u32 data1_oft;
 } __attribute__ ((packed));
 
 enum {

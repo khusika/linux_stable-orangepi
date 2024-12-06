@@ -239,13 +239,18 @@ int rkisp_align_sensor_resolution(struct rkisp_device *dev,
 		max_h = dev->hw_dev->unite ?
 			CIF_ISP_INPUT_H_MAX_V33_UNITE : CIF_ISP_INPUT_H_MAX_V33;
 		break;
+	case ISP_V35:
+		max_w = CIF_ISP_INPUT_W_MAX_V35;
+		max_h = CIF_ISP_INPUT_H_MAX_V35;
+		break;
 	default:
 		max_w = CIF_ISP_INPUT_W_MAX;
 		max_h = CIF_ISP_INPUT_H_MAX;
 	}
 	max_size = max_w * max_h;
 	w = clamp_t(u32, src_w, CIF_ISP_INPUT_W_MIN, max_w);
-	max_h = max_size / w;
+	if (dev->isp_ver != ISP_V35)
+		max_h = max_size / w;
 	h = clamp_t(u32, src_h, CIF_ISP_INPUT_H_MIN, max_h);
 
 	if (dev->isp_ver >= ISP_V33) {
@@ -628,12 +633,7 @@ static void rkisp_update_list_reg(struct rkisp_device *dev)
 	/* sensor mode & index */
 	if (dev->isp_ver >= ISP_V21) {
 		val = rkisp_read_reg_cache(dev, ISP_ACQ_H_OFFS);
-		if (hw->unite == ISP_UNITE_ONE &&
-		    dev->isp_ver == ISP_V33 && !dev->is_frm_rd &&
-		    dev->unite_index == ISP_UNITE_RIGHT)
-			index = 1;
-		else
-			index = dev->multi_index;
+		index = dev->multi_index;
 		val |= ISP21_SENSOR_INDEX(index);
 		if (dev->isp_ver >= ISP_V32_L)
 			val |= ISP32L_SENSOR_MODE(dev->multi_mode);
@@ -658,7 +658,7 @@ static void rkisp_update_list_reg(struct rkisp_device *dev)
 	rkisp_update_regs(dev, ISP3X_CAC_PSF_PARA, ISP32_CAC_RO_CNT);
 	rkisp_update_regs(dev, ISP_LSC_XGRAD_01, ISP3X_CAC_CTRL);
 	rkisp_update_regs(dev, ISP39_W3A_CTRL1, ISP3X_RAWAWB_RAM_DATA_BASE);
-	rkisp_update_regs(dev, ISP32_CAC_RO_CNT, ISP39_W3A_CTRL0);
+	rkisp_update_regs(dev, ISP32_CAC_RO_CNT, ISP39_W3A_CTRL0 - 4);
 	if (dev->isp_ver == ISP_V21) {
 		val = rkisp_read(dev, MI_WR_CTRL2, false);
 		rkisp_set_bits(dev, MI_WR_CTRL2, 0, val, true);
@@ -666,10 +666,27 @@ static void rkisp_update_list_reg(struct rkisp_device *dev)
 	} else {
 		if (dev->isp_ver >= ISP_V32_L)
 			rkisp_write(dev, ISP32_SELF_SCALE_UPDATE, ISP32_SCALE_FORCE_UPD, true);
-		if (dev->isp_ver == ISP_V33 || dev->isp_ver == ISP_V39) {
+		if (dev->isp_ver >= ISP_V33) {
 			rkisp_write(dev, ISP39_MAIN_SCALE_UPDATE, ISP32_SCALE_FORCE_UPD, true);
 			if (dev->isp_ver == ISP_V33)
 				rkisp_write(dev, ISP33_BP_SCALE_UPDATE, ISP32_SCALE_FORCE_UPD, true);
+		}
+		if (dev->isp_ver == ISP_V35) {
+			rkisp_update_regs(dev, ISP35_AIAWB_CTRL1, ISP35_AIAWB_WR_BASE_VIR);
+			val = rkisp_read(dev, ISP35_AIAWB_CTRL0, false);
+			if (val & ISP35_AIAWB_EN) {
+				val |= ISP35_AIAWB_SELF_UPD;
+				writel(val, hw->base_addr + ISP35_AIAWB_CTRL0);
+			}
+			if (rkisp_read(dev, ISP39_W3A_CTRL0, false) & ISP39_W3A_EN) {
+				val = rkisp_read(dev, ISP3X_SWS_CFG, false);
+				val |= ISP3X_3A_DDR_WRITE_EN;
+				writel(val, hw->base_addr + ISP3X_SWS_CFG);
+			}
+		}
+		if (dev->isp_ver >= ISP_V33) {
+			val = rkisp_read(dev, ISP39_W3A_CTRL0, false);
+			writel(val, hw->base_addr + ISP39_W3A_CTRL0);
 		}
 		rkisp_unite_write(dev, ISP3X_MI_WR_INIT, CIF_MI_INIT_SOFT_UPD, true);
 	}
@@ -914,7 +931,7 @@ run_next:
 	/* disable isp force update to read 3dlut
 	 * 3dlut auto update at frame end for single sensor
 	 */
-	if (hw->is_single && is_upd &&
+	if (hw->is_single && is_upd && hw->isp_ver < ISP_V33 &&
 	    rkisp_read_reg_cache(dev, ISP_3DLUT_UPDATE) & 0x1) {
 		rkisp_unite_write(dev, ISP_3DLUT_UPDATE, 0, true);
 		is_3dlut_upd = true;
@@ -960,6 +977,13 @@ run_next:
 		udelay(25);
 	}
 
+	if (hw->isp_ver == ISP_V35) {
+		val = rkisp_read_reg_cache(dev, ISP3X_CSI2RX_RAW_RD_CTRL);
+		val |= ISP35_RXS_FORCE_UPD;
+		if (dev->rd_mode == HDR_RDBK_FRAME2)
+			val |= ISP35_RX0_FORCE_UPD;
+		writel(val, hw->base_addr + ISP3X_CSI2RX_RAW_RD_CTRL);
+	}
 	val = rkisp_read(dev, CSI2RX_CTRL0, true);
 	val &= ~SW_IBUF_OP_MODE(0xf);
 	tmp = SW_IBUF_OP_MODE(dev->rd_mode);
@@ -1445,7 +1469,7 @@ static void rkisp_config_ism(struct rkisp_device *dev)
 	rkisp_unite_write(dev, CIF_ISP_IS_V_SIZE, height / mult, false);
 
 	if (dev->isp_ver == ISP_V30 || dev->isp_ver == ISP_V32 ||
-	    dev->isp_ver == ISP_V33)
+	    dev->isp_ver >= ISP_V33)
 		return;
 
 	/* IS(Image Stabilization) is always on, working as output crop */
@@ -1457,8 +1481,7 @@ static int rkisp_reset_handle(struct rkisp_device *dev)
 	u32 val;
 
 	dev_info(dev->dev, "%s enter\n", __func__);
-	if (dev->isp_ver == ISP_V39 && dev->sditf_dev && dev->sditf_dev->is_on)
-		rkisp_sditf_reset_notify_vpss(dev);
+	rkisp_sditf_reset_notify_vpss(dev);
 	rkisp_hw_reg_save(dev->hw_dev);
 
 	rkisp_soft_reset(dev->hw_dev, true);
@@ -2919,6 +2942,9 @@ static void rkisp_isp_sd_try_crop(struct v4l2_subdev *sd,
 			case ISP_V33:
 				size = CIF_ISP_INPUT_W_MAX_V33 * CIF_ISP_INPUT_H_MAX_V33;
 				break;
+			case ISP_V35:
+				size = CIF_ISP_INPUT_W_MAX_V35 * CIF_ISP_INPUT_H_MAX_V35;
+				break;
 			case ISP_V39:
 				size = CIF_ISP_INPUT_W_MAX_V39_UNITE * CIF_ISP_INPUT_H_MAX_V39_UNITE;
 				size /= 2;
@@ -3005,6 +3031,10 @@ static int rkisp_isp_sd_get_selection(struct v4l2_subdev *sd,
 					CIF_ISP_INPUT_W_MAX_V33_UNITE : CIF_ISP_INPUT_W_MAX_V33;
 				max_h = dev->hw_dev->unite ?
 					CIF_ISP_INPUT_H_MAX_V33_UNITE : CIF_ISP_INPUT_H_MAX_V33;
+				break;
+			case ISP_V35:
+				max_w = CIF_ISP_INPUT_W_MAX_V35;
+				max_h = CIF_ISP_INPUT_H_MAX_V35;
 				break;
 			case ISP_V39:
 				max_w = dev->hw_dev->unite ?
@@ -3765,7 +3795,8 @@ static int rkisp_set_work_mode_by_vicap(struct rkisp_device *isp_dev,
 
 	isp_dev->is_suspend_one_frame = false;
 	if (vicap_mode->rdbk_mode < RKISP_VICAP_RDBK_AIQ) {
-		if (!hw->is_single && hw->isp_ver != ISP_V33)
+		if (!hw->is_single &&
+		    hw->isp_ver != ISP_V33 && hw->isp_ver != ISP_V35)
 			return -EINVAL;
 		/* switch to online mode for single sensor */
 		switch (rd_mode) {
@@ -3802,13 +3833,15 @@ static int rkisp_set_work_mode_by_vicap(struct rkisp_device *isp_dev,
 		rkisp_unite_write(isp_dev, CSI2RX_CTRL0,
 				  SW_IBUF_OP_MODE(isp_dev->rd_mode), true);
 		mask = SW_MPIP_DROP_FRM_DIS;
-		if (isp_dev->isp_ver == ISP_V33)
+		if (isp_dev->isp_ver == ISP_V33 || isp_dev->isp_ver == ISP_V35)
 			mask |= ISP33_SW_ISP2ENC_PATH_EN | ISP33_PP_ENC_PIPE_EN;
 		if (IS_HDR_RDBK(isp_dev->rd_mode)) {
 			val = SW_MPIP_DROP_FRM_DIS;
-			if (isp_dev->isp_ver == ISP_V33 && isp_dev->cap_dev.wrap_line)
+			if (isp_dev->cap_dev.wrap_line &&
+			    (isp_dev->isp_ver == ISP_V33 || isp_dev->isp_ver == ISP_V35))
 				val = ISP33_SW_ISP2ENC_PATH_EN | ISP33_PP_ENC_PIPE_EN;
-		} else if (isp_dev->isp_ver == ISP_V33 && isp_dev->cap_dev.wrap_line) {
+		} else if (isp_dev->cap_dev.wrap_line &&
+			   (isp_dev->isp_ver == ISP_V33 || isp_dev->isp_ver == ISP_V35)) {
 			val = ISP33_SW_ISP2ENC_PATH_EN;
 		} else {
 			val = 0;
@@ -4027,7 +4060,8 @@ static int rkisp_set_online_hdr_wrap(struct rkisp_device *dev, int *line)
 			  "hdr wrap no support for offline\n");
 		return -EINVAL;
 	}
-	if (dev->isp_ver != ISP_V33 || dev->unite_div != ISP_UNITE_DIV1) {
+	if (dev->unite_div != ISP_UNITE_DIV1 ||
+	    (dev->isp_ver != ISP_V33 && dev->isp_ver != ISP_V35)) {
 		v4l2_warn(&dev->v4l2_dev,
 			  "hdr wrap support for 1103b and no unite mode\n");
 		return -EINVAL;
@@ -4142,8 +4176,6 @@ static long rkisp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct rkisp_device *isp_dev = sd_to_isp_dev(sd);
 	struct rkisp_thunderboot_resmem *resmem;
-	struct rkisp32_thunderboot_resmem_head *tb_head_v32;
-	struct rkisp33_thunderboot_resmem_head *tb_head_v33;
 	struct rkisp_thunderboot_resmem_head *head;
 	struct rkisp_thunderboot_shmem *shmem;
 	struct isp2x_buf_idxfd *idxfd;
@@ -4164,31 +4196,29 @@ static long rkisp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		rkisp_get_info(isp_dev, arg);
 		break;
 	case RKISP_CMD_GET_TB_HEAD_V32:
-		if (isp_dev->tb_head.complete != RKISP_TB_OK ||
-		    (!isp_dev->is_rtt_suspend && !isp_dev->is_pre_on)) {
-			ret = -EINVAL;
-			break;
-		}
-		tb_head_v32 = arg;
-		memcpy(tb_head_v32, &isp_dev->tb_head,
-		       sizeof(struct rkisp_thunderboot_resmem_head));
-		memcpy(&tb_head_v32->cfg, isp_dev->params_vdev.isp32_params,
-		       sizeof(struct isp32_isp_params_cfg));
-		break;
 	case RKISP_CMD_GET_TB_HEAD_V33:
+	case RKISP_CMD_GET_TB_HEAD:
 		if (isp_dev->tb_head.complete != RKISP_TB_OK ||
 		    (!isp_dev->is_rtt_suspend && !isp_dev->is_pre_on)) {
 			ret = -EINVAL;
 			break;
 		}
-		tb_head_v33 = arg;
-		memcpy(tb_head_v33, &isp_dev->tb_head,
+		memcpy(arg, &isp_dev->tb_head,
 		       sizeof(struct rkisp_thunderboot_resmem_head));
-		memcpy(&tb_head_v33->cfg, isp_dev->params_vdev.isp33_params,
-		       sizeof(struct isp33_isp_params_cfg));
+		if (cmd != RKISP_CMD_GET_TB_HEAD_V32 && cmd != RKISP_CMD_GET_TB_HEAD_V33)
+			break;
+		if (cmd == RKISP_CMD_GET_TB_HEAD_V32)
+			memcpy(arg + sizeof(struct rkisp_thunderboot_resmem_head),
+			       isp_dev->params_vdev.isp32_params,
+			       sizeof(struct isp32_isp_params_cfg));
+		else
+			memcpy(arg + sizeof(struct rkisp_thunderboot_resmem_head),
+			       isp_dev->params_vdev.isp33_params,
+			       sizeof(struct isp33_isp_params_cfg));
 		break;
 	case RKISP_CMD_SET_TB_HEAD_V32:
 	case RKISP_CMD_SET_TB_HEAD_V33:
+	case RKISP_CMD_SET_TB_HEAD:
 		memcpy(&isp_dev->tb_head, arg,
 		       sizeof(struct rkisp_thunderboot_resmem_head));
 		break;
@@ -4325,6 +4355,9 @@ static long rkisp_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case RKISP_VICAP_CMD_SOF:
 		ret = rkisp_vicap_sof(isp_dev, arg);
 		break;
+	case RKISP_CMD_AIAWB_BUF:
+		ret = rkisp_params_get_aiawb_buffd(&isp_dev->params_vdev, arg);
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 	}
@@ -4434,6 +4467,11 @@ static long rkisp_compat_ioctl32(struct v4l2_subdev *sd,
 	case RKISP_CMD_SET_FPN:
 		size = sizeof(struct rkisp_fpn_cfg);
 		cp_f_us = true;
+		break;
+	case RKISP_CMD_AIAWB_BUF:
+		size = sizeof(struct rkisp_aiawb_buffd);
+		cp_f_us = true;
+		cp_t_us = true;
 		break;
 	default:
 		return -ENOIOCTLCMD;
@@ -4636,6 +4674,8 @@ void rkisp_save_tb_info(struct rkisp_device *isp_dev)
 		offset = size * isp_dev->dev_id;
 		break;
 	default:
+		size = sizeof(struct rkisp_thunderboot_resmem_head);
+		offset = size * isp_dev->dev_id;
 		break;
 	}
 
@@ -4664,6 +4704,8 @@ void rkisp_save_tb_info(struct rkisp_device *isp_dev)
 				  tmp->cfg.module_en_update,
 				  tmp->cfg.module_ens,
 				  tmp->cfg.module_cfg_update);
+		} else {
+			head = resmem_va + offset;
 		}
 		if (param && (isp_dev->isp_state & ISP_STOP)) {
 			params_vdev->ops->get_param_size(params_vdev,
@@ -4691,8 +4733,7 @@ void rkisp_chk_tb_over(struct rkisp_device *isp_dev)
 	if (!isp_dev->is_thunderboot)
 		return;
 
-	if (params_vdev->is_first_cfg &&
-	    (isp_dev->isp_ver == ISP_V32 || isp_dev->isp_ver == ISP_V33))
+	if (params_vdev->is_first_cfg)
 		goto end;
 
 	resmem_va = phys_to_virt(isp_dev->resmem_pa);
@@ -4930,7 +4971,7 @@ void rkisp_isp_isr(unsigned int isp_mis,
 			/* disabled frame end to read 3dlut for multi sensor
 			 * 3dlut will update at isp readback
 			 */
-			if (!dev->hw_dev->is_single) {
+			if (!dev->hw_dev->is_single && dev->isp_ver < ISP_V33) {
 				writel(0, hw->base_addr + ISP_3DLUT_UPDATE);
 				if (hw->unite == ISP_UNITE_TWO)
 					writel(0, hw->base_next_addr + ISP_3DLUT_UPDATE);

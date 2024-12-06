@@ -477,15 +477,11 @@ rkisp_get_stat_size_v39(struct rkisp_isp_stats_vdev *stats_vdev,
 	stats_vdev->vdev_fmt.fmt.meta.buffersize = sizes[0];
 }
 
-static struct rkisp_isp_stats_ops rkisp_isp_stats_ops_tbl = {
-	.isr_hdl = rkisp_stats_isr_v39,
-	.get_stat_size = rkisp_get_stat_size_v39,
-};
-
-void rkisp_stats_first_ddr_config_v39(struct rkisp_isp_stats_vdev *stats_vdev)
+static void
+rkisp_stats_first_ddr_config_v39(struct rkisp_isp_stats_vdev *stats_vdev)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
-	struct rkisp_pdaf_vdev *pdaf_vdev = &dev->pdaf_vdev;
+	struct rkisp_pdaf_vdev *pdaf_vdev = dev->pdaf_vdev;
 	u32 val, size = 0, div = dev->unite_div;
 
 	if (dev->isp_sdev.in_fmt.fmt_type == FMT_YUV)
@@ -506,7 +502,7 @@ void rkisp_stats_first_ddr_config_v39(struct rkisp_isp_stats_vdev *stats_vdev)
 	val = ISP39_W3A_EN | ISP39_W3A_FORCE_UPD;
 	if (!dev->is_aiisp_en || dev->is_aiisp_sync)
 		val |= ISP39_W3A_AUTO_CLR_EN;
-	if (pdaf_vdev->streaming) {
+	if (pdaf_vdev && pdaf_vdev->streaming) {
 		val |= ISP39_W3A_PDAF_EN;
 		rkisp_pdaf_update_buf(dev);
 		if (pdaf_vdev->next_buf) {
@@ -522,11 +518,12 @@ void rkisp_stats_first_ddr_config_v39(struct rkisp_isp_stats_vdev *stats_vdev)
 	}
 }
 
-void rkisp_stats_next_ddr_config_v39(struct rkisp_isp_stats_vdev *stats_vdev)
+static void
+rkisp_stats_next_ddr_config_v39(struct rkisp_isp_stats_vdev *stats_vdev)
 {
 	struct rkisp_device *dev = stats_vdev->dev;
 	struct rkisp_hw_dev *hw = dev->hw_dev;
-	struct rkisp_pdaf_vdev *pdaf_vdev = &dev->pdaf_vdev;
+	struct rkisp_pdaf_vdev *pdaf_vdev = dev->pdaf_vdev;
 
 	if (!stats_vdev->streamon || dev->isp_sdev.in_fmt.fmt_type == FMT_YUV)
 		return;
@@ -534,10 +531,17 @@ void rkisp_stats_next_ddr_config_v39(struct rkisp_isp_stats_vdev *stats_vdev)
 	if (hw->is_single) {
 		if (!dev->is_aiisp_en || dev->is_aiisp_sync)
 			rkisp_stats_update_buf(stats_vdev);
-		if (pdaf_vdev->streaming)
+		if (pdaf_vdev && pdaf_vdev->streaming)
 			rkisp_pdaf_update_buf(dev);
 	}
 }
+
+static struct rkisp_isp_stats_ops rkisp_isp_stats_ops_tbl = {
+	.isr_hdl = rkisp_stats_isr_v39,
+	.get_stat_size = rkisp_get_stat_size_v39,
+	.first_ddr_cfg = rkisp_stats_first_ddr_config_v39,
+	.next_ddr_cfg = rkisp_stats_next_ddr_config_v39,
+};
 
 void rkisp_init_stats_vdev_v39(struct rkisp_isp_stats_vdev *stats_vdev)
 {
