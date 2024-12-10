@@ -12975,6 +12975,7 @@ static void rkcif_toisp_check_stop_status(struct sditf_priv *priv,
 					atomic_inc(&stream->cifdev->sensor_off);
 					schedule_work(&stream->cifdev->sensor_work.work);
 				} else {
+					stream->is_single_cap = false;
 					stream->is_wait_single_cap = false;
 					complete(&stream->start_complete);
 					spin_unlock_irqrestore(&stream->cifdev->stream_spinlock, flags);
