@@ -257,6 +257,81 @@
 		status = "disabled";
 	};
 
+	pdm: pdm@20990000 {
+		compatible = "rockchip,rv1126b-pdm", "rockchip,rk3576-pdm";
+		reg = <0x20990000 0x1000>;
+		interrupts = <GIC_SPI 182 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru MCLK_PDM>, <&cru HCLK_PDM>, <&cru CLKOUT_PDM>;
+		clock-names = "pdm_clk", "pdm_hclk", "pdm_clk_out";
+		dmas = <&dmac 26>;
+		dma-names = "rx";
+		rockchip,pdm-data-shift = <5 5 5 5 5 5 5 5>;
+		pinctrl-names = "default", "idle", "clk";
+		pinctrl-0 = <&pdmm0_sdi0_pins
+			     &pdmm0_sdi1_pins
+			     &pdmm0_sdi2_pins
+			     &pdmm0_sdi3_pins>;
+		pinctrl-1 = <&pdmm0_clk0_idle
+			     &pdmm0_clk1_idle>;
+		pinctrl-2 = <&pdmm0_clk0_pins
+			     &pdmm0_clk1_pins>;
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "PDM0";
+		status = "disabled";
+	};
+
+	acdcdig_dsm: acdcdig-dsm@209a0000 {
+		compatible = "rockchip,rv1126b-dsm";
+		reg = <0x209a0000 0x1000>;
+		clocks = <&cru MCLK_RKDSM>, <&cru HCLK_RKDSM>;
+		clock-names = "dac", "pclk";
+		resets = <&cru SRST_MRESETN_RKDSM>;
+		reset-names = "reset" ;
+		rockchip,grf = <&grf>;
+		rockchip,ioc-grf = <&ioc_grf>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&dsm_aud_ln_pins
+			     &dsm_aud_lp_pins
+			     &dsm_aud_rn_pins
+			     &dsm_aud_rp_pins>;
+		#sound-dai-cells = <0>;
+		status = "disabled";
+	};
+
+	asrc0: asrc@209b0000 {
+		compatible = "rockchip,rv1126b-asrc", "rockchip,rk3506-asrc";
+		reg = <0x209b0000 0x1000>;
+		interrupts = <GIC_SPI 183 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_ASRC0>, <&cru HCLK_ASRC0>,
+			 <&cru LRCK_SRC_ASRC0>, <&cru LRCK_DST_ASRC0>;
+		clock-names = "mclk", "hclk",
+			      "src_lrck", "dst_lrck";
+		dmas = <&dmac 22>, <&dmac 23>;
+		dma-names = "rx", "tx";
+		resets = <&cru SRST_RESETN_ASRC0>, <&cru SRST_HRESETN_ASRC0>;
+		reset-names = "m", "h";
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "ASRC0";
+		status = "disabled";
+	};
+
+	asrc1: asrc@209c0000 {
+		compatible = "rockchip,rv1126b-asrc", "rockchip,rk3506-asrc";
+		reg = <0x209c0000 0x1000>;
+		interrupts = <GIC_SPI 184 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru CLK_ASRC1>, <&cru HCLK_ASRC1>,
+			 <&cru LRCK_SRC_ASRC1>, <&cru LRCK_DST_ASRC1>;
+		clock-names = "mclk", "hclk",
+			      "src_lrck", "dst_lrck";
+		dmas = <&dmac 24>, <&dmac 25>;
+		dma-names = "rx", "tx";
+		resets = <&cru SRST_RESETN_ASRC1>, <&cru SRST_HRESETN_ASRC1>;
+		reset-names = "m", "h";
+		#sound-dai-cells = <0>;
+		sound-name-prefix = "ASRC1";
+		status = "disabled";
+	};
+
 	dmac: dma-controller@20b80000 {
 		compatible = "rockchip,rv1126b-dma", "rockchip,dma";
 		reg = <0x20b80000 0x2000>;
