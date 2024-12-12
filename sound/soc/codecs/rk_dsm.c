@@ -61,6 +61,11 @@
 #define RK3562_GRF_PERI_AUDIO_CON	(0x0070)
 #define RK3576_SYS_GRF_SOC_CON2		(0x0008)
 #define RK3576_DSM_SEL			(0x0)
+#define RV1126B_AUDIO_CON0		(0x40)
+#define RV1126B_DSM_SEL			(15)
+#define RV1126B_DSM_IOC_CON		(0x40ca0)
+#define RV1126B_DSM_FUNC		(0xffff0000)
+#define RV1126B_DSM_GPIO		(0xfffff993)
 
 #define RKDSM_VOL_VAL_MAX		(0xff)
 
@@ -94,6 +99,7 @@ struct rk_dsm_iomux {
 
 struct rk_dsm_priv {
 	struct regmap *grf;
+	struct regmap *ioc_grf;
 	struct regmap *regmap;
 	struct clk *clk_dac;
 	struct clk *pclk;
@@ -794,11 +800,50 @@ static const struct rk_dsm_soc_data rk3576_data = {
 	.deinit = rk3576_soc_deinit,
 };
 
+static int rv1126b_soc_init(struct device *dev)
+{
+	struct rk_dsm_priv *rd = dev_get_drvdata(dev);
+	struct device_node *node = dev->of_node;
+
+	rd->ioc_grf = syscon_regmap_lookup_by_phandle(node, "rockchip,ioc-grf");
+	if (IS_ERR(rd->ioc_grf))
+		return PTR_ERR(rd->ioc_grf);
+	/* enable internal codec to sai2 */
+	return regmap_write(rd->grf, RV1126B_AUDIO_CON0,
+			    BIT(RV1126B_DSM_SEL) << 16 | BIT(RV1126B_DSM_SEL));
+}
+
+static void rv1126b_soc_deinit(struct device *dev)
+{
+	struct rk_dsm_priv *rd = dev_get_drvdata(dev);
+
+	regmap_write(rd->grf, RV1126B_AUDIO_CON0, BIT(RV1126B_DSM_SEL) << 16);
+}
+
+static int rv1126b_soc_iomux_switch(struct device *dev, int type)
+{
+	struct rk_dsm_priv *rd = dev_get_drvdata(dev);
+
+	if (type == RKDSM_ON_GPIO)
+		regmap_write(rd->ioc_grf, RV1126B_DSM_IOC_CON, RV1126B_DSM_GPIO);
+	else if (type == RKDSM_ON_FUNC)
+		regmap_write(rd->ioc_grf, RV1126B_DSM_IOC_CON, RV1126B_DSM_FUNC);
+
+	return 0;
+}
+
+static const struct rk_dsm_soc_data rv1126b_data = {
+	.init = rv1126b_soc_init,
+	.deinit = rv1126b_soc_deinit,
+	.iomux_switch = rv1126b_soc_iomux_switch,
+};
+
 #ifdef CONFIG_OF
 static const struct of_device_id rd_of_match[] = {
 	{ .compatible = "rockchip,rk3506-dsm", .data = &rk3506_data },
 	{ .compatible = "rockchip,rk3562-dsm", .data = &rk3562_data },
 	{ .compatible = "rockchip,rk3576-dsm", .data = &rk3576_data },
+	{ .compatible = "rockchip,rv1126b-dsm", .data = &rv1126b_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, rd_of_match);
