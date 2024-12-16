@@ -13220,14 +13220,12 @@ static void rkcif_deal_sof(struct rkcif_device *cif_dev)
 	detect_stream->readout.fs_timestamp = rkcif_time_get_ns(cif_dev);
 	spin_unlock_irqrestore(&detect_stream->fps_lock, flags);
 
-	if (cif_dev->chip_id >= CHIP_RK3576_CIF) {
-		rkcif_add_sensor_exp_to_kfifo(&cif_dev->stream[0]);
-		sd = get_rkisp_sd(cif_dev->sditf[0]);
-		if (sd) {
-			rkcif_get_sof_and_exp_info(cif_dev, &sof);
-			v4l2_subdev_call(sd, core, ioctl,
-					 RKISP_VICAP_CMD_SOF, &sof);
-		}
+	rkcif_add_sensor_exp_to_kfifo(&cif_dev->stream[0]);
+	sd = get_rkisp_sd(cif_dev->sditf[0]);
+	if (sd) {
+		rkcif_get_sof_and_exp_info(cif_dev, &sof);
+		v4l2_subdev_call(sd, core, ioctl,
+				 RKISP_VICAP_CMD_SOF, &sof);
 	}
 
 	if (cif_dev->chip_id < CHIP_RK3588_CIF)
