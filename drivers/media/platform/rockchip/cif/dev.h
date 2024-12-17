@@ -766,6 +766,7 @@ enum scale_ch_sw {
 };
 
 enum scale_mode {
+	SCALE_4TIMES,
 	SCALE_8TIMES,
 	SCALE_16TIMES,
 	SCALE_32TIMES,

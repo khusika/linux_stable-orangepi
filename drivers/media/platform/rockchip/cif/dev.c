@@ -606,7 +606,7 @@ static ssize_t rkcif_show_scl_mode(struct device *dev,
 	struct rkcif_device *cif_dev = (struct rkcif_device *)dev_get_drvdata(dev);
 	int ret;
 
-	ret = snprintf(buf, PAGE_SIZE, "%d %d %d %d\n",
+	ret = snprintf(buf, PAGE_SIZE, "%d %d %d %d (0 scale, 1 binning, 2 extract)\n",
 		       cif_dev->scale_vdev[0].scl_mode,
 		       cif_dev->scale_vdev[1].scl_mode,
 		       cif_dev->scale_vdev[2].scl_mode,
@@ -671,7 +671,7 @@ static ssize_t rkcif_show_extraction_pattern(struct device *dev,
 	struct rkcif_device *cif_dev = (struct rkcif_device *)dev_get_drvdata(dev);
 	int ret;
 
-	ret = snprintf(buf, PAGE_SIZE, "%d %d %d %d\n",
+	ret = snprintf(buf, PAGE_SIZE, "%d %d %d %d (0 top left, 1 top right, 2 bottom left, 3 bottom right)\n",
 		       cif_dev->scale_vdev[0].extrac_pattern,
 		       cif_dev->scale_vdev[1].extrac_pattern,
 		       cif_dev->scale_vdev[2].extrac_pattern,
@@ -1095,6 +1095,8 @@ void rkcif_write_register(struct rkcif_device *dev,
 				csi_offset = dev->csi_host_idx * 0x200;
 			else
 				csi_offset = 0x100 + dev->csi_host_idx * 0x100;
+		} else if (dev->chip_id == CHIP_RV1126B_CIF) {
+			csi_offset = dev->csi_host_idx * 0x200;
 		}
 	}
 	if (index < CIF_REG_INDEX_MAX) {
@@ -1137,6 +1139,8 @@ void rkcif_write_register_or(struct rkcif_device *dev,
 				csi_offset = dev->csi_host_idx * 0x200;
 			else
 				csi_offset = 0x100 + dev->csi_host_idx * 0x100;
+		} else if (dev->chip_id == CHIP_RV1126B_CIF) {
+			csi_offset = dev->csi_host_idx * 0x200;
 		}
 	}
 
@@ -1182,6 +1186,8 @@ void rkcif_write_register_and(struct rkcif_device *dev,
 				csi_offset = dev->csi_host_idx * 0x200;
 			else
 				csi_offset = 0x100 + dev->csi_host_idx * 0x100;
+		} else if (dev->chip_id == CHIP_RV1126B_CIF) {
+			csi_offset = dev->csi_host_idx * 0x200;
 		}
 	}
 
@@ -1228,6 +1234,8 @@ unsigned int rkcif_read_register(struct rkcif_device *dev,
 				csi_offset = dev->csi_host_idx * 0x200;
 			else
 				csi_offset = 0x100 + dev->csi_host_idx * 0x100;
+		} else if (dev->chip_id == CHIP_RV1126B_CIF) {
+			csi_offset = dev->csi_host_idx * 0x200;
 		}
 	}
 

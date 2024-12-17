@@ -1069,17 +1069,17 @@ void sditf_change_to_online(struct sditf_priv *priv)
 void sditf_disable_immediately(struct sditf_priv *priv)
 {
 	if (priv->toisp_inf.link_mode == TOISP0) {
-		if (priv->cif_dev->chip_id == CHIP_RV1103B_CIF)
+		if (priv->cif_dev->chip_id >= CHIP_RV1103B_CIF)
 			sditf_channel_disable_rv1103b(priv, 0);
 		else
 			sditf_channel_disable(priv, 0);
 	} else if (priv->toisp_inf.link_mode == TOISP1) {
-		if (priv->cif_dev->chip_id == CHIP_RV1103B_CIF)
+		if (priv->cif_dev->chip_id >= CHIP_RV1103B_CIF)
 			sditf_channel_disable_rv1103b(priv, 1);
 		else
 			sditf_channel_disable(priv, 1);
 	} else if (priv->toisp_inf.link_mode == TOISP_UNITE) {
-		if (priv->cif_dev->chip_id == CHIP_RV1103B_CIF) {
+		if (priv->cif_dev->chip_id >= CHIP_RV1103B_CIF) {
 			sditf_channel_disable_rv1103b(priv, 0);
 		} else {
 			sditf_channel_disable(priv, 0);
@@ -1093,17 +1093,17 @@ void sditf_disable_immediately(struct sditf_priv *priv)
 static void sditf_enable_immediately(struct sditf_priv *priv)
 {
 	if (priv->toisp_inf.link_mode == TOISP0) {
-		if (priv->cif_dev->chip_id == CHIP_RV1103B_CIF)
+		if (priv->cif_dev->chip_id >= CHIP_RV1103B_CIF)
 			sditf_channel_enable_rv1103b(priv, 0);
 		else
 			sditf_channel_enable(priv, 0);
 	} else if (priv->toisp_inf.link_mode == TOISP1) {
-		if (priv->cif_dev->chip_id == CHIP_RV1103B_CIF)
+		if (priv->cif_dev->chip_id >= CHIP_RV1103B_CIF)
 			sditf_channel_enable_rv1103b(priv, 1);
 		else
 			sditf_channel_enable(priv, 1);
 	} else if (priv->toisp_inf.link_mode == TOISP_UNITE) {
-		if (priv->cif_dev->chip_id == CHIP_RV1103B_CIF) {
+		if (priv->cif_dev->chip_id >= CHIP_RV1103B_CIF) {
 			sditf_channel_enable_rv1103b(priv, 0);
 		} else {
 			sditf_channel_enable(priv, 0);
