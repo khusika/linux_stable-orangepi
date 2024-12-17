@@ -2879,6 +2879,7 @@ static const struct vop2_win_regs rk3528_cluster0_win_data = {
 	.ymirror = VOP_REG(RK3568_CLUSTER0_WIN0_CTRL0, 0x1, 21),
 	.axi_yrgb_id = VOP_REG(RK3528_CLUSTER0_WIN0_CTRL2, 0x1f, 0),
 	.axi_uv_id = VOP_REG(RK3528_CLUSTER0_WIN0_CTRL2, 0x1f, 5),
+	.background = VOP_REG(RK3568_CLUSTER0_WIN0_DSP_BG, 0xffffffff, 0),
 };
 
 static const struct vop2_win_regs rk3568_cluster0_win_data = {
@@ -2903,6 +2904,7 @@ static const struct vop2_win_regs rk3568_cluster0_win_data = {
 	.axi_yrgb_id = VOP_REG(RK3568_CLUSTER0_WIN0_CTRL2, 0x1f, 0),
 	.axi_uv_id = VOP_REG(RK3568_CLUSTER0_WIN0_CTRL2, 0x1f, 5),
 	.axi_id = VOP_REG(RK3568_CLUSTER0_CTRL, 0x1, 13),
+	.background = VOP_REG(RK3568_CLUSTER0_WIN0_DSP_BG, 0xffffffff, 0),
 };
 
 static const struct vop2_win_regs rk3568_cluster1_win_data = {
@@ -2927,6 +2929,7 @@ static const struct vop2_win_regs rk3568_cluster1_win_data = {
 	.axi_yrgb_id = VOP_REG(RK3568_CLUSTER1_WIN0_CTRL2, 0x1f, 0),
 	.axi_uv_id = VOP_REG(RK3568_CLUSTER1_WIN0_CTRL2, 0x1f, 5),
 	.axi_id = VOP_REG(RK3568_CLUSTER1_CTRL, 0x1, 13),
+	.background = VOP_REG(RK3568_CLUSTER1_WIN0_DSP_BG, 0xffffffff, 0),
 };
 
 static const struct vop2_win_regs rk3588_cluster2_win_data = {
@@ -2949,6 +2952,7 @@ static const struct vop2_win_regs rk3588_cluster2_win_data = {
 	.axi_yrgb_id = VOP_REG(RK3588_CLUSTER2_WIN0_CTRL2, 0x1f, 0),
 	.axi_uv_id = VOP_REG(RK3588_CLUSTER2_WIN0_CTRL2, 0x1f, 5),
 	.axi_id = VOP_REG(RK3588_CLUSTER2_CTRL, 0x1, 13),
+	.background = VOP_REG(RK3588_CLUSTER2_WIN0_DSP_BG, 0xffffffff, 0),
 };
 
 static const struct vop2_win_regs rk3588_cluster3_win_data = {
@@ -2971,6 +2975,7 @@ static const struct vop2_win_regs rk3588_cluster3_win_data = {
 	.axi_yrgb_id = VOP_REG(RK3588_CLUSTER3_WIN0_CTRL2, 0x1f, 0),
 	.axi_uv_id = VOP_REG(RK3588_CLUSTER3_WIN0_CTRL2, 0x1f, 5),
 	.axi_id = VOP_REG(RK3588_CLUSTER3_CTRL, 0x1, 13),
+	.background = VOP_REG(RK3588_CLUSTER3_WIN0_DSP_BG, 0xffffffff, 0),
 };
 
 static const struct vop2_win_regs rk3568_esmart_win_data = {
@@ -2999,6 +3004,7 @@ static const struct vop2_win_regs rk3568_esmart_win_data = {
 	.ymirror = VOP_REG(RK3568_ESMART0_CTRL1, 0x1, 31),
 	.color_key = VOP_REG(RK3568_ESMART0_COLOR_KEY_CTRL, 0x3fffffff, 0),
 	.color_key_en = VOP_REG(RK3568_ESMART0_COLOR_KEY_CTRL, 0x1, 31),
+	.background = VOP_REG(RK3568_ESMART0_BG_EN, 0xffffffff, 0),
 	.scale_engine_num = VOP_REG(RK3568_ESMART0_CTRL0, 0x3, 12),/* supported from vop3 */
 	.csc_y2r_path_sel = VOP_REG(RK3568_ESMART0_CTRL0, 0x1, 24),
 };
@@ -3579,6 +3585,7 @@ static const struct vop2_win_regs rk3576_cluster0_win_data = {
 	.axi_yrgb_id = VOP_REG(RK3528_CLUSTER0_WIN0_CTRL2, 0x1f, 0),
 	.axi_uv_id = VOP_REG(RK3528_CLUSTER0_WIN0_CTRL2, 0x1f, 5),
 	.ymirror = VOP_REG(RK3568_CLUSTER0_WIN0_CTRL0, 0x1, 21),
+	.background = VOP_REG(RK3568_CLUSTER0_WIN0_DSP_BG, 0xffffffff, 0),
 	.csc_y2r_path_sel = VOP_REG(RK3568_CLUSTER0_WIN0_CTRL0, 0x1, 24),
 	.color_key = VOP_REG(RK3576_CLUSTER0_COLOR_KEY_CTRL, 0x3fffffff, 0),
 	.color_key_en = VOP_REG(RK3576_CLUSTER0_COLOR_KEY_CTRL, 0x1, 31),
@@ -3633,6 +3640,7 @@ static const struct vop2_win_regs rk3576_cluster1_win_data = {
 	.axi_yrgb_id = VOP_REG(RK3568_CLUSTER1_WIN0_CTRL2, 0x1f, 0),
 	.axi_uv_id = VOP_REG(RK3568_CLUSTER1_WIN0_CTRL2, 0x1f, 5),
 	.ymirror = VOP_REG(RK3568_CLUSTER1_WIN0_CTRL0, 0x1, 21),
+	.background = VOP_REG(RK3568_CLUSTER1_WIN0_DSP_BG, 0xffffffff, 0),
 	.csc_y2r_path_sel = VOP_REG(RK3568_CLUSTER1_WIN0_CTRL0, 0x1, 24),
 	.color_key = VOP_REG(RK3576_CLUSTER1_COLOR_KEY_CTRL, 0x3fffffff, 0),
 	.color_key_en = VOP_REG(RK3576_CLUSTER1_COLOR_KEY_CTRL, 0x1, 31),
