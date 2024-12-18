@@ -12925,6 +12925,8 @@ static void rkcif_toisp_check_stop_status(struct sditf_priv *priv,
 	u64 cur_time = 0;
 	int on = 0;
 	unsigned long flags;
+	struct v4l2_subdev *sd = NULL;
+	struct rkisp_vicap_sof sof = {0};
 
 	for (i = 0; i < TOISP_CH_MAX; i++) {
 		if (priv->cif_dev->chip_id < CHIP_RK3576_CIF)
@@ -13052,6 +13054,16 @@ static void rkcif_toisp_check_stop_status(struct sditf_priv *priv,
 				stream = &priv->cif_dev->stream[src_id % 4];
 			if (priv->cif_dev->chip_id < CHIP_RK3576_CIF) {
 				if (stream->id == 0) {
+					spin_lock_irqsave(&stream->fps_lock, flags);
+					stream->readout.fs_timestamp = rkcif_time_get_ns(priv->cif_dev);
+					spin_unlock_irqrestore(&stream->fps_lock, flags);
+					rkcif_add_sensor_exp_to_kfifo(&priv->cif_dev->stream[0]);
+					sd = get_rkisp_sd(priv->cif_dev->sditf[0]);
+					if (sd) {
+						rkcif_get_sof_and_exp_info(priv->cif_dev, &sof);
+						v4l2_subdev_call(sd, core, ioctl,
+								 RKISP_VICAP_CMD_SOF, &sof);
+					}
 					spin_lock_irqsave(&stream->vbq_lock, flags);
 					if ((!stream->thunderboot_skip_interval ||
 					     (stream->thunderboot_skip_interval &&
