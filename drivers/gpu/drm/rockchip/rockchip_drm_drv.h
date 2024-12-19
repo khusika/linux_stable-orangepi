@@ -634,6 +634,10 @@ void rockchip_drm_unregister_sub_dev(struct rockchip_drm_sub_dev *sub_dev);
 struct rockchip_drm_sub_dev *rockchip_drm_get_sub_dev(struct device_node *node);
 int rockchip_drm_add_modes_noedid(struct drm_connector *connector);
 void rockchip_drm_te_handle(struct drm_crtc *crtc);
+struct drm_crtc *rockchip_drm_encoder_get_old_crtc(struct drm_encoder *encoder,
+						   struct drm_atomic_state *state);
+struct drm_crtc *rockchip_drm_encoder_get_new_crtc(struct drm_encoder *encoder,
+						   struct drm_atomic_state *state);
 void drm_mode_convert_to_split_mode(struct drm_display_mode *mode);
 void drm_mode_convert_to_origin_mode(struct drm_display_mode *mode);
 const char *rockchip_drm_get_color_encoding_name(enum drm_color_encoding encoding);
