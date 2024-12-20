@@ -1935,20 +1935,19 @@ dw_hdmi_rockchip_mode_valid(struct dw_hdmi *dw_hdmi, void *data,
 	return status;
 }
 
-static void dw_hdmi_rockchip_encoder_disable(struct drm_encoder *encoder)
+static void dw_hdmi_rockchip_encoder_atomic_disable(struct drm_encoder *encoder,
+						    struct drm_atomic_state *state)
 {
 	struct rockchip_hdmi *hdmi = to_rockchip_hdmi(encoder);
-	struct drm_crtc *crtc = encoder->crtc;
+	struct drm_crtc *old_crtc, *new_crtc;
 	struct rockchip_crtc_state *s;
 
-	if (!crtc || !crtc->state) {
-		dev_info(hdmi->dev, "%s old crtc state is null\n", __func__);
-		return;
-	}
+	old_crtc = rockchip_drm_encoder_get_old_crtc(encoder, state);
+	new_crtc = rockchip_drm_encoder_get_new_crtc(encoder, state);
 
-	s = to_rockchip_crtc_state(crtc->state);
+	if (old_crtc && old_crtc != new_crtc) {
+		s = to_rockchip_crtc_state(old_crtc->state);
 
-	if (crtc->state->active_changed) {
 		if (hdmi->plat_data->split_mode) {
 			s->output_if &= ~(VOP_OUTPUT_IF_HDMI0 | VOP_OUTPUT_IF_HDMI1);
 		} else {
@@ -3792,7 +3791,7 @@ static void dw_hdmi_rockchip_encoder_mode_set(struct drm_encoder *encoder,
 
 static const struct drm_encoder_helper_funcs dw_hdmi_rockchip_encoder_helper_funcs = {
 	.enable     = dw_hdmi_rockchip_encoder_enable,
-	.disable    = dw_hdmi_rockchip_encoder_disable,
+	.atomic_disable = dw_hdmi_rockchip_encoder_atomic_disable,
 	.atomic_check = dw_hdmi_rockchip_encoder_atomic_check,
 	.mode_set = dw_hdmi_rockchip_encoder_mode_set,
 };
