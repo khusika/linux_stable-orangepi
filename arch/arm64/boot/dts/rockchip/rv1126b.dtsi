@@ -7,6 +7,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/pinctrl/rockchip.h>
+#include <dt-bindings/power/rockchip,rv1126b-power.h>
 #include <dt-bindings/soc/rockchip,boot-mode.h>
 #include <dt-bindings/soc/rockchip-system-status.h>
 
@@ -210,6 +211,31 @@
 		reg-shift = <2>;
 		reg-io-width = <4>;
 		status = "disabled";
+	};
+
+	pmu: power-management@20838000 {
+		compatible = "rockchip,rv1126b-pmu", "syscon", "simple-mfd";
+		reg = <0x20838000 0x400>;
+
+		power: power-controller {
+			compatible = "rockchip,rv1126b-power-controller";
+			#power-domain-cells = <1>;
+			#address-cells = <1>;
+			#size-cells = <0>;
+			status = "okay";
+
+			/* These power domains are grouped by VD_NPU */
+			power-domain@RV1126B_PD_NPU {
+				reg = <RV1126B_PD_NPU>;
+			};
+			/* These power domains are grouped by VD_LOGIC */
+			power-domain@RV1126B_PD_VDO {
+				reg = <RV1126B_PD_VDO>;
+			};
+			power-domain@RV1126B_PD_AISP {
+				reg = <RV1126B_PD_AISP>;
+			};
+		};
 	};
 
 	sai0: sai@20960000 {
