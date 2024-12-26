@@ -215,6 +215,7 @@ extern struct rkvdec_link_info rkvdec_link_rk356x_hw_info;
 extern struct rkvdec_link_info rkvdec_link_v2_hw_info;
 extern struct rkvdec_link_info rkvdec_link_vdpu382_hw_info;
 extern struct rkvdec_link_info rkvdec_link_vdpu383_hw_info;
+extern struct rkvdec_link_info rkvdec_link_vdpu384a_hw_info;
 
 int rkvdec_link_dump(struct mpp_dev *mpp);
 

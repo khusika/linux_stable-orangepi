@@ -75,6 +75,18 @@ static struct mpp_hw_info rkvdec_vdpu383_hw_info = {
 	.link_info = &rkvdec_link_vdpu383_hw_info,
 };
 
+static struct mpp_hw_info rkvdec_vdpu384a_hw_info = {
+	.reg_num = 296,
+	.reg_id = 0,
+	.reg_start = 0,
+	.reg_end = 295,
+	.reg_en = 16,
+	.reg_fmt = 8,
+	.reg_ret_status = 15,
+	.magic_base = 0x100,
+	.link_info = &rkvdec_link_vdpu384a_hw_info,
+};
+
 /*
  * file handle translate information
  */
@@ -188,6 +200,46 @@ static struct mpp_trans_info rkvdec_vdpu383_trans[] = {
 		.count = ARRAY_SIZE(trans_vdpu383_tbl_av1d),
 		.table = trans_vdpu383_tbl_av1d,
 	}
+};
+
+/*
+ * file handle translate information
+ */
+static const u16 trans_vdpu384a_tbl_h265d[] = {
+	/* 128-135 general in/out */
+	/* 140-160 rcb base */
+	/* 168-185 dpb base */
+	/* 192-210 payload */
+	/* 216-232 colmv */
+	128, 129, 130, 131, 132, 133, 134, 135, 140, 142, 144, 146, 148, 150, 152,
+	156, 158, 160, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179,
+	180, 181, 182, 183, 184, 185, 192, 194, 195, 196, 197, 198, 199, 200, 201,
+	202, 203, 204, 205, 206, 207, 208, 209, 210, 216, 217, 218, 219, 220, 221,
+	222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232
+};
+
+static const u16 trans_vdpu384a_tbl_h264d[] = {
+	/* 128-135 general in/out */
+	/* 140-160 rcb base */
+	/* 168-185 dpb base */
+	/* 192-210 payload */
+	/* 216-232 colmv */
+	128, 129, 130, 131, 132, 133, 134, 135, 140, 142, 144, 146, 148, 150, 152,
+	156, 158, 160, 168, 169, 170, 171, 172, 173, 174, 175, 176, 177, 178, 179,
+	180, 181, 182, 183, 184, 185, 192, 194, 195, 196, 197, 198, 199, 200, 201,
+	202, 203, 204, 205, 206, 207, 208, 209, 210, 216, 217, 218, 219, 220, 221,
+	222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232
+};
+
+static struct mpp_trans_info rkvdec_vdpu384a_trans[] = {
+	[RKVDEC_FMT_H265D] = {
+		.count = ARRAY_SIZE(trans_vdpu384a_tbl_h265d),
+		.table = trans_vdpu384a_tbl_h265d,
+	},
+	[RKVDEC_FMT_H264D] = {
+		.count = ARRAY_SIZE(trans_vdpu384a_tbl_h264d),
+		.table = trans_vdpu384a_tbl_h264d,
+	},
 };
 
 static int mpp_extract_rcb_info(struct rkvdec2_rcb_info *rcb_inf,
@@ -1610,6 +1662,14 @@ static const struct mpp_dev_var rkvdec_rk3576_data = {
 	.dev_ops = &rkvdec_vdpu383_dev_ops,
 };
 
+static const struct mpp_dev_var rkvdec_rv1126b_data = {
+	.device_type = MPP_DEVICE_RKVDEC,
+	.hw_info = &rkvdec_vdpu384a_hw_info,
+	.trans_info = rkvdec_vdpu384a_trans,
+	.hw_ops = &rkvdec_rk3576_hw_ops,
+	.dev_ops = &rkvdec_vdpu383_dev_ops,
+};
+
 static const struct of_device_id mpp_rkvdec2_dt_match[] = {
 	{
 		.compatible = "rockchip,rkv-decoder-v2",
@@ -1643,6 +1703,12 @@ static const struct of_device_id mpp_rkvdec2_dt_match[] = {
 	{
 		.compatible = "rockchip,rkv-decoder-rk3576",
 		.data = &rkvdec_rk3576_data,
+	},
+#endif
+#ifdef CONFIG_CPU_RV1126B
+	{
+		.compatible = "rockchip,rkv-decoder-rv1126b",
+		.data = &rkvdec_rv1126b_data,
 	},
 #endif
 	{},
