@@ -175,6 +175,7 @@ static int rockchip_flexbus_adc_read_raw(struct iio_dev *indio_dev,
 			val_mask = 0xffff;
 			break;
 		}
+		dma_rmb();
 		*val = readw(rkfb_adc->dst_buf) & val_mask;
 		return IIO_VAL_INT;
 
