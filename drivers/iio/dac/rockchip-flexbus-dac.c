@@ -229,6 +229,7 @@ static int rockchip_flexbus_dac_write_raw(struct iio_dev *indio_dev,
 			buf[0] = val & 0xffff;
 			break;
 		}
+		dma_wmb();
 
 		ret = rkfb_dac->ops->write_block(rkfb_dac, rkfb_dac->src_buf,
 						 rkfb_dac->src_buf_phys, rkfb_dac->src_buf_len, 1);
