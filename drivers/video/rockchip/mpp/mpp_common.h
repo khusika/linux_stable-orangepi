@@ -841,7 +841,7 @@ mpp_procfs_create_u32(const char *name, umode_t mode,
 {
 	return 0;
 }
-void mpp_procfs_create_common(struct proc_dir_entry *parent, struct mpp_dev *mpp)
+static inline void mpp_procfs_create_common(struct proc_dir_entry *parent, struct mpp_dev *mpp)
 {
 }
 #endif
