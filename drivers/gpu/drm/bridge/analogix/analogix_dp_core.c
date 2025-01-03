@@ -178,7 +178,7 @@ static int analogix_dp_detect_hpd(struct analogix_dp_device *dp)
 		analogix_dp_force_hpd(dp);
 
 	if (analogix_dp_get_plug_in_status(dp) != 0) {
-		dev_err(dp->dev, "failed to get hpd plug in status\n");
+		dev_dbg(dp->dev, "hpd status is detected as disconnected\n");
 		return -EINVAL;
 	}
 
