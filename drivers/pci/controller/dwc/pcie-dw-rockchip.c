@@ -118,8 +118,6 @@
 	((ltssm & PORT_LOGIC_LTSSM_STATE_MASK) == 0x15)
 #define RK_PCIE_ENUM_HW_RETRYIES	2
 
-#define	PORT_LOGIC_LTSSM_L2
-
 struct rk_pcie {
 	struct dw_pcie			*pci;
 	void __iomem			*dbi_base;
