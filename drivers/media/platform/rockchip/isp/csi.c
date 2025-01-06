@@ -717,7 +717,7 @@ void rkisp_csi_sof(struct rkisp_device *dev, u8 id)
 		return;
 	}
 
-	rkisp_isp_queue_event_sof(&dev->isp_sdev);
+	rkisp_isp_queue_event_sof(dev);
 }
 
 int rkisp_register_csi_subdev(struct rkisp_device *dev,

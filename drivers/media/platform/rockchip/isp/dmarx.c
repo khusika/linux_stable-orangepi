@@ -436,7 +436,7 @@ static void update_rawrd(struct rkisp_stream *stream)
 			};
 
 			if (!vbuf->sequence)
-				trigger.frame_id = atomic_inc_return(&dev->isp_sdev.frm_sync_seq) - 1;
+				trigger.frame_id = ++dev->dmarx_dev.cur_frame.id;
 			rkisp_rdbk_trigger_event(dev, T_CMD_QUEUE, &trigger);
 		}
 	} else if (dev->dmarx_dev.trigger == T_AUTO) {
@@ -1232,30 +1232,24 @@ void rkisp_rawrd_set_pic_size(struct rkisp_device *dev,
 
 void rkisp_dmarx_get_frame(struct rkisp_device *dev, u32 *id,
 			   u64 *sof_timestamp, u64 *timestamp,
-			   bool sync)
+			   bool is_cur_frame)
 {
 	unsigned long flag = 0;
 	u64 sof_time = 0, frame_timestamp = 0;
 	u32 frame_id = 0;
 
-	if (!IS_HDR_RDBK(dev->rd_mode)) {
-		frame_id = atomic_read(&dev->isp_sdev.frm_sync_seq) - 1;
-		frame_timestamp = dev->isp_sdev.frm_timestamp;
-		goto end;
-	}
-
 	spin_lock_irqsave(&dev->rdbk_lock, flag);
-	if (sync) {
+	if (is_cur_frame) {
 		frame_id = dev->dmarx_dev.cur_frame.id;
 		sof_time = dev->dmarx_dev.cur_frame.sof_timestamp;
 		frame_timestamp = dev->dmarx_dev.cur_frame.timestamp;
 	} else {
-		frame_id = dev->dmarx_dev.pre_frame.id;
-		sof_time = dev->dmarx_dev.pre_frame.sof_timestamp;
-		frame_timestamp = dev->dmarx_dev.pre_frame.timestamp;
+		frame_id = dev->dmarx_dev.cur_be_frame.id;
+		sof_time = dev->dmarx_dev.cur_be_frame.sof_timestamp;
+		frame_timestamp = dev->dmarx_dev.cur_be_frame.timestamp;
 	}
 	spin_unlock_irqrestore(&dev->rdbk_lock, flag);
-end:
+
 	if (id)
 		*id = frame_id;
 	if (sof_timestamp)
@@ -1290,7 +1284,8 @@ int rkisp_register_dmarx_vdev(struct rkisp_device *dev)
 		if (ret < 0)
 			goto err_free_dmarx2;
 	}
-
+	dmarx_dev->cur_be_frame.id = -1;
+	dmarx_dev->cur_frame.id = -1;
 	return 0;
 err_free_dmarx2:
 	rkisp_unregister_dmarx_video(&dmarx_dev->stream[RKISP_STREAM_RAWRD2]);

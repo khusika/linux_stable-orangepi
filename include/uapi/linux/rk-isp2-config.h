@@ -69,7 +69,7 @@
 	_IOR('V', BASE_VIDIOC_PRIVATE + 17, struct rkisp_aiisp_cfg)
 
 #define RKISP_CMD_AIISP_RD_START \
-	_IO('V', BASE_VIDIOC_PRIVATE + 18)
+	_IOW('V', BASE_VIDIOC_PRIVATE + 18, struct rkisp_aiisp_st)
 
 /* BASE_VIDIOC_PRIVATE + 19 for RKISP_CMD_GET_TB_HEAD_V33 */
 /* BASE_VIDIOC_PRIVATE + 20 for RKISP_CMD_SET_TB_HEAD_V33 */
@@ -89,6 +89,8 @@
 #define RKISP_CMD_SET_FPN \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 25, struct rkisp_fpn_cfg)
 
+#define RKISP_CMD_INIT_BNR_BUF \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 26, struct rkisp_bnr_buf_info)
 /****************ISP VIDEO IOCTL******************************/
 
 #define RKISP_CMD_GET_CSI_MEMORY_MODE \
@@ -321,6 +323,13 @@
 
 #define ISP2X_MESH_BUF_NUM		2
 
+#define RKISP_BUFFER_MAX		8
+struct rkisp_buf_info {
+	int buf_cnt;
+	int buf_size;
+	int buf_fd[RKISP_BUFFER_MAX];
+} __attribute__ ((packed));
+
 enum rkisp_isp_mode {
 	/* frame input related */
 	RKISP_ISP_NORMAL = _BITUL(0),
@@ -372,7 +381,7 @@ enum {
 	RKISP_FPN_DATA_SHIFT_3,
 };
 
-/* struct rkisp_aiisp_cfg
+/* struct rkisp_fpn_cfg
  * en: enable fpn function
  * row_en: row fpn mode other column fpn
  * data_shift: fpn data shift, 4bits of 7bits calculate fpn data
@@ -391,22 +400,46 @@ struct rkisp_fpn_cfg {
 #define RKISP_AIISP_WR_LINECNT_ID	0
 #define RKISP_AIISP_RD_LINECNT_ID	1
 struct rkisp_aiisp_ev_info {
+	unsigned long long timestamp;
 	int sequence;
 	int height;
+
+	/* bnr front end */
+	int iir_index;
+	int gain_index;
+	/* bnr back end */
+	int aiisp_index;
+} __attribute__ ((packed));
+
+struct rkisp_aiisp_st {
+	unsigned long long timestamp;
+	int sequence;
+
+	int iir_index;
+	int gain_index;
+	int aiisp_index;
 } __attribute__ ((packed));
 
 /* struct rkisp_aiisp_cfg
- * wr_mode: 0: only one RKISP_AIISP_WR_LINECNT_ID event, else event per wr_linecnt
- * rd_mode: 0: only one RKISP_AIISP_RD_LINECNT_ID event, else event per rd_linecnt
- * wr_linecnt: aiisp write irq line, 0 isn't RKISP_AIISP_WR_LINECNT_ID event, and aiisp no enable
- * rd_linecnt: aiisp read irq line, 0 isn't RKISP_AIISP_RD_LINECNT_ID event
+ * mode: 0: disable aiisp, 1:enable aiisp
+ * wr_linecnt: aiisp write irq line
+ * rd_linecnt: aiisp read irq line
  */
 struct rkisp_aiisp_cfg {
-	char wr_mode;
-	char rd_mode;
-
+	int mode;
 	int wr_linecnt;
 	int rd_linecnt;
+} __attribute__ ((packed));
+
+struct rkisp_bnr_buf_info {
+	struct rkisp_buf_info iir;
+	union {
+		struct {
+			struct rkisp_buf_info aiisp;
+			struct rkisp_buf_info gain;
+			__u8 iirsparse_en;
+		} v39;
+	} u;
 } __attribute__ ((packed));
 
 struct rkisp_bay3dbuf_info {
@@ -429,12 +462,6 @@ struct rkisp_bay3dbuf_info {
 			int gain_fd;
 			int gain_size;
 		} v33;
-		struct {
-			int gain_fd;
-			int gain_size;
-			int aiisp_fd;
-			int aiisp_size;
-		} v39;
 	} u;
 } __attribute__ ((packed));
 
