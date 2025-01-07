@@ -1298,7 +1298,6 @@ static void __sc450ai_power_off(struct sc450ai *sc450ai)
 
 	if (!IS_ERR(sc450ai->pwdn_gpio))
 		gpiod_set_value_cansleep(sc450ai->pwdn_gpio, 0);
-	clk_disable_unprepare(sc450ai->xvclk);
 	if (!IS_ERR(sc450ai->reset_gpio))
 		gpiod_set_value_cansleep(sc450ai->reset_gpio, 0);
 	if (!IS_ERR_OR_NULL(sc450ai->pins_sleep)) {
