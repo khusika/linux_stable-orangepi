@@ -80,6 +80,7 @@ enum rkisp_isp_state {
 	ISP_FRAME_BP = BIT(6),
 	ISP_FRAME_LDC = BIT(7),
 	ISP_FRAME_VPSS = BIT(8),
+	ISP_FRAME_VPSL = BIT(9),
 
 	ISP_STOP = BIT(16),
 	ISP_START = BIT(17),
@@ -213,6 +214,7 @@ struct rkisp_device {
 	struct device *dev;
 	char name[128];
 	void *sw_base_addr;
+	void *sw_vpsl_base_addr;
 	struct rkisp_hw_dev *hw_dev;
 	struct v4l2_device v4l2_dev;
 	struct v4l2_ctrl_handler ctrl_handler;

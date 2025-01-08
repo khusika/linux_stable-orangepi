@@ -157,6 +157,7 @@
 #define ISP35_BAY3D_FILT_COEFF_NUM	6
 
 #define ISP35_AI_SIGMA_NUM		33
+#define ISP35_VPSL_SIGMA_NUM		81
 
 #define ISP35_SHARP_X_NUM		ISP33_SHARP_X_NUM
 #define ISP35_SHARP_Y_NUM		ISP33_SHARP_Y_NUM
@@ -625,7 +626,7 @@ struct isp35_ai_cfg {
 	__u16 aiisp_sigma_y[ISP35_AI_SIGMA_NUM];
 	/* AIPRE_NL_PRE */
 	__u8 aipre_scale;
-	__u8 aipre_zp;
+	__s8 aipre_zp;
 	__u16 aipre_black_lvl;
 	/* AIPRE_GAIN_PARA */
 	__u8 aipre_gain_alpha;
@@ -635,7 +636,7 @@ struct isp35_ai_cfg {
 	__u16 aipre_sigma_y[ISP35_AI_SIGMA_NUM];
 	/* AIPRE_NOISE0 */
 	__u8 aipre_noise_mot_offset;
-	__u8 aipre_noise_mot_gain;
+	__s8 aipre_noise_mot_gain;
 	__u16 aipre_noise_luma_offset;
 	/* AIPRE_NOISE1 */
 	__u16 aipre_noise_luma_gain;
@@ -644,6 +645,15 @@ struct isp35_ai_cfg {
 	/* AIPRE_NOISE2 */
 	__u8 aipre_nar_manual;
 	__u8 aipre_nar_manual_alpha;
+
+	/* VPSL_PYR_CTRL */
+	__u8 pyr_yraw_mode;
+	__u8 pyr_sigma_en;
+	__u8 pyr_yraw_sel;
+	__u8 pyr_gain_leftshift;
+	__u8 pyr_blacklvl_sig;
+	/* VPSL_PYR_SIGMA_LUT */
+	__u8 pyr_sigma_y[ISP35_VPSL_SIGMA_NUM];
 } __attribute__ ((packed));
 
 struct isp35_ynr_cfg {
@@ -1739,7 +1749,14 @@ struct isp35_stat {
 	struct isp33_hist_stat hist;
 	struct isp35_awbsync_stat awbsync;
 	struct isp32_info2ddr_stat info2ddr;
+
 	int buf_aiawb_index;
+	int buf_bay3d_iir_index;
+	int buf_bay3d_ds_index;
+	int buf_bay3d_wgt_index;
+	int buf_gain_index;
+	int buf_aipre_gain_index;
+	int buf_vpsl_index;
 } __attribute__ ((packed));
 
 struct rkisp35_stat_buffer {

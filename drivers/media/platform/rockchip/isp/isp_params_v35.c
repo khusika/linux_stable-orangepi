@@ -2,6 +2,7 @@
 /* Copyright (c) 2025 Rockchip Electronics Co., Ltd. */
 
 #include <media/v4l2-common.h>
+#include <media/v4l2-event.h>
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-vmalloc.h>
@@ -295,44 +296,60 @@ isp_dpcc_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 
 static void
 isp_bls_config(struct rkisp_isp_params_vdev *params_vdev,
-	       const struct isp35_bls_cfg *arg, u32 id)
+	       const struct isp35_bls_cfg *arg,
+	       enum rkisp_params_type type, u32 id)
 {
+	struct rkisp_device *dev = params_vdev->dev;
 	const struct isp2x_bls_fixed_val *pval;
+	unsigned long lock_flags = 0;
 	u32 new_control, value;
+	bool is_lock = false;
+
+	if (!dev->is_aiisp_en ||
+	    type == RKISP_PARAMS_LAT || type == RKISP_PARAMS_ALL) {
+		pval = &arg->bls1_val;
+		switch (params_vdev->raw_type) {
+		case RAW_BGGR:
+			isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_D_FIXED, id);
+			isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_C_FIXED, id);
+			isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_B_FIXED, id);
+			isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_A_FIXED, id);
+			break;
+		case RAW_GBRG:
+			isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_C_FIXED, id);
+			isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_D_FIXED, id);
+			isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_A_FIXED, id);
+			isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_B_FIXED, id);
+			break;
+		case RAW_GRBG:
+			isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_B_FIXED, id);
+			isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_A_FIXED, id);
+			isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_D_FIXED, id);
+			isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_C_FIXED, id);
+			break;
+		case RAW_RGGB:
+		default:
+			isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_A_FIXED, id);
+			isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_B_FIXED, id);
+			isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_C_FIXED, id);
+			isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_D_FIXED, id);
+			break;
+		}
+		if (type == RKISP_PARAMS_LAT) {
+			spin_lock_irqsave(&dev->hw_dev->reg_lock, lock_flags);
+			value = isp3_param_read(params_vdev, ISP32_BLS_ISP_OB_OFFSET, id);
+			value &= 0xffff;
+			value |= arg->isp_ob_offset1 << 16;
+			isp3_param_write(params_vdev, value, ISP32_BLS_ISP_OB_OFFSET, id);
+			spin_unlock_irqrestore(&dev->hw_dev->reg_lock, lock_flags);
+			return;
+		}
+	}
 
 	new_control = isp3_param_read(params_vdev, ISP3X_BLS_CTRL, id);
 	new_control &= (ISP_BLS_ENA | ISP32_BLS_BLS2_EN);
-
-	pval = &arg->bls1_val;
 	if (arg->bls1_en)
 		new_control |= ISP_BLS_BLS1_EN;
-	switch (params_vdev->raw_type) {
-	case RAW_BGGR:
-		isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_D_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_C_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_B_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_A_FIXED, id);
-		break;
-	case RAW_GBRG:
-		isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_C_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_D_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_A_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_B_FIXED, id);
-		break;
-	case RAW_GRBG:
-		isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_B_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_A_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_D_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_C_FIXED, id);
-		break;
-	case RAW_RGGB:
-	default:
-		isp3_param_write(params_vdev, pval->r, ISP3X_BLS1_A_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP3X_BLS1_B_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP3X_BLS1_C_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP3X_BLS1_D_FIXED, id);
-		break;
-	}
 
 	/* fixed subtraction values */
 	pval = &arg->fixed_val;
@@ -395,10 +412,23 @@ isp_bls_config(struct rkisp_isp_params_vdev *params_vdev,
 	}
 	isp3_param_write(params_vdev, new_control, ISP3X_BLS_CTRL, id);
 
-	value = ISP_PACK_2SHORT(arg->isp_ob_offset, arg->isp_ob_offset1);
-	isp3_param_write(params_vdev, value, ISP32_BLS_ISP_OB_OFFSET, id);
 	isp3_param_write(params_vdev, arg->isp_ob_predgain, ISP32_BLS_ISP_OB_PREDGAIN, id);
 	isp3_param_write(params_vdev, arg->isp_ob_max, ISP32_BLS_ISP_OB_MAX, id);
+
+	if (dev->is_aiisp_en && !dev->is_aiisp_sync && type != RKISP_PARAMS_ALL)
+		is_lock = true;
+	if (is_lock) {
+		spin_lock_irqsave(&dev->hw_dev->reg_lock, lock_flags);
+
+		value = isp3_param_read(params_vdev, ISP32_BLS_ISP_OB_OFFSET, id);
+		value &= 0xffff0000;
+		value |= arg->isp_ob_offset;
+	} else {
+		value = ISP_PACK_2SHORT(arg->isp_ob_offset, arg->isp_ob_offset1);
+	}
+	isp3_param_write(params_vdev, value, ISP32_BLS_ISP_OB_OFFSET, id);
+	if (is_lock)
+		spin_unlock_irqrestore(&dev->hw_dev->reg_lock, lock_flags);
 }
 
 static void
@@ -629,7 +659,8 @@ isp_debayer_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 
 static void
 isp_awbgain_config(struct rkisp_isp_params_vdev *params_vdev,
-		   const struct isp32_awb_gain_cfg *arg, u32 id)
+		   const struct isp32_awb_gain_cfg *arg,
+		   enum rkisp_params_type type, u32 id)
 {
 	struct rkisp_device *dev = params_vdev->dev;
 
@@ -641,6 +672,18 @@ isp_awbgain_config(struct rkisp_isp_params_vdev *params_vdev,
 	    !arg->gain2_green_r || !arg->gain2_green_b) {
 		dev_err(dev->dev, "awb gain is zero!\n");
 		return;
+	}
+
+	if (!dev->is_aiisp_en || dev->is_aiisp_sync ||
+	    type == RKISP_PARAMS_ALL || type == RKISP_PARAMS_LAT) {
+		isp3_param_write(params_vdev,
+				 ISP_PACK_2SHORT(arg->awb1_gain_gb, arg->awb1_gain_gr),
+				 ISP32_ISP_AWB1_GAIN_G, id);
+		isp3_param_write(params_vdev,
+				 ISP_PACK_2SHORT(arg->awb1_gain_b, arg->awb1_gain_r),
+				 ISP32_ISP_AWB1_GAIN_RB, id);
+		if (type == RKISP_PARAMS_LAT)
+			return;
 	}
 
 	isp3_param_write(params_vdev,
@@ -663,13 +706,6 @@ isp_awbgain_config(struct rkisp_isp_params_vdev *params_vdev,
 	isp3_param_write(params_vdev,
 			 ISP_PACK_2SHORT(arg->gain2_blue, arg->gain2_red),
 			 ISP3X_ISP_AWB_GAIN2_RB, id);
-
-	isp3_param_write(params_vdev,
-			 ISP_PACK_2SHORT(arg->awb1_gain_gb, arg->awb1_gain_gr),
-			 ISP32_ISP_AWB1_GAIN_G, id);
-	isp3_param_write(params_vdev,
-			 ISP_PACK_2SHORT(arg->awb1_gain_b, arg->awb1_gain_r),
-			 ISP32_ISP_AWB1_GAIN_RB, id);
 }
 
 static void
@@ -1030,6 +1066,7 @@ isp_rawae_config(struct rkisp_isp_params_vdev *params_vdev,
 		 const struct isp35_rawae_meas_cfg *arg,
 		 u32 addr, u32 id)
 {
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	struct rkisp_device *ispdev = params_vdev->dev;
 	struct v4l2_rect *out_crop = &ispdev->isp_sdev.out_crop;
 	u32 width = out_crop->width, height = out_crop->height;
@@ -1101,11 +1138,18 @@ isp_rawae_config(struct rkisp_isp_params_vdev *params_vdev,
 		value |= ISP3X_RAWAE3_SEL(arg->rawae_sel & 0xf);
 		value |= !!arg->bnr2ae_sel << 29;
 		isp3_param_write(params_vdev, value, ISP3X_VI_ISP_PATH, id);
+		priv->is_ae3_fe = true;
+		if ((arg->bnr2ae_sel && arg->bnr_be_sel) ||
+		    (!arg->bnr2ae_sel && arg->rawae_sel == 3))
+			priv->is_ae3_fe = false;
 	} else {
 		value &= ~(ISP3X_RAWAE012_SEL(3) | BIT(30));
 		value |= ISP3X_RAWAE012_SEL(arg->rawae_sel & 0xf);
 		value |= !!arg->bnr2ae_sel << 30;
 		isp3_param_write(params_vdev, value, ISP3X_VI_ISP_PATH, id);
+		priv->is_ae0_fe = true;
+		if (arg->bnr2ae_sel && arg->bnr_be_sel)
+			priv->is_ae0_fe = false;
 	}
 }
 
@@ -3571,7 +3615,13 @@ isp_bay3d_config(struct rkisp_isp_params_vdev *params_vdev,
 		isp3_param_set_bits(params_vdev, ISP3X_ISP_CTRL1, ISP3X_RAW3D_FST_FRAME, id);
 	ctrl &= ISP35_MODULE_EN;
 
-	ctrl |= (arg->iir_rw_fmt & 0x3) << 13 |
+	value = arg->iir_rw_fmt;
+	if (value != priv->bay3d_iir_rw_fmt) {
+		dev_err(dev->dev, "%s iir_rw_fmt:%d unequal to init fmt:%d\n",
+			__func__, value, priv->bay3d_iir_rw_fmt);
+		value = priv->bay3d_iir_rw_fmt;
+	}
+	ctrl |= (value & 0x3) << 13 |
 		!!arg->motion_est_en << 8 |
 		(arg->out_use_pre_mode & 0x7) << 5 |
 		!!arg->iir_wr_src << 3 |
@@ -3964,8 +4014,8 @@ isp_bay3d_config(struct rkisp_isp_params_vdev *params_vdev,
 static void
 isp_bay3d_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 {
-	struct rkisp_isp_params_val_v35 *priv_val = params_vdev->priv_val;
-	struct rkisp_device *ispdev = params_vdev->dev;
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
 	u32 value, ctrl;
 
 	ctrl = isp3_param_read_cache(params_vdev, ISP33_BAY3D_CTRL0, id);
@@ -3973,29 +4023,65 @@ isp_bay3d_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 		return;
 
 	if (en) {
-		if (!priv_val->buf_3dnr_iir.mem_priv) {
-			dev_err(ispdev->dev, "no bay3d buffer available\n");
+		if (!priv->buf_bay3d_iir[0].mem_priv ||
+		    !priv->buf_bay3d_ds[0].mem_priv ||
+		    !priv->buf_bay3d_wgt[0].mem_priv) {
+			dev_err(dev->dev, "no bay3d buffer available\n");
 			return;
 		}
 
-		value = priv_val->bay3d_iir_size;
+		priv->bay3d_iir_idx = 0;
+		priv->bay3d_iir_cur_idx = 0;
+		value = priv->bay3d_iir_size;
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_WR_SIZE, id);
-		value = priv_val->buf_3dnr_iir.dma_addr + value * id;
-		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_WR_BASE, id);
+		value = priv->buf_bay3d_iir[0].dma_addr + value * id;
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_RD_BASE, id);
+		if (priv->bay3d_iir_rw_fmt == 3) {
+			isp3_param_write(params_vdev, value, ISP35_B3DLDC_WR_ADDR, id);
+			value += priv->bay3d_iir_offs;
+		}
+		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_WR_BASE, id);
+		if (priv->buf_aiisp[0].mem_priv) {
+			priv->aiisp_cur_idx = 0;
+			value = priv->buf_aiisp[0].dma_addr + value * id;
+			isp3_param_write(params_vdev, value, ISP39_AIISP_RD_BASE, id);
+		}
+		value = priv->bay3d_iir_stride;
+		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_WR_LENGTH, id);
+		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_RD_LENGTH, id);
+		isp3_param_write(params_vdev, value, ISP3X_MI_DBR_RD_LENGTH, id);
+		isp3_param_write(params_vdev, value, ISP35_B3DLDC_WR_STRIDE, id);
 
-		value = priv_val->bay3d_ds_size;
+		priv->bay3d_ds_idx = 0;
+		priv->bay3d_ds_cur_idx = 0;
+		value = priv->bay3d_ds_size;
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_DS_WR_SIZE, id);
-		value = priv_val->buf_3dnr_ds.dma_addr + value * id;
+		value = priv->buf_bay3d_ds[0].dma_addr + value * id;
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_DS_WR_BASE, id);
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_DS_RD_BASE, id);
 
-		value = priv_val->bay3d_wgt_size;
+		priv->bay3d_wgt_idx = 0;
+		priv->bay3d_wgt_cur_idx = 0;
+		value = priv->bay3d_wgt_size;
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_CUR_WR_SIZE, id);
 		isp3_param_write(params_vdev, value, ISP32_MI_BAY3D_CUR_RD_SIZE, id);
-		value = priv_val->buf_3dnr_wgt.dma_addr + value * id;
+		value = priv->buf_bay3d_wgt[0].dma_addr + value * id;
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_CUR_WR_BASE, id);
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_CUR_RD_BASE, id);
+
+		if (priv->buf_gain[0].mem_priv) {
+			value = priv->gain_size;
+			isp3_param_write(params_vdev, value, ISP3X_MI_GAIN_WR_SIZE, id);
+			if (!params_vdev->is_hdr)
+				isp3_param_write(params_vdev, 0, ISP32_MI_RAW0_RD_SIZE, id);
+			value = priv->buf_gain[0].dma_addr + value * id;
+			isp3_param_write(params_vdev, value, ISP3X_MI_GAIN_WR_BASE, id);
+			if (!params_vdev->is_hdr)
+				isp3_param_write(params_vdev, value, ISP3X_MI_RAW0_RD_BASE, id);
+			else
+				isp3_param_write(params_vdev, value, ISP35_B3DLDCH_RD_BASE, id);
+			priv->gain_cur_idx = 0;
+		}
 
 		ctrl |= ISP35_MODULE_EN;
 		isp3_param_write(params_vdev, ctrl, ISP33_BAY3D_CTRL0, id);
@@ -4004,7 +4090,7 @@ isp_bay3d_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 			ISP3X_BAY3D_DS_WR_AUTO_UPD | ISP3X_BAY3D_IIRSELF_UPD |
 			ISP3X_BAY3D_CURSELF_UPD | ISP3X_BAY3D_DSSELF_UPD |
 			ISP3X_BAY3D_RDSELF_UPD;
-		if (priv_val->buf_gain.mem_priv)
+		if (priv->buf_gain[0].mem_priv)
 			value |= ISP3X_GAIN_WR_AUTO_UPD | ISP3X_GAINSELF_UPD;
 		isp3_param_set_bits(params_vdev, MI_WR_CTRL2, value, id);
 
@@ -4249,31 +4335,219 @@ isp_rgbir_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 	isp3_param_write(params_vdev, value, ISP39_RGBIR_CTRL, id);
 }
 
+static void vpsl_update_buf(struct rkisp_isp_params_vdev *params_vdev)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
+	u32 i, val, ds_cnt;
+
+	if (!priv->pbuf_vpsl)
+		return;
+	priv->vpsl_cur_idx = priv->pbuf_vpsl->index;
+	ds_cnt = priv->yraw_sel ? VPSL_YRAW_CHN_MAX / 2 : VPSL_YRAW_CHN_MAX;
+	for (i = 0; i < ds_cnt; i++) {
+		val = priv->pbuf_vpsl->dma_addr + priv->vpsl_yraw_offs[i];
+		vpsl_write(dev, VPSL_MI_CHN0_WR_BASE + i * 0x100, val, false);
+		val = priv->vpsl_yraw_stride[i];
+		vpsl_write(dev, VPSL_MI_CHN0_WR_STRIDE + i * 0x100, val, false);
+		vpsl_write(dev, VPSL_MI_CHN0_WR_CTRL + i * 0x100, VPSL_CHN_WR_AUTO_UPD, false);
+	}
+	ds_cnt = priv->yraw_sel ? VPSL_SIG_CHN_MAX - 1 : VPSL_SIG_CHN_MAX;
+	for (i = 0; i < ds_cnt; i++) {
+		val = priv->pbuf_vpsl->dma_addr + priv->vpsl_sig_offs[i];
+		vpsl_write(dev, VPSL_MI_CHN6_WR_BASE + i * 0x100, val, false);
+		val = priv->vpsl_sig_stride[i];
+		vpsl_write(dev, VPSL_MI_CHN6_WR_STRIDE + i * 0x100, val, false);
+		vpsl_write(dev, VPSL_MI_CHN6_WR_CTRL + i * 0x100, VPSL_CHN_WR_AUTO_UPD, false);
+	}
+
+	vpsl_write(dev, VPSL_MI_IMSC, 0xffffffff, false);
+	val = VPSL_MI_WR_ID_POLL_DIS | VPSL_MI_WR_INIT_OFFSET_EN | VPSL_MI_WR_INIT_BASE_EN;
+	vpsl_write(dev, VPSL_MI_CTRL, val, false);
+	if (dev->hw_dev->is_single)
+		vpsl_write(dev, VPSL_MI_WR_INIT, 0x7ff0, true);
+}
+
+static void vpsl_cfg_sram(struct rkisp_isp_params_vdev *params_vdev,
+			  const struct isp35_ai_cfg *arg)
+{
+	struct rkisp_device *dev = params_vdev->dev;
+	u32 i, val;
+
+	if (!arg->pyr_sigma_en)
+		return;
+	for (i = 0; i < ISP35_VPSL_SIGMA_NUM; i++) {
+		val = arg->pyr_sigma_y[i];
+		vpsl_write(dev, VPSL_PYR_SIGMA_LUT, val, true);
+	}
+}
+
+static void vpsl_config(struct rkisp_isp_params_vdev *params_vdev,
+			const struct isp35_ai_cfg *arg, u32 id)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
+	u32 val;
+
+	if (!arg->pyr_yraw_mode && !arg->pyr_sigma_en)
+		return;
+	if (!priv->buf_vpsl[0].mem_priv) {
+		dev_err(dev->dev, "no vpsl buffer available\n");
+		return;
+	}
+
+	val = VPSL_CHN0_EN | VPSL_CHN1_EN | VPSL_CHN2_EN |
+	      VPSL_CHN6_EN | VPSL_CHN7_EN | VPSL_CHN8_EN | VPSL_CHN9_EN;
+	if (!priv->yraw_sel)
+		val |= VPSL_CHN3_EN | VPSL_CHN4_EN | VPSL_CHN5_EN | VPSL_CHN10_EN;
+	vpsl_write(dev, VPSL_PYR_CHN, val, false);
+
+	val = (arg->pyr_yraw_mode & 0x3) |
+	      !!arg->pyr_sigma_en << 2 |
+	      !!arg->pyr_yraw_sel << 4 |
+	      (arg->pyr_gain_leftshift & 0x7) << 8 |
+	      arg->pyr_blacklvl_sig << 16;
+	vpsl_write(dev, VPSL_PYR_CTRL, val, false);
+
+	//vpsl_write(dev, VPSL_IMSC, 0xffffffff, false);
+	if (dev->hw_dev->is_single) {
+		vpsl_cfg_sram(params_vdev, arg);
+		val = VPSL_CFG_GEN_UPD | VPSL_YRAW_CHN_FORCE_UPD | VPSL_SIGMA_CHN_FORCE_UPD;
+		vpsl_write(dev, VPSL_UPDATE, val, true);
+	}
+}
+
+static void
+isp_ai_config(struct rkisp_isp_params_vdev *params_vdev,
+	      const struct isp35_ai_cfg *arg, u32 id)
+{
+	struct isp35_isp_params_cfg *params_rec = params_vdev->isp35_params + id;
+	struct isp35_ai_cfg *arg_rec = &params_rec->others.ai_cfg;
+	u32 i, val;
+
+	val = isp3_param_read(params_vdev, ISP35_AI_CTRL, id);
+	val &= (ISP35_AIISP_EN | ISP35_AIPRE_IIR2DDR_EN | ISP35_AIPRE_GIAN2DDR_EN);
+	val |= !!arg->aiisp_raw12_msb << 2 |
+	       (arg->aiisp_gain_mode & 0x3) << 4 |
+	       !!arg->aiisp_curve_en << 6 |
+	       !!arg->aipre_iir_en << 8 |
+	       //!!arg->aipre_iir2ddr_en << 9 |
+	       !!arg->aipre_gain_en << 10 |
+	       //!!arg->aipre_gain2ddr_en << 11 |
+	       !!arg->aipre_yraw_sel << 12 |
+	       !!arg->aipre_nl_ddr_mode << 13 |
+	       !!arg->aipre_gain_bypass << 14 |
+	       !!arg->aipre_gain_mode << 15 |
+	       !!arg->aipre_narmap_inv << 16 |
+	       !!arg->aipre_luma2gain_dis << 17;
+	if (params_vdev->is_hdr)
+		val |= ISP35_AIISP_HDR_EN;
+	isp3_param_write(params_vdev, val, ISP35_AI_CTRL, id);
+	for (i = 0; i < ISP35_AI_SIGMA_NUM / 2; i++) {
+		val = ISP_PACK_2SHORT(arg->aiisp_sigma_y[i * 2], arg->aiisp_sigma_y[i * 2 + 1]);
+		isp3_param_write(params_vdev, val, ISP35_AI_SIGMA_Y0 + i * 4, id);
+	}
+	val = arg->aiisp_sigma_y[ISP35_AI_SIGMA_NUM - 1];
+	isp3_param_write(params_vdev, val, ISP35_AI_SIGMA_Y16, id);
+
+	val = arg->aipre_scale | (arg->aipre_zp & 0xff) << 8 |
+	      (arg->aipre_black_lvl & 0x1ff) << 20;
+	isp3_param_write(params_vdev, val, ISP35_AI_PRE_NL_PRE, id);
+
+	val = (arg->aipre_gain_alpha & 0xf) | arg->aipre_global_gain << 4 |
+	      arg->aipre_gain_ratio << 12;
+	isp3_param_write(params_vdev, val, ISP35_AI_PRE_GAIN_PARA, id);
+
+	for (i = 0; i < ISP35_AI_SIGMA_NUM / 3; i++) {
+		val = (arg->aipre_sigma_y[i * 3] & 0x3ff) |
+		      (arg->aipre_sigma_y[i * 3 + 1] & 0x3ff) << 10 |
+		      (arg->aipre_sigma_y[i * 3 + 2] & 0x3ff) << 20;
+		isp3_param_write(params_vdev, val, ISP35_AI_PRE_SIGMA_CURVE0 + i * 4, id);
+	}
+
+	val = arg->aipre_noise_mot_offset | (arg->aipre_noise_mot_gain & 0x7f) << 8 |
+	      (arg->aipre_noise_luma_offset & 0x3ff) << 16;
+	isp3_param_write(params_vdev, val, ISP35_AI_PRE_NOISE0, id);
+
+	val = (arg->aipre_noise_luma_gain & 0x7ff) |
+	      (arg->aipre_noise_luma_clip & 0x3ff) << 12 |
+	      arg->aipre_noise_luma_static << 24;
+	isp3_param_write(params_vdev, val, ISP35_AI_PRE_NOISE1, id);
+
+	val = arg->aipre_nar_manual |
+	      (arg->aipre_nar_manual_alpha & 0x3f) << 8;
+	isp3_param_write(params_vdev, val, ISP35_AI_PRE_NOISE2, id);
+
+	vpsl_config(params_vdev, arg, id);
+	*arg_rec = *arg;
+}
+
+static void
+isp_ai_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	u32 val, ctrl = isp3_param_read(params_vdev, ISP35_AI_CTRL, id);
+
+	if (en == !!(ctrl & ISP35_MODULE_EN))
+		return;
+	ctrl &= ~(ISP35_AIISP_ST | ISP35_AIPRE_IIR2DDR_EN | ISP35_AIPRE_GIAN2DDR_EN);
+	if (en) {
+		if (priv->buf_aipre_gain[0].mem_priv) {
+			priv->aipre_gain_cur_idx = 0;
+			val = priv->buf_aipre_gain[0].dma_addr;
+			isp3_param_write(params_vdev, val, ISP35_AI_PRE_GAIN_WR_BASE, id);
+			val = priv->aipre_gain_stride;
+			isp3_param_write(params_vdev, val, ISP35_AI_PRE_GAIN_WR_STRIDE, id);
+			ctrl |= ISP35_AIPRE_GIAN2DDR_EN;
+		}
+		if (priv->buf_vpsl[0].mem_priv) {
+			vpsl_update_buf(params_vdev);
+			if (!priv->yraw_sel)
+				params_vdev->dev->irq_ends_mask |= ISP_FRAME_VPSL;
+		}
+		ctrl |= ISP35_AIISP_EN | ISP35_AIPRE_ITS_FORCE_UPD;
+	} else {
+		ctrl &= ~ISP35_AIISP_EN;
+		params_vdev->dev->irq_ends_mask &= ~ISP_FRAME_VPSL;
+	}
+	isp3_param_write(params_vdev, ctrl, ISP35_AI_CTRL, id);
+	if (en) {
+		ctrl &= ~ISP35_AIPRE_ITS_FORCE_UPD;
+		isp3_param_write(params_vdev, ctrl, ISP35_AI_CTRL, id);
+	}
+}
+
 static __maybe_unused
 void __isp_isr_other_config(struct rkisp_isp_params_vdev *params_vdev,
 			    const struct isp35_isp_params_cfg *new_params,
 			    enum rkisp_params_type type, u32 id)
 {
+	struct rkisp_device *dev = params_vdev->dev;
 	u64 module_cfg_update = new_params->module_cfg_update;
 
-	v4l2_dbg(4, rkisp_debug, &params_vdev->dev->v4l2_dev,
-		 "%s id:%d seq:%d module_cfg_update:0x%llx\n",
-		 __func__, id, new_params->frame_id, module_cfg_update);
+	v4l2_dbg(4, rkisp_debug, &dev->v4l2_dev,
+		 "%s id:%d seq:%d type:%d module_cfg_update:0x%llx\n",
+		 __func__, id, new_params->frame_id, type, module_cfg_update);
 
-	if (module_cfg_update & ISP35_MODULE_RGBIR)
+	if (module_cfg_update & ISP35_MODULE_RGBIR && type != RKISP_PARAMS_LAT)
 		isp_rgbir_config(params_vdev, &new_params->others.rgbir_cfg, id);
 	if (module_cfg_update & ISP35_MODULE_BLS)//bls0 ob TNR blc1, blc2 for awb
-		isp_bls_config(params_vdev, &new_params->others.bls_cfg, id);
+		isp_bls_config(params_vdev, &new_params->others.bls_cfg, type, id);
 	if (module_cfg_update & ISP35_MODULE_AWB_GAIN)//awb0 TNR awb1
-		isp_awbgain_config(params_vdev, &new_params->others.awb_gain_cfg, id);
-	if (module_cfg_update & ISP35_MODULE_DPCC)
+		isp_awbgain_config(params_vdev, &new_params->others.awb_gain_cfg, type, id);
+	if (module_cfg_update & ISP35_MODULE_DPCC && type != RKISP_PARAMS_LAT)
 		isp_dpcc_config(params_vdev, &new_params->others.dpcc_cfg, id);
-	if (module_cfg_update & ISP35_MODULE_HDRMGE)
+	if (module_cfg_update & ISP35_MODULE_HDRMGE && type != RKISP_PARAMS_LAT)
 		isp_hdrmge_config(params_vdev, &new_params->others.hdrmge_cfg, type, id);
-	if (module_cfg_update & ISP35_MODULE_GAIN)
+	if (module_cfg_update & ISP35_MODULE_GAIN && type != RKISP_PARAMS_LAT)
 		isp_gain_config(params_vdev, &new_params->others.gain_cfg, id);
-	if (module_cfg_update & ISP35_MODULE_BAY3D)
+	if (module_cfg_update & ISP35_MODULE_AI && type != RKISP_PARAMS_LAT)
+		isp_ai_config(params_vdev, &new_params->others.ai_cfg, id);
+	if (module_cfg_update & ISP35_MODULE_BAY3D && type != RKISP_PARAMS_LAT)
 		isp_bay3d_config(params_vdev, &new_params->others.bay3d_cfg, id);
+
+	if (type == RKISP_PARAMS_IMD && dev->is_aiisp_en && !dev->is_aiisp_sync)
+		return;
 
 	if (module_cfg_update & ISP35_MODULE_CAC)
 		isp_cac_config(params_vdev, &new_params->others.cac_cfg, id);
@@ -4317,7 +4591,8 @@ void __isp_isr_other_en(struct rkisp_isp_params_vdev *params_vdev,
 			const struct isp35_isp_params_cfg *new_params,
 			enum rkisp_params_type type, u32 id)
 {
-	struct rkisp_isp_params_val_v35 *priv_val = params_vdev->priv_val;
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
 	u64 module_en_update = new_params->module_en_update;
 	u64 module_ens = new_params->module_ens;
 	u64 mask;
@@ -4325,25 +4600,30 @@ void __isp_isr_other_en(struct rkisp_isp_params_vdev *params_vdev,
 
 	mask = ISP35_MODULE_YNR | ISP35_MODULE_CNR | ISP35_MODULE_SHARP;
 	if ((module_ens & mask) && ((module_ens & mask) != mask))
-		dev_err(params_vdev->dev->dev, "ynr cnr sharp no enable together\n");
-	v4l2_dbg(4, rkisp_debug, &params_vdev->dev->v4l2_dev,
-		 "%s id:%d seq:%d module_en_update:0x%llx module_ens:0x%llx\n",
-		 __func__, id, new_params->frame_id, module_en_update, module_ens);
+		dev_err(dev->dev, "ynr cnr sharp no enable together\n");
+	v4l2_dbg(4, rkisp_debug, &dev->v4l2_dev,
+		 "%s id:%d seq:%d type:%d module_en_update:0x%llx module_ens:0x%llx\n",
+		 __func__, id, new_params->frame_id, type, module_en_update, module_ens);
 
-	if (module_en_update & ISP35_MODULE_RGBIR)
+	if (module_en_update & ISP35_MODULE_RGBIR && type != RKISP_PARAMS_LAT)
 		isp_rgbir_enable(params_vdev, !!(module_ens & ISP35_MODULE_RGBIR), id);
 	if (module_en_update & ISP35_MODULE_BLS)
 		isp_bls_enable(params_vdev, !!(module_ens & ISP35_MODULE_BLS), id);
 	if (module_en_update & ISP35_MODULE_AWB_GAIN)
 		isp_awbgain_enable(params_vdev, !!(module_ens & ISP35_MODULE_AWB_GAIN), id);
-	if (module_en_update & ISP35_MODULE_DPCC)
+	if (module_en_update & ISP35_MODULE_DPCC && type != RKISP_PARAMS_LAT)
 		isp_dpcc_enable(params_vdev, !!(module_ens & ISP35_MODULE_DPCC), id);
-	if (module_en_update & ISP35_MODULE_GAIN ||
-	    ((priv_val->buf_info_owner == RKISP_INFO2DRR_OWNER_GAIN) &&
+	if ((module_en_update & ISP35_MODULE_GAIN && type != RKISP_PARAMS_LAT) ||
+	    ((priv->buf_info_owner == RKISP_INFO2DRR_OWNER_GAIN) &&
 	     !(isp3_param_read(params_vdev, ISP3X_GAIN_CTRL, id) & ISP3X_GAIN_2DDR_EN)))
 		isp_gain_enable(params_vdev, !!(module_ens & ISP35_MODULE_GAIN), id);
-	if (module_en_update & ISP35_MODULE_BAY3D)
+	if (module_en_update & ISP35_MODULE_AI && type != RKISP_PARAMS_LAT)
+		isp_ai_enable(params_vdev, !!(module_ens & ISP35_MODULE_AI), id);
+	if (module_en_update & ISP35_MODULE_BAY3D && type != RKISP_PARAMS_LAT)
 		isp_bay3d_enable(params_vdev, !!(module_ens & ISP35_MODULE_BAY3D), id);
+
+	if (type == RKISP_PARAMS_IMD && dev->is_aiisp_en && !dev->is_aiisp_sync)
+		return;
 
 	if (module_en_update & ISP35_MODULE_CAC)
 		isp_cac_enable(params_vdev, !!(module_ens & ISP35_MODULE_CAC), id);
@@ -4393,19 +4673,27 @@ void __isp_isr_meas_config(struct rkisp_isp_params_vdev *params_vdev,
 			   struct isp35_isp_params_cfg *new_params,
 			   enum rkisp_params_type type, u32 id)
 {
+	struct rkisp_device *dev = params_vdev->dev;
 	u64 module_cfg_update = new_params->module_cfg_update;
 
+	v4l2_dbg(4, rkisp_debug, &dev->v4l2_dev,
+		 "%s id:%d seq:%d type:%d module_cfg_update:0x%llx\n",
+		 __func__, id, new_params->frame_id, type, module_cfg_update);
+
+	if (!dev->is_aiisp_en || dev->is_aiisp_sync || type != RKISP_PARAMS_LAT) {
+		if (module_cfg_update & ISP35_MODULE_RAWAE0)
+			isp_rawae0_config(params_vdev, &new_params->meas.rawae0, id);
+		if (module_cfg_update & ISP35_MODULE_RAWHIST0)
+			isp_rawhist0_config(params_vdev, &new_params->meas.rawhist0, id);
+		if ((module_cfg_update & ISP35_MODULE_RAWAF))
+			isp_rawaf_config(params_vdev, &new_params->meas.rawaf, id);
+		if (dev->is_aiisp_en && !dev->is_aiisp_sync && type == RKISP_PARAMS_IMD) {
+			params_vdev->cur_fe_frame_id = new_params->frame_id;
+			return;
+		}
+	}
 	params_vdev->cur_frame_id = new_params->frame_id;
-
-	v4l2_dbg(4, rkisp_debug, &params_vdev->dev->v4l2_dev,
-		 "%s id:%d seq:%d module_cfg_update:0x%llx\n",
-		 __func__, id, new_params->frame_id, module_cfg_update);
-
-	if (module_cfg_update & ISP35_MODULE_RAWAE0)
-		isp_rawae0_config(params_vdev, &new_params->meas.rawae0, id);
-
-	if (module_cfg_update & ISP35_MODULE_RAWHIST0)
-		isp_rawhist0_config(params_vdev, &new_params->meas.rawhist0, id);
+	params_vdev->exposure = new_params->exposure;
 
 	if (module_cfg_update & ISP35_MODULE_RAWAE3)
 		isp_rawae3_config(params_vdev, &new_params->meas.rawae3, id);
@@ -4417,8 +4705,6 @@ void __isp_isr_meas_config(struct rkisp_isp_params_vdev *params_vdev,
 		isp_awbsync_config(params_vdev, &new_params->meas.awbsync, id);
 	if (module_cfg_update & ISP35_MODULE_RAWAWB)
 		isp_rawawb_config(params_vdev, &new_params->meas.rawawb, id);
-	if ((module_cfg_update & ISP35_MODULE_RAWAF))
-		isp_rawaf_config(params_vdev, &new_params->meas.rawaf, id);
 }
 
 static __maybe_unused
@@ -4430,8 +4716,8 @@ void __isp_isr_meas_en(struct rkisp_isp_params_vdev *params_vdev,
 	u64 module_ens = new_params->module_ens;
 
 	v4l2_dbg(4, rkisp_debug, &params_vdev->dev->v4l2_dev,
-		 "%s id:%d seq:%d module_en_update:0x%llx module_ens:0x%llx\n",
-		 __func__, id, new_params->frame_id, module_en_update, module_ens);
+		 "%s id:%d seq:%d type:%d module_en_update:0x%llx module_ens:0x%llx\n",
+		 __func__, id, new_params->frame_id, type, module_en_update, module_ens);
 
 	if (module_en_update & ISP35_MODULE_RAWAE0)
 		isp_rawae0_enable(params_vdev, !!(module_ens & ISP35_MODULE_RAWAE0), id);
@@ -4474,131 +4760,6 @@ void rkisp_params_cfgsram_v35(struct rkisp_isp_params_vdev *params_vdev, bool is
 			     ISP3X_RAWHIST_LITE_BASE, true, id);
 	isp_rawhist_cfg_sram(params_vdev, &params->meas.rawhist3,
 			     ISP3X_RAWHIST_BIG1_BASE, true, id);
-}
-
-static int
-rkisp_alloc_internal_buf(struct rkisp_isp_params_vdev *params_vdev,
-			 const struct isp35_isp_params_cfg *new_params)
-{
-	struct rkisp_isp_params_val_v35 *priv_val = params_vdev->priv_val;
-	struct rkisp_device *dev = params_vdev->dev;
-	struct rkisp_isp_subdev *isp_sdev = &dev->isp_sdev;
-	u64 module_en_update, module_ens;
-	int ret;
-
-	module_en_update = new_params->module_en_update;
-	module_ens = new_params->module_ens;
-
-	if ((module_en_update & ISP35_MODULE_BAY3D) && (module_ens & ISP35_MODULE_BAY3D)) {
-		u8 iir_rw_fmt = new_params->others.bay3d_cfg.iir_rw_fmt;
-		u32 w = isp_sdev->in_crop.width;
-		u32 h = isp_sdev->in_crop.height;
-		u32 size, val, w16, w32, w128;
-		bool is_alloc;
-
-		if (dev->unite_div > ISP_UNITE_DIV1)
-			w = w / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL;
-		if (dev->unite_div == ISP_UNITE_DIV4)
-			h = h / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL;
-		w16 = ALIGN(w, 16);
-		w32 = ALIGN(w, 32);
-		w128 = ALIGN(w, 128);
-		priv_val->bay3d_iir_stride = 0;
-		switch (iir_rw_fmt) {
-		case 0:
-			val = w16 * 7 / 4;
-			size = val * h;
-			break;
-		case 1:
-			size = w16 * h * 2;
-			break;
-		case 2:
-		case 4:
-			val = ALIGN(w16 * 9 / 4, 16);
-			size = val * h;
-			priv_val->bay3d_iir_stride = val;
-			break;
-		case 3:
-			val = ALIGN((w32 + w128 / 8) * 2, 16);
-			size = val * h;
-			priv_val->bay3d_iir_stride = val;
-			break;
-		default:
-			dev_err(dev->dev, "bay3d iir_rw_fmt:%d error\n", iir_rw_fmt);
-			return -EINVAL;
-		}
-
-		val = ALIGN(size, 16);
-		priv_val->bay3d_iir_size = val;
-		if (dev->unite_div > ISP_UNITE_DIV1)
-			val *= dev->unite_div;
-		is_alloc = true;
-		if (priv_val->buf_3dnr_iir.mem_priv) {
-			if (val > priv_val->buf_3dnr_iir.size)
-				rkisp_free_buffer(dev, &priv_val->buf_3dnr_iir);
-			else
-				is_alloc = false;
-		}
-		if (is_alloc) {
-			priv_val->buf_3dnr_iir.size = val;
-			ret = rkisp_alloc_buffer(dev, &priv_val->buf_3dnr_iir);
-			if (ret) {
-				dev_err(dev->dev, "alloc bay3d iir buf fail:%d\n", ret);
-				goto err_3dnr;
-			}
-		}
-
-		val = (w16 * 36 / 8 + 31) / 32 * 4;
-		size = val * ((h + 7) / 8);
-		val = ALIGN(size, 16);
-		priv_val->bay3d_ds_size = val;
-		if (dev->unite_div > ISP_UNITE_DIV1)
-			val *= dev->unite_div;
-		is_alloc = true;
-		if (priv_val->buf_3dnr_ds.mem_priv) {
-			if (val > priv_val->buf_3dnr_ds.size)
-				rkisp_free_buffer(dev, &priv_val->buf_3dnr_ds);
-			else
-				is_alloc = false;
-		}
-		if (is_alloc) {
-			priv_val->buf_3dnr_ds.size = val;
-			ret = rkisp_alloc_buffer(dev, &priv_val->buf_3dnr_ds);
-			if (ret) {
-				rkisp_free_buffer(dev, &priv_val->buf_3dnr_iir);
-				dev_err(dev->dev, "alloc bay3d ds buf fail:%d\n", ret);
-				goto err_3dnr;
-			}
-		}
-
-		val = (((w + 31) / 32 + 1) / 2 * 2 + 3) / 4 * 4;
-		size = val * ((h + 31) / 32);
-		val = ALIGN(size, 16);
-		priv_val->bay3d_wgt_size = val;
-		if (dev->unite_div > ISP_UNITE_DIV1)
-			val *= dev->unite_div;
-		is_alloc = true;
-		if (priv_val->buf_3dnr_wgt.mem_priv) {
-			if (val > priv_val->buf_3dnr_wgt.size)
-				rkisp_free_buffer(dev, &priv_val->buf_3dnr_wgt);
-			else
-				is_alloc = false;
-		}
-		if (is_alloc) {
-			priv_val->buf_3dnr_wgt.size = val;
-			ret = rkisp_alloc_buffer(dev, &priv_val->buf_3dnr_wgt);
-			if (ret) {
-				rkisp_free_buffer(dev, &priv_val->buf_3dnr_iir);
-				rkisp_free_buffer(dev, &priv_val->buf_3dnr_ds);
-				dev_err(dev->dev, "alloc bay3d wgt buf fail:%d\n", ret);
-				goto err_3dnr;
-			}
-		}
-	}
-
-	return 0;
-err_3dnr:
-	return ret;
 }
 
 static bool
@@ -4663,7 +4824,6 @@ static void rkisp_save_first_param_v35(struct rkisp_isp_params_vdev *params_vdev
 		if (params_vdev->dev->unite_div == ISP_UNITE_DIV2)
 			memcpy(params_vdev->isp35_params + 1, param, size);
 	}
-	rkisp_alloc_internal_buf(params_vdev, params_vdev->isp35_params);
 }
 
 static void rkisp_clear_first_param_v35(struct rkisp_isp_params_vdev *params_vdev)
@@ -4964,10 +5124,371 @@ err:
 	return -ENOMEM;
 }
 
-static void
-rkisp_params_get_bay3d_buffd_v35(struct rkisp_isp_params_vdev *params_vdev,
-				 struct rkisp_bay3dbuf_info *bay3dbuf)
+static int
+rkisp_alloc_vpsl_buf(struct rkisp_isp_params_vdev *params_vdev,
+		     struct rkisp_bnr_buf_info *bnrbuf)
 {
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
+	struct rkisp_dummy_buffer *buf;
+	u32 w = dev->isp_sdev.out_crop.width;
+	u32 h = dev->isp_sdev.out_crop.height;
+	u32 size, vpsl_size, stride, ds_w, ds_h, ds_ch;
+	int i, ret, cnt;
+
+	/* yraw down sample */
+	if (priv->yraw_sel) {
+		ds_ch = VPSL_YRAW_CHN_MAX / 2;
+		ds_w = ALIGN((w + 1) / 2, 2);
+	} else {
+		ds_ch = VPSL_YRAW_CHN_MAX;
+		ds_w = (w + 1) / 2;
+	}
+	ds_h = (h + 1) / 2;
+	vpsl_size = 0;
+	for (i = 0; i < ds_ch; i++) {
+		if (priv->yraw_sel)
+			stride = ALIGN(((ds_w * 11) + 7) / 8, 16);
+		else
+			stride = ALIGN(ds_w, 16);
+		priv->vpsl_yraw_stride[i] = stride;
+		priv->vpsl_yraw_offs[i] = vpsl_size;
+		bnrbuf->u.v35.vpsl_yraw_stride[i] = stride;
+		bnrbuf->u.v35.vpsl_yraw_offs[i] = vpsl_size;
+		size = stride * ds_h;
+		vpsl_size += size;
+
+		ds_w = priv->yraw_sel ? ALIGN((ds_w + 1) / 2, 2) : (ds_w + 1) / 2;
+		ds_h = (ds_h + 1) / 2;
+	}
+	/* Sigma down sample */
+	ds_ch = priv->yraw_sel ? VPSL_SIG_CHN_MAX - 1 : VPSL_SIG_CHN_MAX;
+	ds_w = (w + 1) / 2;
+	ds_h = (h + 1) / 2;
+	for (i = 0; i < ds_ch; i++) {
+		stride = ALIGN(ds_w, 16);
+		priv->vpsl_sig_stride[i] = stride;
+		priv->vpsl_sig_offs[i] = vpsl_size;
+		bnrbuf->u.v35.vpsl_sig_stride[i] = stride;
+		bnrbuf->u.v35.vpsl_sig_offs[i] = vpsl_size;
+		size = stride * ds_h;
+		vpsl_size += size;
+
+		ds_w = (ds_w + 1) / 2;
+		ds_h = (ds_h + 1) / 2;
+	}
+
+	cnt = bnrbuf->u.v35.vpsl.buf_cnt;
+	if (cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
+	for (i = 0; i < cnt; i++) {
+		buf = &priv->buf_vpsl[i];
+		buf->size = vpsl_size;
+		buf->is_need_dbuf = true;
+		buf->is_need_dmafd = true;
+		ret = rkisp_alloc_buffer(dev, buf);
+		if (ret) {
+			dev_err(dev->dev, "alloc vpsl buf%d fail:%d\n", i, ret);
+			goto err_vpsl;
+		}
+		if (!i)
+			priv->pbuf_vpsl = buf;
+		else
+			list_add_tail(&buf->queue, &priv->vpsl_list);
+		buf->index = i;
+		bnrbuf->u.v35.vpsl.buf_fd[i] = buf->dma_fd;
+	}
+	priv->vpsl_cnt = cnt;
+	bnrbuf->u.v35.vpsl.buf_cnt = cnt;
+	bnrbuf->u.v35.vpsl.buf_size = vpsl_size;
+	return 0;
+err_vpsl:
+	for (i -= 1; i >= 0; i--) {
+		buf = &priv->buf_vpsl[i];
+		rkisp_free_buffer(dev, buf);
+	}
+	priv->vpsl_cnt = 0;
+	bnrbuf->u.v35.vpsl.buf_cnt = 0;
+	bnrbuf->u.v35.vpsl.buf_size = 0;
+	return ret;
+}
+
+static int
+rkisp_params_init_bnr_buf_v35(struct rkisp_isp_params_vdev *params_vdev,
+			      struct rkisp_bnr_buf_info *bnrbuf)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
+	struct rkisp_isp_subdev *isp_sdev = &dev->isp_sdev;
+	struct rkisp_dummy_buffer *buf;
+	u32 w = isp_sdev->out_crop.width;
+	u32 h = isp_sdev->out_crop.height;
+	u32 iir_rw_fmt, size, val, w16, w32, w128, iir_size = 0;
+	int ret, i, cnt;
+
+	INIT_LIST_HEAD(&priv->iir_list);
+	INIT_LIST_HEAD(&priv->gain_list);
+	INIT_LIST_HEAD(&priv->vpsl_list);
+	INIT_LIST_HEAD(&priv->aipre_gain_list);
+
+	iir_rw_fmt = bnrbuf->u.v35.iir_rw_fmt;
+	if (dev->unite_div > ISP_UNITE_DIV1)
+		w = w / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL;
+	if (dev->unite_div == ISP_UNITE_DIV4)
+		h = h / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL;
+	w16 = ALIGN(w, 16);
+	w32 = ALIGN(w, 32);
+	w128 = ALIGN(w, 128);
+	priv->bay3d_iir_stride = 0;
+	priv->bay3d_iir_offs = 0;
+	switch (iir_rw_fmt) {
+	case 0:
+		val = w16 * 7 / 4;
+		size = val * h;
+		break;
+	case 1:
+		size = w16 * h * 2;
+		break;
+	case 2:
+	case 4:
+		val = ALIGN(w16 * 9 / 4, 16);
+		size = val * h;
+		priv->bay3d_iir_stride = val;
+		break;
+	case 3:
+		val = ALIGN((w32 + w128 / 8) * 2, 16);
+		size = val * h;
+		priv->bay3d_iir_stride = val;
+		priv->bay3d_iir_offs = w32 * 2;
+		break;
+	default:
+		dev_err(dev->dev, "bay3d iir_rw_fmt:%d error\n", iir_rw_fmt);
+		return -EINVAL;
+	}
+	size = ALIGN(size, 16);
+	priv->bay3d_iir_size = size;
+	if (dev->unite_div > ISP_UNITE_DIV1)
+		size *= dev->unite_div;
+	cnt = bnrbuf->iir.buf_cnt;
+	if (cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
+	if (iir_rw_fmt == 3 && cnt < 2)
+		cnt = 2;
+	for (i = 0; i < cnt; i++) {
+		buf = &priv->buf_bay3d_iir[i];
+		buf->size = size;
+		buf->is_need_dbuf = true;
+		buf->is_need_dmafd = true;
+		ret = rkisp_alloc_buffer(dev, buf);
+		if (ret) {
+			dev_err(dev->dev, "alloc bay3d iir buf%d fail:%d\n", i, ret);
+			goto err_iir;
+		}
+		if (!i)
+			priv->pbuf_bay3d_iir = buf;
+		else
+			list_add_tail(&buf->queue, &priv->iir_list);
+		buf->index = i;
+		bnrbuf->iir.buf_fd[i] = buf->dma_fd;
+	}
+	priv->bay3d_iir_cnt = cnt;
+	bnrbuf->iir.buf_cnt = cnt;
+	bnrbuf->iir.buf_size = size;
+	iir_size = size;
+
+	val = (w16 * 36 / 8 + 31) / 32 * 4;
+	size = ALIGN(val * ((h + 7) / 8), 16);
+	priv->bay3d_ds_size = size;
+	if (dev->unite_div > ISP_UNITE_DIV1)
+		size *= dev->unite_div;
+	cnt = bnrbuf->u.v35.ds.buf_cnt;
+	if (cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
+	for (i = 0; i < cnt; i++) {
+		buf = &priv->buf_bay3d_ds[i];
+		buf->size = size;
+		buf->is_need_dbuf = true;
+		buf->is_need_dmafd = true;
+		ret = rkisp_alloc_buffer(dev, buf);
+		if (ret) {
+			dev_err(dev->dev, "alloc bay3d ds buf:%d fail:%d\n", i, ret);
+			goto err_ds;
+		}
+		buf->index = i;
+		bnrbuf->u.v35.ds.buf_fd[i] = buf->dma_fd;
+	}
+	priv->bay3d_ds_cnt = cnt;
+	bnrbuf->u.v35.ds.buf_cnt = cnt;
+	bnrbuf->u.v35.ds.buf_size = size;
+
+	val = (((w + 31) / 32 + 1) / 2 * 2 + 3) / 4 * 4;
+	size = ALIGN(val * ((h + 31) / 32), 16);
+	priv->bay3d_wgt_size = size;
+	if (dev->unite_div > ISP_UNITE_DIV1)
+		size *= dev->unite_div;
+	if (cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
+	for (i = 0; i < cnt; i++) {
+		buf = &priv->buf_bay3d_wgt[i];
+		buf->size = size;
+		buf->is_need_dbuf = true;
+		buf->is_need_dmafd = true;
+		ret = rkisp_alloc_buffer(dev, buf);
+		if (ret) {
+			dev_err(dev->dev, "alloc bay3d wgt buf:%d fail:%d\n", i, ret);
+			goto err_wgt;
+		}
+		buf->index = i;
+		bnrbuf->u.v35.wgt.buf_fd[i] = buf->dma_fd;
+	}
+	priv->bay3d_wgt_cnt = cnt;
+	bnrbuf->u.v35.wgt.buf_cnt = cnt;
+	bnrbuf->u.v35.wgt.buf_size = size;
+
+	cnt = bnrbuf->u.v35.aiisp.buf_cnt;
+	if (cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
+	for (i = 0; i < cnt && iir_size; i++) {
+		buf = &priv->buf_aiisp[i];
+		buf->size = iir_size;
+		buf->is_need_dbuf = true;
+		buf->is_need_dmafd = true;
+		ret = rkisp_alloc_buffer(dev, buf);
+		if (ret) {
+			dev_err(dev->dev, "alloc aiisp buf%d fail:%d\n", i, ret);
+			goto err_aiisp;
+		}
+		buf->index = i;
+		bnrbuf->u.v35.aiisp.buf_fd[i] = buf->dma_fd;
+	}
+	priv->aiisp_cnt = cnt;
+	bnrbuf->u.v35.aiisp.buf_cnt = cnt;
+	bnrbuf->u.v35.aiisp.buf_size = iir_size;
+
+	size = ALIGN(w * h / 4, 16);
+	priv->gain_size = size;
+	if (dev->unite_div > ISP_UNITE_DIV1)
+		size *= dev->unite_div;
+	cnt = bnrbuf->u.v35.gain.buf_cnt;
+	if (cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
+	for (i = 0; i < cnt; i++) {
+		buf = &priv->buf_gain[i];
+		buf->size = size;
+		buf->is_need_dbuf = true;
+		buf->is_need_dmafd = true;
+		ret = rkisp_alloc_buffer(dev, buf);
+		if (ret) {
+			dev_err(dev->dev, "alloc gain buf%d fail:%d\n", i, ret);
+			goto err_gain;
+		}
+		if (!i)
+			priv->pbuf_gain_wr = buf;
+		else
+			list_add_tail(&buf->queue, &priv->gain_list);
+		buf->index = i;
+		bnrbuf->u.v35.gain.buf_fd[i] = buf->dma_fd;
+	}
+	priv->gain_cnt = cnt;
+	bnrbuf->u.v35.gain.buf_cnt = cnt;
+	bnrbuf->u.v35.gain.buf_size = size;
+
+	val = ALIGN(w / 4, 16);
+	priv->aipre_gain_stride = val;
+	size = ALIGN(val * (h / 2), 16);
+	if (dev->unite_div > ISP_UNITE_DIV1)
+		size *= dev->unite_div;
+	cnt = bnrbuf->u.v35.aipre_gain.buf_cnt;
+	if (cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
+	for (i = 0; i < cnt; i++) {
+		buf = &priv->buf_aipre_gain[i];
+		buf->size = size;
+		buf->is_need_dbuf = true;
+		buf->is_need_dmafd = true;
+		ret = rkisp_alloc_buffer(dev, buf);
+		if (ret) {
+			dev_err(dev->dev, "alloc aipre gain buf%d fail:%d\n", i, ret);
+			goto err_aipre_gain;
+		}
+		if (!i)
+			priv->pbuf_aipre_gain = buf;
+		else
+			list_add_tail(&buf->queue, &priv->aipre_gain_list);
+		buf->index = i;
+		bnrbuf->u.v35.aipre_gain.buf_fd[i] = buf->dma_fd;
+	}
+	priv->aipre_gain_cnt = cnt;
+	bnrbuf->u.v35.aipre_gain.buf_cnt = cnt;
+	bnrbuf->u.v35.aipre_gain.buf_size = size;
+
+	priv->bay3d_iir_rw_fmt = iir_rw_fmt;
+	priv->yraw_sel = !!bnrbuf->u.v35.yraw_sel;
+	ret = rkisp_alloc_vpsl_buf(params_vdev, bnrbuf);
+	if (ret)
+		goto err_vpsl;
+	return 0;
+err_vpsl:
+	i = priv->aipre_gain_cnt;
+err_aipre_gain:
+	for (i -= 1; i >= 0; i--) {
+		buf = &priv->buf_aipre_gain[i];
+		rkisp_free_buffer(dev, buf);
+	}
+	priv->aipre_gain_cnt = 0;
+	bnrbuf->u.v35.aipre_gain.buf_cnt = 0;
+	bnrbuf->u.v35.aipre_gain.buf_size = 0;
+
+	i = priv->gain_cnt;
+err_gain:
+	for (i -= 1; i >= 0; i--) {
+		buf = &priv->buf_gain[i];
+		rkisp_free_buffer(dev, buf);
+	}
+	priv->gain_cnt = 0;
+	bnrbuf->u.v35.gain.buf_cnt = 0;
+	bnrbuf->u.v35.gain.buf_size = 0;
+
+	i = priv->aiisp_cnt;
+err_aiisp:
+	for (i -= 1; i >= 0; i--) {
+		buf = &priv->buf_aiisp[i];
+		rkisp_free_buffer(dev, buf);
+	}
+	priv->aiisp_cnt = 0;
+	bnrbuf->u.v35.aiisp.buf_cnt = 0;
+	bnrbuf->u.v35.aiisp.buf_size = 0;
+
+	i = priv->bay3d_wgt_cnt;
+err_wgt:
+	for (i -= 1; i >= 0; i--) {
+		buf = &priv->buf_bay3d_wgt[i];
+		rkisp_free_buffer(dev, buf);
+	}
+	priv->bay3d_wgt_cnt = 0;
+	bnrbuf->u.v35.wgt.buf_cnt = 0;
+	bnrbuf->u.v35.wgt.buf_size = 0;
+
+	i = priv->bay3d_ds_cnt;
+err_ds:
+	for (i -= 1; i >= 0; i--) {
+		buf = &priv->buf_bay3d_ds[i];
+		rkisp_free_buffer(dev, buf);
+	}
+	priv->bay3d_ds_cnt = 0;
+	bnrbuf->u.v35.ds.buf_cnt = 0;
+	bnrbuf->u.v35.ds.buf_size = 0;
+
+	i = priv->bay3d_iir_cnt;
+err_iir:
+	for (i -= 1; i >= 0; i--) {
+		buf = &priv->buf_bay3d_iir[i];
+		rkisp_free_buffer(dev, buf);
+	}
+	priv->bay3d_iir_cnt = 0;
+	bnrbuf->iir.buf_cnt = 0;
+	bnrbuf->iir.buf_size = 0;
+	return ret;
 }
 
 static int
@@ -4981,8 +5502,8 @@ rkisp_params_get_aiawb_buffd_v35(struct rkisp_isp_params_vdev *params_vdev, void
 	u32 width = out_crop->width, height = out_crop->height;
 	int i, size, ret, cnt = cfg->info.buf_cnt;
 
-	if (cnt <= 0 || cnt > RKISP_BUFFER_MAX)
-		cnt = RKISP_BUFFER_MAX;
+	if (cnt <= 0 || cnt >= RKISP_BUFFER_MAX)
+		cnt = RKISP_BUFFER_MAX - 1;
 	switch (cfg->ds) {
 	case RKISP_AIAWB_DS_4X4:
 		size = (width / 4) * (height / 4) * 8;
@@ -5035,25 +5556,42 @@ err:
 static void
 rkisp_params_stream_stop_v35(struct rkisp_isp_params_vdev *params_vdev)
 {
-	struct rkisp_isp_params_val_v35 *priv_val = params_vdev->priv_val;
-	struct rkisp_device *ispdev = params_vdev->dev;
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
 	int i;
 
-	rkisp_free_buffer(ispdev, &priv_val->buf_3dnr_iir);
-	rkisp_free_buffer(ispdev, &priv_val->buf_3dnr_wgt);
-	rkisp_free_buffer(ispdev, &priv_val->buf_3dnr_ds);
-	rkisp_free_buffer(ispdev, &priv_val->buf_gain);
+	for (i = 0; i < priv->vpsl_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_vpsl[i]);
+	priv->vpsl_cnt = 0;
+	for (i = 0; i < priv->aipre_gain_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_aipre_gain[i]);
+	priv->aipre_gain_cnt = 0;
+	for (i = 0; i < priv->gain_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_gain[i]);
+	priv->gain_cnt = 0;
+	for (i = 0; i < priv->aiisp_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_aiisp[i]);
+	priv->aiisp_cnt = 0;
+	for (i = 0; i < priv->bay3d_wgt_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_bay3d_wgt[i]);
+	priv->bay3d_wgt_cnt = 0;
+	for (i = 0; i < priv->bay3d_ds_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_bay3d_ds[i]);
+	priv->bay3d_ds_cnt = 0;
+	for (i = 0; i < priv->bay3d_iir_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_bay3d_iir[i]);
+	priv->bay3d_iir_cnt = 0;
 	for (i = 0; i < RKISP_STATS_DDR_BUF_NUM; i++)
-		rkisp_free_buffer(ispdev, &ispdev->stats_vdev.stats_buf[i]);
-	for (i = 0; i < priv_val->buf_aiawb_cnt; i++)
-		rkisp_free_buffer(ispdev, &priv_val->buf_aiawb[i]);
-	priv_val->buf_aiawb_cnt = 0;
-	priv_val->buf_aiawb_idx = 0;
-	priv_val->buf_info_owner = 0;
-	priv_val->buf_info_cnt = 0;
-	priv_val->buf_info_idx = -1;
+		rkisp_free_buffer(dev, &dev->stats_vdev.stats_buf[i]);
+	for (i = 0; i < priv->buf_aiawb_cnt; i++)
+		rkisp_free_buffer(dev, &priv->buf_aiawb[i]);
 	for (i = 0; i < RKISP_INFO2DDR_BUF_MAX; i++)
-		rkisp_free_buffer(ispdev, &priv_val->buf_info[i]);
+		rkisp_free_buffer(dev, &priv->buf_info[i]);
+	priv->buf_aiawb_cnt = 0;
+	priv->buf_aiawb_idx = -1;
+	priv->buf_info_owner = 0;
+	priv->buf_info_cnt = 0;
+	priv->buf_info_idx = -1;
 }
 
 static void
@@ -5114,6 +5652,71 @@ module_data_abandon(struct rkisp_isp_params_vdev *params_vdev,
 }
 
 static void
+rkisp_params_cfg_latter_v35(struct rkisp_isp_params_vdev *params_vdev, u32 frame_id)
+{
+	struct rkisp_device *dev = params_vdev->dev;
+	struct isp35_isp_params_cfg *new_params = NULL;
+	struct rkisp_buffer *cur_buf = NULL;
+	unsigned long flags = 0;
+	int i;
+
+	spin_lock_irqsave(&params_vdev->config_lock, flags);
+	if (!params_vdev->streamon)
+		goto unlock;
+
+	/* get buffer by frame_id */
+	while (!list_empty(&params_vdev->params_be)) {
+		cur_buf = list_first_entry(&params_vdev->params_be, struct rkisp_buffer, queue);
+		new_params = cur_buf->vaddr[0];
+		if (new_params->frame_id < frame_id) {
+			list_del(&cur_buf->queue);
+			for (i = 0; i < dev->unite_div; i++) {
+				/* update en immediately */
+				if (new_params->module_en_update ||
+				    (new_params->module_cfg_update & ISP35_MODULE_FORCE)) {
+					__isp_isr_meas_config(params_vdev,
+							      new_params, RKISP_PARAMS_LAT, i);
+					__isp_isr_other_config(params_vdev,
+							       new_params, RKISP_PARAMS_LAT, i);
+					__isp_isr_other_en(params_vdev,
+							   new_params, RKISP_PARAMS_LAT, i);
+					__isp_isr_meas_en(params_vdev,
+							  new_params, RKISP_PARAMS_LAT, i);
+					new_params->module_cfg_update = 0;
+				}
+				if (new_params->module_cfg_update & (ISP35_MODULE_LDCH | ISP35_MODULE_BAY3D))
+					module_data_abandon(params_vdev, new_params, i);
+				new_params++;
+			}
+			vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
+			cur_buf = NULL;
+			continue;
+		} else if (new_params->frame_id == frame_id) {
+			list_del(&cur_buf->queue);
+		} else {
+			cur_buf = NULL;
+		}
+		break;
+	}
+
+	if (!cur_buf)
+		goto unlock;
+
+	new_params = cur_buf->vaddr[0];
+	for (i = 0; i < dev->unite_div; i++) {
+		__isp_isr_meas_config(params_vdev, new_params, RKISP_PARAMS_LAT, i);
+		__isp_isr_other_config(params_vdev, new_params, RKISP_PARAMS_LAT, i);
+		__isp_isr_other_en(params_vdev, new_params, RKISP_PARAMS_LAT, i);
+		__isp_isr_meas_en(params_vdev, new_params, RKISP_PARAMS_LAT, i);
+		new_params->module_cfg_update = 0;
+		new_params++;
+	}
+	vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
+unlock:
+	spin_unlock_irqrestore(&params_vdev->config_lock, flags);
+}
+
+static void
 rkisp_params_cfg_v35(struct rkisp_isp_params_vdev *params_vdev,
 		     u32 frame_id, enum rkisp_params_type type)
 {
@@ -5122,6 +5725,11 @@ rkisp_params_cfg_v35(struct rkisp_isp_params_vdev *params_vdev,
 	struct rkisp_buffer *cur_buf = NULL;
 	unsigned long flags = 0;
 	int i;
+
+	if (type == RKISP_PARAMS_LAT) {
+		rkisp_params_cfg_latter_v35(params_vdev, frame_id);
+		return;
+	}
 
 	spin_lock_irqsave(&params_vdev->config_lock, flags);
 	if (!params_vdev->streamon)
@@ -5133,27 +5741,29 @@ rkisp_params_cfg_v35(struct rkisp_isp_params_vdev *params_vdev,
 		new_params = (struct isp35_isp_params_cfg *)(cur_buf->vaddr[0]);
 		if (new_params->frame_id < frame_id) {
 			list_del(&cur_buf->queue);
-			if (list_empty(&params_vdev->params))
-				break;
 			for (i = 0; i < dev->unite_div; i++) {
 				/* update en immediately */
 				if (new_params->module_en_update ||
 				    (new_params->module_cfg_update & ISP35_MODULE_FORCE)) {
-					__isp_isr_meas_config(params_vdev,
-							      new_params, RKISP_PARAMS_ALL, i);
-					__isp_isr_other_config(params_vdev,
-							       new_params, RKISP_PARAMS_ALL, i);
-					__isp_isr_other_en(params_vdev,
-							   new_params, RKISP_PARAMS_ALL, i);
-					__isp_isr_meas_en(params_vdev,
-							  new_params, RKISP_PARAMS_ALL, i);
-					new_params->module_cfg_update = 0;
+					if (!dev->is_aiisp_en || dev->is_aiisp_sync)
+						type = RKISP_PARAMS_ALL;
+					__isp_isr_meas_config(params_vdev, new_params, type, i);
+					__isp_isr_other_config(params_vdev, new_params, type, i);
+					__isp_isr_other_en(params_vdev, new_params, type, i);
+					__isp_isr_meas_en(params_vdev, new_params, type, i);
+					if (!dev->is_aiisp_en || dev->is_aiisp_sync)
+						new_params->module_cfg_update = 0;
 				}
-				if (new_params->module_cfg_update & ISP35_MODULE_LDCH)
+				if ((!dev->is_aiisp_en || dev->is_aiisp_sync) &&
+				    (new_params->module_cfg_update &
+				     (ISP35_MODULE_LDCH | ISP35_MODULE_BAY3D)))
 					module_data_abandon(params_vdev, new_params, i);
 				new_params++;
 			}
-			vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
+			if (!dev->is_aiisp_en || dev->is_aiisp_sync)
+				vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
+			else
+				list_add_tail(&cur_buf->queue, &params_vdev->params_be);
 			cur_buf = NULL;
 			continue;
 		} else if (new_params->frame_id == frame_id) {
@@ -5174,17 +5784,24 @@ rkisp_params_cfg_v35(struct rkisp_isp_params_vdev *params_vdev,
 		__isp_isr_other_config(params_vdev, new_params, type, i);
 		__isp_isr_other_en(params_vdev, new_params, type, i);
 		__isp_isr_meas_en(params_vdev, new_params, type, i);
-		if (IS_HDR_RDBK(dev->rd_mode)) {
+		if (new_params->module_cfg_update & ISP35_MODULE_HDRMGE) {
 			params_rec->others.hdrmge_cfg = new_params->others.hdrmge_cfg;
-			params_rec->others.drc_cfg = new_params->others.drc_cfg;
-			params_rec->module_cfg_update = new_params->module_cfg_update;
-			params_rec++;
+			params_rec->module_cfg_update |= ISP35_MODULE_HDRMGE;
 		}
-		new_params->module_cfg_update = 0;
+		if (new_params->module_cfg_update & ISP35_MODULE_DRC &&
+		    (!dev->is_aiisp_en || dev->is_aiisp_sync)) {
+			params_rec->others.drc_cfg = new_params->others.drc_cfg;
+			params_rec->module_cfg_update |= ISP35_MODULE_DRC;
+		}
+		if (!dev->is_aiisp_en || dev->is_aiisp_sync)
+			new_params->module_cfg_update = 0;
 		new_params++;
+		params_rec++;
 	}
-	vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
-
+	if (!dev->is_aiisp_en || dev->is_aiisp_sync)
+		vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
+	else
+		list_add_tail(&cur_buf->queue, &params_vdev->params_be);
 unlock:
 	spin_unlock_irqrestore(&params_vdev->config_lock, flags);
 }
@@ -5206,37 +5823,423 @@ rkisp_params_clear_fstflg(struct rkisp_isp_params_vdev *params_vdev)
 }
 
 static void
+rkisp_params_aiisp_update_buf(struct rkisp_isp_params_vdev *params_vdev)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	unsigned long lock_flags = 0;
+	u32 val;
+
+	if (params_vdev->dev->is_aiisp_sync)
+		return;
+
+	spin_lock_irqsave(&priv->buf_lock, lock_flags);
+	val = isp3_param_read_direct(params_vdev, ISP3X_MI_BAY3D_IIR_WR_BASE_SHD);
+	isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_IIR_RD_BASE, 0);
+	priv->pbuf_bay3d_iir = NULL;
+	if (!list_empty(&priv->iir_list)) {
+		priv->pbuf_bay3d_iir = list_first_entry(&priv->iir_list,
+					struct rkisp_dummy_buffer, queue);
+		list_del(&priv->pbuf_bay3d_iir->queue);
+
+		val = priv->pbuf_bay3d_iir->dma_addr;
+		isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_IIR_WR_BASE, 0);
+		priv->bay3d_iir_cur_idx = priv->pbuf_bay3d_iir->index;
+	}
+
+	priv->pbuf_gain_wr = NULL;
+	if (!list_empty(&priv->gain_list)) {
+		priv->pbuf_gain_wr = list_first_entry(&priv->gain_list,
+					struct rkisp_dummy_buffer, queue);
+		list_del(&priv->pbuf_gain_wr->queue);
+
+		val = priv->pbuf_gain_wr->dma_addr;
+		isp3_param_write(params_vdev, val, ISP3X_MI_GAIN_WR_BASE, 0);
+		priv->gain_cur_idx = priv->pbuf_gain_wr->index;
+	}
+	val = ISP3X_BAY3D_IIRSELF_UPD | ISP3X_BAY3D_RDSELF_UPD | ISP3X_GAINSELF_UPD;
+	isp3_param_set_bits(params_vdev, MI_WR_CTRL2, val, 0);
+
+	priv->pbuf_aipre_gain = NULL;
+	if (!list_empty(&priv->aipre_gain_list)) {
+		priv->pbuf_aipre_gain = list_first_entry(&priv->aipre_gain_list,
+					struct rkisp_dummy_buffer, queue);
+		list_del(&priv->pbuf_aipre_gain->queue);
+
+		val = priv->pbuf_aipre_gain->dma_addr;
+		isp3_param_write(params_vdev, val, ISP35_AI_PRE_GAIN_WR_BASE, 0);
+
+		val = isp3_param_read(params_vdev, ISP35_AI_CTRL, 0);
+		val &= ~ISP35_AIISP_ST;
+		val |= ISP35_AIPRE_ITS_FORCE_UPD;
+		isp3_param_write(params_vdev, val, ISP35_AI_CTRL, 0);
+		val &= ~ISP35_AIPRE_ITS_FORCE_UPD;
+		isp3_param_write(params_vdev, val, ISP35_AI_CTRL, 0);
+	}
+
+	v4l2_dbg(3, rkisp_debug, &params_vdev->dev->v4l2_dev,
+		 "aiisp_update %x:%x %x:%x %x:%x %x:%x, iir:%x gain:%x aipre:%x\n",
+		 ISP3X_MI_BAY3D_IIR_WR_BASE_SHD,
+		 isp3_param_read_direct(params_vdev, ISP3X_MI_BAY3D_IIR_WR_BASE_SHD),
+		 ISP3X_MI_BAY3D_IIR_RD_BASE_SHD,
+		 isp3_param_read_direct(params_vdev, ISP3X_MI_BAY3D_IIR_RD_BASE_SHD),
+		 ISP3X_MI_GAIN_WR_BASE_SHD,
+		 isp3_param_read_direct(params_vdev, ISP3X_MI_GAIN_WR_BASE_SHD),
+		 ISP35_AI_PRE_GAIN_WR_BASE,
+		 isp3_param_read_direct(params_vdev, ISP35_AI_PRE_GAIN_WR_BASE),
+		 priv->pbuf_bay3d_iir ? (u32)priv->pbuf_bay3d_iir->dma_addr : 0,
+		 priv->pbuf_gain_wr ? (u32)priv->pbuf_gain_wr->dma_addr : 0,
+		 priv->pbuf_aipre_gain ? (u32)priv->pbuf_aipre_gain->dma_addr : 0);
+	if (!priv->pbuf_gain_wr || !priv->pbuf_aipre_gain || !priv->pbuf_bay3d_iir) {
+		if (priv->pbuf_bay3d_iir) {
+			list_add_tail(&priv->pbuf_bay3d_iir->queue, &priv->iir_list);
+			priv->pbuf_bay3d_iir = NULL;
+		}
+		if (priv->pbuf_gain_wr) {
+			list_add_tail(&priv->pbuf_gain_wr->queue, &priv->gain_list);
+			priv->pbuf_gain_wr = NULL;
+		}
+		if (priv->pbuf_aipre_gain) {
+			list_add_tail(&priv->pbuf_aipre_gain->queue, &priv->aipre_gain_list);
+			priv->pbuf_aipre_gain = NULL;
+		}
+	}
+	spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
+}
+
+static void
+rkisp_params_aiisp_event_v35(struct rkisp_isp_params_vdev *params_vdev, u32 irq)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
+	struct rkisp_dummy_buffer *buf = NULL;
+	struct v4l2_event ev = { 0 };
+	struct rkisp_aiisp_ev_info *ev_info;
+	unsigned long lock_flags = 0;
+	u32 h = dev->isp_sdev.out_crop.height;
+	u32 val, wr_line, rd_line;
+
+	if (sizeof(*ev_info) > sizeof(ev.u)) {
+		v4l2_err(&dev->v4l2_dev, "aiisp_ev_info too large\n");
+		return;
+	}
+	ev.type = RKISP_V4L2_EVENT_AIISP_LINECNT;
+	ev_info = (struct rkisp_aiisp_ev_info *)ev.u.data;
+	ev_info->iir_index = -1;
+	ev_info->gain_index = -1;
+	ev_info->aiisp_index = -1;
+	ev_info->vpsl_index = -1;
+	ev_info->aipre_gain_index = -1;
+	val = rkisp_read(dev, ISP39_AIISP_LINE_CNT, false);
+	if (irq & ISP3X_OUT_FRM_QUARTER) {
+		rd_line = ISP39_AIISP_RD_LINECNT(val);
+		ev.id = RKISP_AIISP_RD_LINECNT_ID;
+		ev_info->height = !rd_line ? h : rd_line;
+		rkisp_dmarx_get_frame(dev, &ev_info->sequence, NULL, &ev_info->timestamp, false);
+		spin_lock_irqsave(&priv->buf_lock, lock_flags);
+		if (priv->pbuf_aiisp) {
+			ev_info->aiisp_index = priv->pbuf_aiisp->index;
+			priv->pbuf_aiisp = NULL;
+		}
+		if (priv->pbuf_gain_rd && !dev->is_aiisp_sync) {
+			list_add_tail(&priv->pbuf_gain_rd->queue, &priv->gain_list);
+			priv->pbuf_gain_rd = NULL;
+		}
+		if (!priv->yraw_sel) {
+			buf = priv->pbuf_vpsl;
+			if (buf)
+				ev_info->vpsl_index = buf->index;
+			buf = priv->pbuf_aipre_gain;
+			if (buf)
+				ev_info->aipre_gain_index = buf->index;
+		}
+		spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
+		v4l2_event_queue(dev->isp_sdev.sd.devnode, &ev);
+	} else {
+		wr_line = ISP39_AIISP_WR_LINECNT(val);
+		ev.id = RKISP_AIISP_WR_LINECNT_ID;
+		ev_info->height = !wr_line ? h : wr_line;
+		rkisp_dmarx_get_frame(dev, &ev_info->sequence, NULL, &ev_info->timestamp, true);
+
+		spin_lock_irqsave(&priv->buf_lock, lock_flags);
+		if (!priv->pbuf_bay3d_iir || !priv->pbuf_vpsl ||
+		    !priv->pbuf_gain_wr || !priv->pbuf_aipre_gain) {
+			if (priv->pbuf_bay3d_iir) {
+				list_add_tail(&priv->pbuf_bay3d_iir->queue, &priv->iir_list);
+				priv->pbuf_bay3d_iir = NULL;
+			}
+			if (priv->pbuf_gain_wr) {
+				list_add_tail(&priv->pbuf_gain_wr->queue, &priv->gain_list);
+				priv->pbuf_gain_wr = NULL;
+			}
+			if (priv->pbuf_aipre_gain && priv->yraw_sel) {
+				list_add_tail(&priv->pbuf_aipre_gain->queue, &priv->aipre_gain_list);
+				priv->pbuf_aipre_gain = NULL;
+			}
+			if (priv->pbuf_vpsl && priv->yraw_sel) {
+				list_add_tail(&priv->pbuf_vpsl->queue, &priv->vpsl_list);
+				priv->pbuf_vpsl = NULL;
+			}
+		}
+
+		if (priv->yraw_sel) {
+			buf = priv->pbuf_vpsl;
+			if (buf)
+				ev_info->vpsl_index = buf->index;
+			buf = priv->pbuf_aipre_gain;
+			if (buf)
+				ev_info->aipre_gain_index = buf->index;
+		}
+
+		buf = priv->pbuf_bay3d_iir;
+		if (buf)
+			ev_info->iir_index = buf->index;
+		buf = priv->pbuf_gain_wr;
+		if (buf)
+			ev_info->gain_index = buf->index;
+		spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
+		if (buf)
+			v4l2_event_queue(dev->isp_sdev.sd.devnode, &ev);
+	}
+	v4l2_dbg(3, rkisp_debug, &dev->v4l2_dev,
+		 "%s seq:%d height:%d idx(iir:%d gain:%d vpsl:%d aipre:%d aiisp:%d)\n",
+		 ev.id ? "isp_be" : "isp_fe", ev_info->sequence, ev_info->height,
+		 ev_info->iir_index, ev_info->gain_index,
+		 ev_info->vpsl_index, ev_info->aipre_gain_index, ev_info->aiisp_index);
+}
+
+static int
+rkisp_params_aiisp_start_v35(struct rkisp_isp_params_vdev *params_vdev,
+			     struct rkisp_aiisp_st *st)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct rkisp_device *dev = params_vdev->dev;
+	struct rkisp_dummy_buffer *buf, *buf_tmp;
+	unsigned long lock_flags = 0;
+	u32 val, seq = st->sequence;
+
+	if (!dev->is_aiisp_en)
+		return -EINVAL;
+	if (st->gain_index < 0 || st->gain_index >= priv->gain_cnt ||
+	    st->aiisp_index < 0 || st->aiisp_index >= priv->aiisp_cnt ||
+	    st->iir_index < 0 || st->iir_index >= priv->bay3d_iir_cnt ||
+	    st->vpsl_index >= priv->vpsl_cnt ||
+	    st->aipre_gain_index >= priv->aipre_gain_cnt) {
+		dev_err(dev->dev, "%s seq:%d error, aiisp(%d cnt:%d)\n"
+			"iir(%d cnt:%d) gain(%d cnt:%d) aipre(%d cnt:%d) vpsl(%d cnt:%d)\n",
+			__func__, seq, st->aiisp_index, priv->aiisp_cnt,
+			st->iir_index, priv->bay3d_iir_cnt, st->gain_index, priv->gain_cnt,
+			st->aipre_gain_index, priv->aipre_gain_cnt, st->vpsl_index, priv->vpsl_cnt);
+		return -EINVAL;
+	}
+
+	if (!dev->is_aiisp_sync)
+		rkisp_params_cfg(params_vdev, seq, RKISP_PARAMS_LAT);
+
+	spin_lock_irqsave(&priv->buf_lock, lock_flags);
+	if (!dev->is_aiisp_sync) {
+		buf = &priv->buf_bay3d_iir[st->iir_index];
+		list_for_each_entry(buf_tmp, &priv->iir_list, queue) {
+			if (buf_tmp == buf) {
+				dev_err(dev->dev, "iir idx:%d error\n", st->iir_index);
+				spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
+				return 0;
+			}
+		}
+		list_add_tail(&buf->queue, &priv->iir_list);
+
+		if (st->aipre_gain_index >= 0) {
+			buf = &priv->buf_aipre_gain[st->aipre_gain_index];
+			list_for_each_entry(buf_tmp, &priv->aipre_gain_list, queue) {
+				if (buf_tmp == buf) {
+					dev_err(dev->dev, "aipre idx:%d error\n", st->aipre_gain_index);
+					spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
+					return 0;
+				}
+			}
+			list_add_tail(&buf->queue, &priv->aipre_gain_list);
+		}
+
+		if (st->vpsl_index >= 0) {
+			buf = &priv->buf_vpsl[st->vpsl_index];
+			list_for_each_entry(buf_tmp, &priv->vpsl_list, queue) {
+				if (buf_tmp == buf) {
+					dev_err(dev->dev, "vpsl idx:%d error\n", st->vpsl_index);
+					spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
+					return 0;
+				}
+			}
+			list_add_tail(&buf->queue, &priv->vpsl_list);
+		}
+	}
+	priv->pbuf_gain_rd = &priv->buf_gain[st->gain_index];
+	priv->pbuf_aiisp = &priv->buf_aiisp[st->aiisp_index];
+	priv->aiisp_cur_idx = st->aiisp_index;
+
+	val = priv->pbuf_aiisp->dma_addr;
+	rkisp_write(dev, ISP39_AIISP_RD_BASE, val, true);
+	val = priv->pbuf_gain_rd->dma_addr;
+	if (!params_vdev->is_hdr) {
+		rkisp_write(dev, ISP3X_MI_RAW0_RD_BASE, val, true);
+		rkisp_set_bits(dev, ISP3X_CSI2RX_RAW_RD_CTRL, 0, ISP35_RX0_FORCE_UPD, true);
+
+		val = ISP3X_DBR_RDSELF_UPD;
+	} else {
+		rkisp_write(dev, ISP35_B3DLDCH_RD_BASE, val, true);
+
+		val = ISP3X_DBR_RDSELF_UPD | ISP3X_BAY3D_RDSELF_UPD;
+	}
+	rkisp_set_bits(dev, ISP3X_MI_WR_CTRL2, 0, val, true);
+	spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
+
+	val = params_vdev->is_hdr ? ISP35_B3DLDCH_RD_BASE_SHD : ISP3X_MI_RAW0_RD_BASE_SHD;
+	v4l2_dbg(3, rkisp_debug, &dev->v4l2_dev,
+		 "isp_be start seq:%d idx(%d %d) %x %x, %x:%x %x:%x\n",
+		 seq, st->aiisp_index, st->gain_index,
+		 (u32)priv->pbuf_aiisp->dma_addr,
+		 (u32)priv->pbuf_gain_rd->dma_addr,
+		 ISP3X_MI_DBR_RD_BASE_SHD, rkisp_read(dev, ISP3X_MI_DBR_RD_BASE_SHD, true),
+		 val, rkisp_read(dev, val, true));
+	return 0;
+}
+
+static void
+rkisp_vpsl_update_regs_v35(struct rkisp_isp_params_vdev *params_vdev)
+{
+	struct isp35_isp_params_cfg *params = params_vdev->isp35_params;
+	struct rkisp_device *isp, *dev = params_vdev->dev;
+	struct rkisp_hw_dev *hw = dev->hw_dev;
+	void __iomem *base = hw->vpsl_base_addr;
+	u32 i, *val, *flag;
+
+	for (i = 0; i < hw->dev_link_num; i++) {
+		isp = hw->isp[i];
+		if (isp && isp->is_aiisp_en)
+			break;
+	}
+	if (i == hw->dev_link_num)
+		return;
+
+	for (i = VPSL_CTRL; i < VPSL_SW_REG_SIZE; i += 4) {
+		val = dev->sw_vpsl_base_addr + i;
+		flag = dev->sw_vpsl_base_addr + i + VPSL_SW_REG_SIZE;
+
+		if (*flag == SW_REG_CACHE)
+			writel(*val, base + i);
+	}
+	vpsl_cfg_sram(params_vdev, &params->others.ai_cfg);
+	writel(VPSL_CFG_GEN_UPD | VPSL_CFG_FORCE_UPD, base + VPSL_UPDATE);
+	writel(VPSL_MI_FORCE_UPD, base + VPSL_MI_WR_INIT);
+}
+
+static void
 rkisp_params_isr_v35(struct rkisp_isp_params_vdev *params_vdev, u32 isp_mis)
 {
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	struct isp35_isp_params_cfg *params_rec = params_vdev->isp35_params;
 	struct rkisp_device *dev = params_vdev->dev;
-	u32 cur_frame_id, i;
+	u32 i, val, reg;
 
-	rkisp_dmarx_get_frame(dev, &cur_frame_id, NULL, NULL, true);
 	if (isp_mis & CIF_ISP_V_START) {
 		if (params_vdev->rdbk_times)
 			params_vdev->rdbk_times--;
 
-		if (IS_HDR_RDBK(dev->rd_mode) && !params_vdev->rdbk_times) {
-			struct isp35_isp_params_cfg *params = params_vdev->isp35_params;
+		if (!params_vdev->rdbk_times) {
+			if (!dev->is_aiisp_en && priv->bay3d_iir_cnt > 1) {
+				priv->bay3d_iir_cur_idx = priv->bay3d_iir_idx;
+				i = (priv->bay3d_iir_idx + 1) % priv->bay3d_iir_cnt;
+				priv->bay3d_iir_idx = i;
+				for (i = 0; i < dev->unite_div; i++) {
+					if (priv->bay3d_iir_rw_fmt == 3)
+						reg = ISP35_B3DLDC_WR_ADDR;
+					else
+						reg = ISP3X_MI_BAY3D_IIR_WR_BASE;
+					val = isp3_param_read_cache(params_vdev, reg, i);
+					isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_IIR_RD_BASE, i);
 
-			for (i = 0; i < dev->unite_div; i++) {
-				if (params->module_cfg_update & ISP35_MODULE_HDRMGE)
-					isp_hdrmge_config(params_vdev, &params->others.hdrmge_cfg, RKISP_PARAMS_SHD, i);
-				if (params->module_cfg_update & ISP35_MODULE_DRC)
-					isp_hdrdrc_config(params_vdev, &params->others.drc_cfg, RKISP_PARAMS_SHD, i);
-				params->module_cfg_update = 0;
-				params++;
+					val = priv->buf_bay3d_iir[priv->bay3d_iir_idx].dma_addr;
+					val += i * priv->bay3d_iir_size;
+					if (priv->bay3d_iir_rw_fmt == 3) {
+						isp3_param_write(params_vdev, val, ISP35_B3DLDC_WR_ADDR, i);
+						val += priv->bay3d_iir_offs;
+					}
+					isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_IIR_WR_BASE, i);
+				}
 			}
-			return;
+			if (priv->bay3d_ds_cnt > 1) {
+				priv->bay3d_ds_cur_idx = priv->bay3d_ds_idx;
+				i = (priv->bay3d_ds_idx + 1) % priv->bay3d_ds_cnt;
+				priv->bay3d_ds_idx = i;
+				for (i = 0; i < dev->unite_div; i++) {
+					val = isp3_param_read_cache(params_vdev, ISP3X_MI_BAY3D_DS_WR_BASE, i);
+					isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_DS_RD_BASE, i);
+
+					val = priv->buf_bay3d_ds[priv->bay3d_ds_idx].dma_addr;
+					val += i * priv->bay3d_ds_size;
+					isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_DS_WR_BASE, i);
+				}
+			}
+			if (priv->bay3d_wgt_cnt > 1) {
+				priv->bay3d_wgt_cur_idx = priv->bay3d_wgt_idx;
+				i = (priv->bay3d_wgt_idx + 1) % priv->bay3d_wgt_cnt;
+				priv->bay3d_wgt_idx = i;
+				for (i = 0; i < dev->unite_div; i++) {
+					val = isp3_param_read_cache(params_vdev, ISP3X_MI_BAY3D_CUR_WR_BASE, i);
+					isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_CUR_RD_BASE, i);
+
+					val = priv->buf_bay3d_wgt[priv->bay3d_wgt_idx].dma_addr;
+					val += i * priv->bay3d_wgt_size;
+					isp3_param_write(params_vdev, val, ISP3X_MI_BAY3D_CUR_WR_BASE, i);
+				}
+			}
+			for (i = 0; i < dev->unite_div && !dev->is_aiisp_en; i++) {
+				if (params_rec->module_cfg_update & ISP35_MODULE_HDRMGE &&
+				    (dev->is_aiisp_en || IS_HDR_RDBK(dev->rd_mode))) {
+					isp_hdrmge_config(params_vdev, &params_rec->others.hdrmge_cfg, RKISP_PARAMS_SHD, i);
+					params_rec->module_cfg_update &= ~ISP35_MODULE_HDRMGE;
+				}
+				if (params_rec->module_cfg_update & ISP35_MODULE_DRC &&
+				    ((!dev->is_aiisp_en && IS_HDR_RDBK(dev->rd_mode)) || dev->is_aiisp_sync)) {
+					isp_hdrdrc_config(params_vdev, &params_rec->others.drc_cfg, RKISP_PARAMS_SHD, i);
+					params_rec->module_cfg_update &= ~ISP35_MODULE_DRC;
+				}
+				params_rec++;
+			}
 		}
 	}
 
 	if ((isp_mis & CIF_ISP_FRAME) && !params_vdev->rdbk_times)
 		rkisp_params_clear_fstflg(params_vdev);
 
-	if ((isp_mis & CIF_ISP_FRAME) &&
-	    !IS_HDR_RDBK(dev->rd_mode) && !params_vdev->rdbk_times)
-		rkisp_params_cfg_v35(params_vdev, cur_frame_id + 1, RKISP_PARAMS_ALL);
+	rkisp_dmarx_get_frame(dev, &i, NULL, NULL, true);
+	if (isp_mis & ISP3X_BAY3D_FRM_END && dev->is_aiisp_en) {
+		rkisp_params_aiisp_update_buf(params_vdev);
+		if (!IS_HDR_RDBK(dev->rd_mode))
+			rkisp_params_cfg_v35(params_vdev, i + 1, RKISP_PARAMS_IMD);
+	} else if (isp_mis & CIF_ISP_FRAME && !IS_HDR_RDBK(dev->rd_mode) &&
+		   !params_vdev->rdbk_times && !dev->is_aiisp_en) {
+		rkisp_params_cfg_v35(params_vdev, i + 1, RKISP_PARAMS_ALL);
+	}
+
+}
+
+void rkisp_params_vpsl_mi_isr_v35(struct rkisp_isp_params_vdev *params_vdev, u32 mis_val)
+{
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
+	unsigned long lock_flags = 0;
+
+	if (params_vdev->dev->is_aiisp_sync)
+		return;
+	spin_lock_irqsave(&priv->buf_lock, lock_flags);
+	if (mis_val & VPSL_MI_YRAW_ALL_END) {
+		priv->pbuf_vpsl = NULL;
+		if (!list_empty(&priv->vpsl_list)) {
+			priv->pbuf_vpsl = list_first_entry(&priv->vpsl_list,
+						struct rkisp_dummy_buffer, queue);
+			list_del(&priv->pbuf_vpsl->queue);
+			vpsl_update_buf(params_vdev);
+		}
+	}
+	spin_unlock_irqrestore(&priv->buf_lock, lock_flags);
 }
 
 static struct rkisp_isp_params_ops rkisp_isp_params_ops_tbl = {
@@ -5255,8 +6258,11 @@ static struct rkisp_isp_params_ops rkisp_isp_params_ops_tbl = {
 	.fop_release = rkisp_params_fop_release_v35,
 	.check_bigmode = rkisp_params_check_bigmode_v35,
 	.info2ddr_cfg = rkisp_params_info2ddr_cfg_v35,
-	.get_bay3d_buffd = rkisp_params_get_bay3d_buffd_v35,
 	.get_aiawb_buffd = rkisp_params_get_aiawb_buffd_v35,
+	.init_bnr_buf = rkisp_params_init_bnr_buf_v35,
+	.aiisp_event = rkisp_params_aiisp_event_v35,
+	.aiisp_start = rkisp_params_aiisp_start_v35,
+	.vpsl_update_regs = rkisp_vpsl_update_regs_v35,
 };
 
 int rkisp_init_params_vdev_v35(struct rkisp_isp_params_vdev *params_vdev)
@@ -5277,6 +6283,7 @@ int rkisp_init_params_vdev_v35(struct rkisp_isp_params_vdev *params_vdev)
 		return -ENOMEM;
 	}
 
+	spin_lock_init(&priv->buf_lock);
 	params_vdev->priv_val = priv;
 	params_vdev->ops = &rkisp_isp_params_ops_tbl;
 	rkisp_clear_first_param_v35(params_vdev);

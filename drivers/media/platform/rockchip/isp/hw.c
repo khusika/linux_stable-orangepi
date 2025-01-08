@@ -24,6 +24,7 @@
 #include "dev.h"
 #include "hw.h"
 #include "regs.h"
+#include "vpsl_reg.h"
 
 /*
  * rkisp_hw share hardware resource with rkisp virtual device
@@ -246,6 +247,42 @@ static irqreturn_t isp_irq_hdl(int irq, void *ctx)
 		v4l2_dbg(0, rkisp_debug, &isp->v4l2_dev,
 			 "%s:0x%x %lldus\n", __func__, mis_val, us);
 	}
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t vpsl_mi_irq_hdl(int irq, void *ctx)
+{
+	struct device *dev = ctx;
+	struct rkisp_hw_dev *hw_dev = dev_get_drvdata(dev);
+	struct rkisp_device *isp = hw_dev->isp[hw_dev->cur_dev_id];
+	void __iomem *base = hw_dev->vpsl_base_addr;
+	u32 mis_val;
+
+	mis_val = readl(base + VPSL_MI_MIS);
+	if (mis_val) {
+		writel(mis_val, base + VPSL_MI_ICR);
+		v4l2_dbg(3, rkisp_debug, &isp->v4l2_dev,
+			 "%s isr:0x%x\n", __func__, mis_val);
+		rkisp_vpsl_mi_isr(isp, mis_val);
+	}
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t vpsl_irq_hdl(int irq, void *ctx)
+{
+	struct device *dev = ctx;
+	struct rkisp_hw_dev *hw_dev = dev_get_drvdata(dev);
+	struct rkisp_device *isp = hw_dev->isp[hw_dev->cur_dev_id];
+	void __iomem *base = hw_dev->vpsl_base_addr;
+	u32 mis_val;
+
+	mis_val = readl(base + VPSL_MIS);
+	if (mis_val) {
+		writel(mis_val, base + VPSL_ICR);
+		v4l2_dbg(3, rkisp_debug, &isp->v4l2_dev,
+			 "%s isr:0x%x\n", __func__, mis_val);
+	}
+
 	return IRQ_HANDLED;
 }
 
@@ -794,6 +831,14 @@ static struct isp_irqs_data isp_irqs[] = {
 	{"mipi_irq", mipi_irq_hdl}
 };
 
+static struct isp_irqs_data isp35_irqs[] = {
+	{"isp_irq", isp_irq_hdl},
+	{"isp_mi_irq", mi_irq_hdl},
+	{"isp_mipi_irq", mipi_irq_hdl},
+	{"vpsl_mi_irq", vpsl_mi_irq_hdl},
+	{"vpsl_irq", vpsl_irq_hdl},
+};
+
 static const struct isp_match_data rv1103b_isp_match_data = {
 	.clks = rv1106_isp_clks,
 	.num_clks = ARRAY_SIZE(rv1106_isp_clks),
@@ -833,8 +878,8 @@ static const struct isp_match_data rv1126b_isp_match_data = {
 	.isp_ver = ISP_V35,
 	.clk_rate_tbl = rv1126_isp_clk_rate,
 	.num_clk_rate_tbl = ARRAY_SIZE(rv1126_isp_clk_rate),
-	.irqs = isp_irqs,
-	.num_irqs = ARRAY_SIZE(isp_irqs),
+	.irqs = isp35_irqs,
+	.num_irqs = ARRAY_SIZE(isp35_irqs),
 	.unite = false,
 };
 
@@ -1299,6 +1344,29 @@ static int rkisp_hw_probe(struct platform_device *pdev)
 		hw_dev->unite = ISP_UNITE_NONE;
 	}
 
+	hw_dev->vpsl_base_addr = NULL;
+	if (hw_dev->isp_ver == ISP_V35) {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+		if (!res) {
+			dev_err(dev, "get vpsl resource failed\n");
+			ret = -EINVAL;
+			goto err;
+		}
+		hw_dev->vpsl_base_addr = devm_ioremap_resource(dev, res);
+		if (PTR_ERR(hw_dev->vpsl_base_addr) == -EBUSY) {
+			resource_size_t offset = res->start;
+			resource_size_t size = resource_size(res);
+
+			hw_dev->vpsl_base_addr = devm_ioremap(dev, offset, size);
+		}
+
+		if (IS_ERR(hw_dev->vpsl_base_addr)) {
+			dev_err(dev, "ioremap vpsl failed\n");
+			ret = PTR_ERR(hw_dev->vpsl_base_addr);
+			goto err;
+		}
+	}
+
 	memset(&hw_dev->max_in, 0, sizeof(hw_dev->max_in));
 	if (!of_property_read_u32_array(node, "max-input", &hw_dev->max_in.w, 3)) {
 		hw_dev->max_in.is_fix = true;
@@ -1361,6 +1429,7 @@ static int rkisp_hw_probe(struct platform_device *pdev)
 	mutex_init(&hw_dev->dev_lock);
 	spin_lock_init(&hw_dev->rdbk_lock);
 	atomic_set(&hw_dev->refcnt, 0);
+	spin_lock_init(&hw_dev->reg_lock);
 	spin_lock_init(&hw_dev->buf_lock);
 	INIT_LIST_HEAD(&hw_dev->list);
 	INIT_LIST_HEAD(&hw_dev->rpt_list);
@@ -1517,6 +1586,16 @@ static int __maybe_unused rkisp_runtime_resume(struct device *dev)
 				buf += RKISP_ISP_SW_MAX_SIZE;
 				base = hw_dev->base_next_addr;
 				memcpy_fromio(buf, base, RKISP_ISP_SW_REG_SIZE);
+			}
+			if (isp->sw_vpsl_base_addr && hw_dev->vpsl_base_addr) {
+				u32 *flag;
+
+				buf = isp->sw_vpsl_base_addr;
+				memset(buf, 0, VPSL_SW_MAX_SIZE * mult);
+				flag = buf + VPSL_SW_REG_SIZE + VPSL_PYR_CTRL;
+				*flag = SW_REG_CACHE;
+				flag = buf + VPSL_PYR_CHN + VPSL_PYR_CTRL;
+				*flag = SW_REG_CACHE;
 			}
 			default_sw_reg_flag(hw_dev->isp[i]);
 		}

@@ -58,6 +58,7 @@ struct rkisp_isp_params_ops {
 	void (*aiisp_event)(struct rkisp_isp_params_vdev *params_vdev, u32 irq);
 	int (*aiisp_start)(struct rkisp_isp_params_vdev *params_vdev, struct rkisp_aiisp_st *st);
 	int (*get_aiawb_buffd)(struct rkisp_isp_params_vdev *params_vdev, void *arg);
+	void (*vpsl_update_regs)(struct rkisp_isp_params_vdev *params_vdev);
 };
 
 /*
@@ -111,6 +112,7 @@ struct rkisp_isp_params_vdev {
 
 	bool is_subs_evt;
 	bool is_first_cfg;
+	bool is_hdr;
 };
 
 static inline void

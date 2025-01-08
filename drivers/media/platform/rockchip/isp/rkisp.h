@@ -198,6 +198,8 @@ void rkisp_rx_buf_pool_free(struct rkisp_device *dev);
 int rkisp_expander_config(struct rkisp_device *dev,
 			  struct rkmodule_hdr_cfg *cfg, bool on);
 
+void rkisp_vpsl_mi_isr(struct rkisp_device *dev, u32 mis_val);
+
 static inline
 struct ispsd_out_fmt *rkisp_get_ispsd_out_fmt(struct rkisp_isp_subdev *isp_sdev)
 {

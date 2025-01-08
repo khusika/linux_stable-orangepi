@@ -430,10 +430,11 @@ struct rkisp_aiisp_ev_info {
 	int sequence;
 	int height;
 
-	/* bnr front end */
 	int iir_index;
 	int gain_index;
-	/* bnr back end */
+	int aipre_gain_index;
+	int vpsl_index;
+
 	int aiisp_index;
 } __attribute__ ((packed));
 
@@ -443,7 +444,11 @@ struct rkisp_aiisp_st {
 
 	int iir_index;
 	int gain_index;
+
 	int aiisp_index;
+
+	int aipre_gain_index;
+	int vpsl_index;
 } __attribute__ ((packed));
 
 /* struct rkisp_aiisp_cfg
@@ -457,6 +462,9 @@ struct rkisp_aiisp_cfg {
 	int rd_linecnt;
 } __attribute__ ((packed));
 
+#define VPSL_YRAW_CHN_MAX	6
+#define VPSL_SIG_CHN_MAX	5
+
 struct rkisp_bnr_buf_info {
 	struct rkisp_buf_info iir;
 	union {
@@ -465,6 +473,24 @@ struct rkisp_bnr_buf_info {
 			struct rkisp_buf_info gain;
 			__u8 iirsparse_en;
 		} v39;
+		struct {
+			struct rkisp_buf_info ds;
+			struct rkisp_buf_info wgt;
+
+			struct rkisp_buf_info aiisp;
+			struct rkisp_buf_info gain;
+			struct rkisp_buf_info aipre_gain;
+			struct rkisp_buf_info vpsl;
+			__u8 iir_rw_fmt;
+			__u8 gain_mode;
+			__u8 yraw_sel;
+			/* yraw ds_2x2 to ds_64x64 buf offset and stride */
+			__u32 vpsl_yraw_offs[VPSL_YRAW_CHN_MAX];
+			__u32 vpsl_yraw_stride[VPSL_YRAW_CHN_MAX];
+			/* sigma ds_2x2 to ds_32x32 buf offset and stride */
+			__u32 vpsl_sig_offs[VPSL_SIG_CHN_MAX];
+			__u32 vpsl_sig_stride[VPSL_SIG_CHN_MAX];
+		} v35;
 	} u;
 } __attribute__ ((packed));
 

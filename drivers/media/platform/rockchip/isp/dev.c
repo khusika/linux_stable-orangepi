@@ -351,7 +351,8 @@ static int rkisp_pipeline_open(struct rkisp_pipeline *p,
 		rkisp_csi_config_patch(dev, false);
 	dev->is_aiisp_sync = false;
 	if (dev->is_aiisp_en &&
-	    (dev->isp_inp & (INP_RAWRD0 | INP_RAWRD2) || dev->is_rdbk_auto))
+	    ((dev->isp_ver == ISP_V35 && !hw->is_single) ||
+	     (dev->isp_ver == ISP_V39 && (dev->isp_inp & INP_RAWRD2 || dev->is_rdbk_auto))))
 		dev->is_aiisp_sync = true;
 	return 0;
 err:
@@ -937,6 +938,11 @@ static int rkisp_plat_probe(struct platform_device *pdev)
 	isp_dev->sw_base_addr = devm_kzalloc(dev, RKISP_ISP_SW_MAX_SIZE * mult, GFP_KERNEL);
 	if (!isp_dev->sw_base_addr)
 		return -ENOMEM;
+	if (isp_dev->hw_dev->isp_ver == ISP_V35) {
+		isp_dev->sw_vpsl_base_addr = devm_kzalloc(dev, VPSL_SW_MAX_SIZE * mult, GFP_KERNEL);
+		if (!isp_dev->sw_vpsl_base_addr)
+			return -ENOMEM;
+	}
 
 	ret = rkisp_vs_irq_parse(dev);
 	if (ret)

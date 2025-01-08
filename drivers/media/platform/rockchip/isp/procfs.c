@@ -1195,7 +1195,17 @@ static void isp35_show(struct rkisp_device *dev, struct seq_file *p)
 		   rkisp_read(dev, ISP35_B3DLDC_ADR_STS, false),
 		   rkisp_read(dev, ISP35_B3DLDC_CTRL, false),
 		   !(val & BIT(8)), !!(tmp & BIT(20)), !!(tmp & BIT(21)), !!(tmp & BIT(22)),
-		   priv->buf_3dnr_iir.size, priv->buf_3dnr_ds.size, priv->buf_3dnr_wgt.size);
+		   priv->buf_bay3d_iir[0].size, priv->buf_bay3d_ds[0].size, priv->buf_bay3d_wgt[0].size);
+	val = rkisp_read(dev, ISP35_AI_CTRL, false);
+	seq_printf(p, "%-10s %s(0x%x) vpsl(ctrl:0x%x chn:0x%x), aiisp(idx:%d cnt:%d)\n"
+		   "\t   iir(idx:%d cnt:%d) gain(idx:%d cnt:%d) aipre(idx:%d cnt:%d) vpsl(idx:%d cnt:%d)\n",
+		   "AINR", (val & 1) ? "ON" : "OFF", val,
+		   vpsl_read(dev, VPSL_PYR_CTRL, false), vpsl_read(dev, VPSL_PYR_CHN, false),
+		   priv->aiisp_cur_idx, priv->aiisp_cnt,
+		   priv->bay3d_iir_cur_idx, priv->bay3d_iir_cnt,
+		   priv->gain_cur_idx, priv->gain_cnt,
+		   priv->aipre_gain_cur_idx, priv->aipre_gain_cnt,
+		   priv->vpsl_cur_idx, priv->vpsl_cnt);
 	val = rkisp_read(dev, ISP3X_YNR_GLOBAL_CTRL, false);
 	seq_printf(p, "%-10s %s(0x%x) bypass(hi:%d mi:%d lo:%d) lp_en:%d\n", "YNR",
 		   (val & 1) ? "ON" : "OFF", val,
