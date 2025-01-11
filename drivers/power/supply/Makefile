@@ -104,6 +104,7 @@ obj-$(CONFIG_CHARGER_RK818)	+= rk818_charger.o
 obj-$(CONFIG_CHARGER_SGM41542)	+= sgm41542_charger.o
 obj-$(CONFIG_CHARGER_SMB347)	+= smb347-charger.o
 obj-$(CONFIG_CHARGER_SC8551)	+= sc8551_charger.o
+obj-$(CONFIG_CHARGER_SC89601)	+= sc89601_charger.o
 obj-$(CONFIG_CHARGER_SC89890)	+= sc89890_charger.o
 obj-$(CONFIG_CHARGER_TPS65090)	+= tps65090-charger.o
 obj-$(CONFIG_CHARGER_TPS65217)	+= tps65217_charger.o
