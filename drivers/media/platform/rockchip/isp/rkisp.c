@@ -3617,7 +3617,7 @@ static int rkisp_subdev_link_setup(struct media_entity *entity,
 		struct rkisp_vicap_mode mode;
 
 		memset(&mode, 0, sizeof(mode));
-		mode.name = dev->name;
+		strscpy(mode.name, dev->name, sizeof(mode.name));
 		mode.rdbk_mode = !!(dev->isp_inp & rawrd);
 		/* read back mode only */
 		if (dev->isp_ver < ISP_V30 || !dev->hw_dev->is_single)

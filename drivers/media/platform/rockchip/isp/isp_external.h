@@ -57,7 +57,8 @@ enum rkisp_vicap_link {
 };
 
 struct rkisp_vicap_mode {
-	char *name;
+	/* copy rkisp_device name */
+	char name[128];
 	enum rkisp_vicap_link rdbk_mode;
 
 	struct rkisp_vicap_input input;

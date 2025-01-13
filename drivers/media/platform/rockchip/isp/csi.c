@@ -545,7 +545,7 @@ int rkisp_csi_config_patch(struct rkisp_device *dev, bool is_pre_cfg)
 			u32 op_mode;
 
 			memset(&mode, 0, sizeof(mode));
-			mode.name = dev->name;
+			strscpy(mode.name, dev->name, sizeof(mode.name));
 
 			rkisp_get_remote_mipi_sensor(dev, &mipi_sensor, MEDIA_ENT_F_PROC_VIDEO_COMPOSER);
 			if (!mipi_sensor)
