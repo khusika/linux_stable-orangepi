@@ -1013,6 +1013,11 @@ static int icm42670_chip_init(struct icm42670_data *data, icm42670_bus_setup bus
 	return ret;
 }
 
+static irqreturn_t icm42670_do_nothing(int irq, void *private)
+{
+	return IRQ_HANDLED;
+}
+
 int icm42670_core_probe(struct regmap *regmap,
 						int irq, const char *name,
 						int chip_type, icm42670_bus_setup bus_setup)
@@ -1115,9 +1120,13 @@ int icm42670_core_probe(struct regmap *regmap,
 	indio_dev->info = &icm42670_info;
 	indio_dev->modes = INDIO_BUFFER_TRIGGERED;
 
-	ret = devm_iio_triggered_buffer_setup(dev, indio_dev,
-		iio_pollfunc_store_time,
-		data->enable_fifo ? icm42670_read_fifo : icm42670_read_data, NULL);
+	if (data->enable_fifo) {
+		ret = devm_iio_triggered_buffer_setup(dev, indio_dev,
+				iio_pollfunc_store_time, icm42670_read_fifo, NULL);
+	} else {
+		ret = devm_iio_triggered_buffer_setup(dev, indio_dev,
+				icm42670_do_nothing, NULL, NULL);
+	}
 	if (ret < 0)
 		goto uninit;
 
