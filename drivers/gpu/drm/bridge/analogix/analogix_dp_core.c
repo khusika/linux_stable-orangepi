@@ -341,6 +341,43 @@ static bool analogix_dp_get_vrr_capable(struct analogix_dp_device *dp)
 	return true;
 }
 
+static int analogix_dp_enable_sink_to_assr_mode(struct analogix_dp_device *dp, bool enable)
+{
+	u8 data;
+	int ret;
+
+	ret = drm_dp_dpcd_readb(&dp->aux, DP_EDP_CONFIGURATION_SET, &data);
+	if (ret != 1)
+		return ret;
+
+	if (enable)
+		ret = drm_dp_dpcd_writeb(&dp->aux, DP_EDP_CONFIGURATION_SET,
+					 data | DP_ALTERNATE_SCRAMBLER_RESET_ENABLE);
+	else
+		ret = drm_dp_dpcd_writeb(&dp->aux, DP_LANE_COUNT_SET,
+					 data & ~DP_ALTERNATE_SCRAMBLER_RESET_ENABLE);
+
+	return ret < 0 ? ret : 0;
+}
+
+static int analogix_dp_set_assr_mode(struct analogix_dp_device *dp)
+{
+	bool assr_en;
+	int ret;
+
+	assr_en = drm_dp_alternate_scrambler_reset_cap(dp->dpcd);
+
+	ret = analogix_dp_enable_sink_to_assr_mode(dp, assr_en);
+	if (ret < 0)
+		return ret;
+
+	analogix_dp_enable_assr_mode(dp, assr_en);
+
+	dp->link_train.assr = assr_en;
+
+	return 0;
+}
+
 static int analogix_dp_link_start(struct analogix_dp_device *dp)
 {
 	u8 buf[4];
@@ -379,6 +416,13 @@ static int analogix_dp_link_start(struct analogix_dp_device *dp)
 	retval = drm_dp_dpcd_write(&dp->aux, DP_DOWNSPREAD_CTRL, buf, 2);
 	if (retval < 0)
 		return retval;
+
+	/* set ASSR if available */
+	retval = analogix_dp_set_assr_mode(dp);
+	if (retval < 0) {
+		dev_err(dp->dev, "failed to set assr mode\n");
+		return retval;
+	}
 
 	/* set enhanced mode if available */
 	retval = analogix_dp_set_enhanced_mode(dp);
@@ -908,6 +952,7 @@ static int analogix_dp_fast_link_train(struct analogix_dp_device *dp)
 	analogix_dp_set_link_bandwidth(dp, dp->link_train.link_rate);
 	analogix_dp_set_lane_count(dp, dp->link_train.lane_count);
 	analogix_dp_set_lane_link_training(dp);
+	analogix_dp_enable_assr_mode(dp, dp->link_train.assr);
 	analogix_dp_enable_enhanced_mode(dp, dp->link_train.enhanced_framing);
 
 	/* source Set training pattern 1 */
@@ -2392,6 +2437,7 @@ static void analogix_dp_link_train_restore(struct analogix_dp_device *dp)
 
 	dp->link_train.link_rate = link_rate;
 	dp->link_train.lane_count = lane_count;
+	dp->link_train.assr = analogix_dp_get_assr_mode(dp);
 	dp->link_train.enhanced_framing = analogix_dp_get_enhanced_mode(dp);
 	dp->link_train.ssc = !!(spread & DP_MAX_DOWNSPREAD_0_5);
 

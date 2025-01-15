@@ -1390,3 +1390,27 @@ void analogix_dp_init(struct analogix_dp_device *dp)
 	analogix_dp_init_hpd(dp);
 	analogix_dp_init_aux(dp);
 }
+
+void analogix_dp_enable_assr_mode(struct analogix_dp_device *dp, bool enable)
+{
+	u32 reg;
+
+	if (enable) {
+		reg = analogix_dp_read(dp, ANALOGIX_DP_LINK_POLICY);
+		reg |= ALTERNATE_SR_ENABLE;
+		analogix_dp_write(dp, ANALOGIX_DP_LINK_POLICY, reg);
+	} else {
+		reg = analogix_dp_read(dp, ANALOGIX_DP_LINK_POLICY);
+		reg &= ~ALTERNATE_SR_ENABLE;
+		analogix_dp_write(dp, ANALOGIX_DP_LINK_POLICY, reg);
+	}
+}
+
+bool analogix_dp_get_assr_mode(struct analogix_dp_device *dp)
+{
+	u32 reg;
+
+	reg = analogix_dp_read(dp, ANALOGIX_DP_LINK_POLICY);
+
+	return !!(reg & ALTERNATE_SR_ENABLE);
+}
