@@ -151,7 +151,7 @@
 #define DSI2_IPI_VID_VACT_MAN_CFG	0X0334
 #define VID_VACT_LINES(x)		UPDATE(x, 13, 0)
 #define DSI2_IPI_VID_VFP_MAN_CFG	0X033C
-#define VID_VFP_LINES(x)		UPDATE(x, 9, 0)
+#define VID_VFP_LINES(x)		UPDATE(x, 12, 0)
 #define DSI2_IPI_PIX_PKT_CFG		0x0344
 #define MAX_PIX_PKT(x)			UPDATE(x, 15, 0)
 
@@ -227,7 +227,9 @@ struct dw_mipi_dsi2_plat_data {
 	const u32 *dsi1_grf_reg_fields;
 	unsigned long long dphy_max_bit_rate_per_lane;
 	unsigned long long cphy_max_symbol_rate_per_lane;
-
+	const u32 max_vfp;
+	const u32 max_vsync;
+	const u32 max_vbp;
 };
 
 struct dw_mipi_dsi2 {
@@ -1213,10 +1215,11 @@ dw_mipi_dsi2_connector_mode_valid(struct drm_connector *connector,
 	if (vm.vactive > 16383)
 		return MODE_VIRTUAL_Y;
 
-	if (vm.vsync_len > 1023)
+	if (vm.vsync_len > dsi2->pdata->max_vsync)
 		return MODE_VSYNC_WIDE;
 
-	if (vm.vback_porch > 1023 || vm.vfront_porch > 1023)
+	if (vm.vback_porch > dsi2->pdata->max_vbp ||
+	    vm.vfront_porch > dsi2->pdata->max_vfp)
 		return MODE_VBLANK_WIDE;
 
 	/*
@@ -2056,6 +2059,9 @@ static const struct dw_mipi_dsi2_plat_data rk3576_mipi_dsi2_plat_data = {
 	.dsi0_grf_reg_fields = rk3576_dsi_grf_reg_fields,
 	.dphy_max_bit_rate_per_lane = 2500000000ULL,
 	.cphy_max_symbol_rate_per_lane = 1700000000ULL,
+	.max_vfp = 8191,
+	.max_vsync = 1023,
+	.max_vbp = 1023,
 };
 
 static const struct dw_mipi_dsi2_plat_data rk3588_mipi_dsi2_plat_data = {
@@ -2064,6 +2070,9 @@ static const struct dw_mipi_dsi2_plat_data rk3588_mipi_dsi2_plat_data = {
 	.dsi1_grf_reg_fields = rk3588_dsi1_grf_reg_fields,
 	.dphy_max_bit_rate_per_lane = 4500000000ULL,
 	.cphy_max_symbol_rate_per_lane = 2000000000ULL,
+	.max_vfp = 1023,
+	.max_vsync = 1023,
+	.max_vbp = 1023,
 };
 
 static const struct of_device_id dw_mipi_dsi2_dt_ids[] = {
