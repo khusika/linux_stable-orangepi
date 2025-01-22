@@ -2,7 +2,7 @@
 /*
  * Rockchip Serial Flash Controller Driver
  *
- * Copyright (c) 2017-2021, Rockchip Inc.
+ * Copyright (c) 2017-2021, Rockchip Electronics Co., Ltd.
  * Author: Shawn Lin <shawn.lin@rock-chips.com>
  *	   Chris Morgan <macroalpha82@gmail.com>
  *	   Jon Lin <Jon.lin@rock-chips.com>
