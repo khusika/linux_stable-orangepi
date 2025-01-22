@@ -14854,7 +14854,7 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 	    plane_mask != vop2_data->plane_mask_base) {
 		full_plane = vop2_plane_mask_to_string(vop2_data->plane_mask_base);
 		current_plane = vop2_plane_mask_to_string(plane_mask);
-		DRM_WARN("all windows should be assigned, full plane mask: %s[0x%x], current plane mask: %s[0x%x\n]",
+		DRM_WARN("all windows should be assigned, full plane mask: %s[0x%x], current plane mask: %s[0x%x]\n",
 			 full_plane, vop2_data->plane_mask_base, current_plane, plane_mask);
 		kfree(full_plane);
 		kfree(current_plane);
