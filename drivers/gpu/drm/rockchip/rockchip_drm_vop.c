@@ -2921,6 +2921,7 @@ static int vop_crtc_debugfs_init(struct drm_minor *minor, struct drm_crtc *crtc)
 	rockchip_drm_add_dump_buffer(crtc, vop->debugfs);
 	rockchip_drm_debugfs_add_regs_write(crtc, vop->debugfs);
 	rockchip_drm_debugfs_add_color_bar(crtc, vop->debugfs);
+	rockchip_drm_debugfs_add_dclk_rate(crtc, vop->debugfs);
 #endif
 	for (i = 0; i < ARRAY_SIZE(vop_debugfs_files); i++)
 		vop->debugfs_files[i].data = vop;
@@ -3349,6 +3350,26 @@ static int vop_crtc_set_color_bar(struct drm_crtc *crtc, enum rockchip_color_bar
 
 	return ret;
 }
+
+static unsigned long vop_crtc_get_dclk_rate(struct drm_crtc *crtc)
+{
+	struct vop *vop = to_vop(crtc);
+	unsigned long rate, count;
+
+	if (!VOP_CTRL_SUPPORT(vop, calc_dclk_cnt))
+		return 0;
+
+	VOP_CTRL_SET(vop, calc_clk_en, 1);
+	usleep_range(500, 1000);
+	count = VOP_CTRL_GET(vop, calc_dclk_cnt);
+	rate = clk_get_rate(vop->aclk);
+
+	/* calc_dclk_cnt is the count number when aclk counts to 10000 */
+	rate = rate / 10000 * count;
+
+	VOP_CTRL_SET(vop, calc_clk_en, 0);
+	return rate;
+}
 #endif
 
 static const struct rockchip_crtc_funcs private_crtc_funcs = {
@@ -3366,6 +3387,7 @@ static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.te_handler = vop_crtc_te_handler,
 #if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
 	.crtc_set_color_bar = vop_crtc_set_color_bar,
+	.crtc_get_dclk_rate = vop_crtc_get_dclk_rate,
 #endif
 };
 

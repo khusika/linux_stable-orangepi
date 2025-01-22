@@ -476,6 +476,10 @@ struct vop_ctrl {
 	/* color bar */
 	struct vop_reg color_bar_en;
 	struct vop_reg color_bar_mode;
+
+	/* clk cnt */
+	struct vop_reg calc_clk_en;
+	struct vop_reg calc_dclk_cnt;
 };
 
 struct vop_intr {

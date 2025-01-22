@@ -1953,6 +1953,9 @@ static const struct vop_ctrl rv1126b_ctrl_data = {
 	.color_bar_mode = VOP_REG(RK3366_LIT_DSP_CTRL2, 0xff, 28),
 	.color_bar_en = VOP_REG(RK3366_LIT_DSP_CTRL2, 0xff, 31),
 
+	.calc_dclk_cnt = VOP_REG(RV1126B_CLK_CNT, 0x7fff, 0),
+	.calc_clk_en = VOP_REG(RV1126B_CLK_CNT, 0x1, 15),
+
 	.htotal_pw = VOP_REG(RK3366_LIT_DSP_HTOTAL_HS_END, 0x0fff0fff, 0),
 	.hact_st_end = VOP_REG(RK3366_LIT_DSP_HACT_ST_END, 0x0fff0fff, 0),
 	.vtotal_pw = VOP_REG(RK3366_LIT_DSP_VTOTAL_VS_END, 0x0fff0fff, 0),
