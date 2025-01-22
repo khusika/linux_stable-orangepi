@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (C) 2021 Rockchip Co.,Ltd.
+ * Copyright (C) 2021 Rockchip Electronics Co., Ltd.
  * Author: Wang Jie <dave.wang@rock-chips.com>
  *
  * Hynetek Husb311 Type-C Chip Driver
