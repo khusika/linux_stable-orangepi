@@ -5046,10 +5046,24 @@ static const struct vop_dump_regs rk3588_dump_regs[] = {
 	{ RK3568_HDR_LUT_CTRL, "HDR", {0}, 0 },
 };
 
+#define RK3528_PLANE_MASK_BASE \
+	(BIT(ROCKCHIP_VOP2_CLUSTER0) | \
+	 BIT(ROCKCHIP_VOP2_ESMART0)  | BIT(ROCKCHIP_VOP2_ESMART1)  | \
+	 BIT(ROCKCHIP_VOP2_ESMART2)  | BIT(ROCKCHIP_VOP2_ESMART3))
+
+#define RK3562_PLANE_MASK_BASE \
+	(BIT(ROCKCHIP_VOP2_ESMART0)  | BIT(ROCKCHIP_VOP2_ESMART1)  | \
+	 BIT(ROCKCHIP_VOP2_ESMART2)  | BIT(ROCKCHIP_VOP2_ESMART3))
+
 #define RK3568_PLANE_MASK_BASE \
 	(BIT(ROCKCHIP_VOP2_CLUSTER0) | BIT(ROCKCHIP_VOP2_CLUSTER1) | \
 	 BIT(ROCKCHIP_VOP2_ESMART0)  | BIT(ROCKCHIP_VOP2_ESMART1)  | \
 	 BIT(ROCKCHIP_VOP2_SMART0)   | BIT(ROCKCHIP_VOP2_SMART1))
+
+#define RK3576_PLANE_MASK_BASE \
+	(BIT(ROCKCHIP_VOP2_CLUSTER0) | BIT(ROCKCHIP_VOP2_CLUSTER1) | \
+	 BIT(ROCKCHIP_VOP2_ESMART0)  | BIT(ROCKCHIP_VOP2_ESMART1)  | \
+	 BIT(ROCKCHIP_VOP2_ESMART2)  | BIT(ROCKCHIP_VOP2_ESMART3))
 
 #define RK3588_PLANE_MASK_BASE \
 	(BIT(ROCKCHIP_VOP2_CLUSTER0) | BIT(ROCKCHIP_VOP2_CLUSTER1) | \
@@ -5244,6 +5258,7 @@ static const struct vop2_data rk3528_vop = {
 	.win_size = ARRAY_SIZE(rk3528_vop_win_data),
 	.dump_regs = rk3528_dump_regs,
 	.dump_regs_size = ARRAY_SIZE(rk3528_dump_regs),
+	.plane_mask_base = RK3528_PLANE_MASK_BASE,
 };
 
 static const struct vop2_data rk3562_vop = {
@@ -5265,6 +5280,7 @@ static const struct vop2_data rk3562_vop = {
 	.win_size = ARRAY_SIZE(rk3562_vop_win_data),
 	.dump_regs = rk3562_dump_regs,
 	.dump_regs_size = ARRAY_SIZE(rk3562_dump_regs),
+	.plane_mask_base = RK3562_PLANE_MASK_BASE,
 };
 
 static const struct vop2_data rk3568_vop = {
@@ -5313,6 +5329,7 @@ static const struct vop2_data rk3576_vop = {
 	.nr_pds = ARRAY_SIZE(rk3576_vop_pd_data),
 	.dump_regs = rk3576_dump_regs,
 	.dump_regs_size = ARRAY_SIZE(rk3576_dump_regs),
+	.plane_mask_base = RK3576_PLANE_MASK_BASE,
 	.crc_sources = rk3576_crc_sources,
 	.crc_sources_num = ARRAY_SIZE(rk3576_crc_sources),
 };

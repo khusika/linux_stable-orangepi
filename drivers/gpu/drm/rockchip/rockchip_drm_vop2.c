@@ -15282,29 +15282,103 @@ static void post_buf_empty_work_event(struct work_struct *work)
 	}
 }
 
+static void vop2_plane_mask_to_possible_vp_mask(struct vop2 *vop2)
+{
+	const struct vop2_data *vop2_data = vop2->data;
+	struct vop2_video_port *vp;
+	struct vop2_win *win;
+	uint32_t plane_mask;
+	uint32_t nr_planes;
+	uint32_t phys_id;
+	int i, j, k;
+
+	for (i = 0; i < vop2->registered_num_wins; i++) {
+		win = &vop2->win[i];
+		win->possible_vp_mask = 0;
+	}
+
+	for (i = 0; i < vop2_data->nr_vps; i++) {
+		vp = &vop2->vps[i];
+		plane_mask = vp->plane_mask;
+		nr_planes = hweight32(plane_mask);
+
+		for (j = 0; j < nr_planes; j++) {
+			phys_id = ffs(plane_mask) - 1;
+
+			for (k = 0; k < vop2->registered_num_wins; k++) {
+				win = &vop2->win[k];
+				if (win->phys_id == phys_id)
+					win->possible_vp_mask |= BIT(i);
+			}
+
+			plane_mask &= ~BIT(phys_id);
+		}
+	}
+}
+
+/*
+ * The function checks whether the 'rockchip,plane-mask' property assigned
+ * in DTS is valid.
+ */
 static bool vop2_plane_mask_check(struct vop2 *vop2)
 {
 	const struct vop2_data *vop2_data = vop2->data;
+	struct vop2_video_port *vp;
+	struct vop2_win *win;
 	char *full_plane, *current_plane;
-	u32 plane_mask = 0;
-	int i;
+	u32 full_plane_mask = 0, plane_mask = 0;
+	u32 phys_id;
+	u32 nr_planes;
+	int i, j;
 
 	/*
-	 * For RK3568 and RK3588, all windows need to be assigned to
-	 * one of all vps, and two of vps can not share the same window.
+	 * If plane_mask is assigned in DTS, then every plane need to be assigned to
+	 * one of all the VPs, and no single plane can be assigned to more than one
+	 * VP.
 	 */
-	if (vop2->version != VOP_VERSION_RK3568 && vop2->version != VOP_VERSION_RK3588)
-		return true;
-
 	for (i = 0; i < vop2_data->nr_vps; i++) {
-		if (plane_mask & vop2->vps[i].plane_mask) {
+		vp = &vop2->vps[i];
+		plane_mask = vp->plane_mask;
+		nr_planes = hweight32(plane_mask);
+
+		/*
+		 * Every plane assigned to the specific VP should follow the constraints
+		 * of default &vop2_win.possible_vp_mask.
+		 */
+		for (j = 0; j < nr_planes; j++) {
+			phys_id = ffs(plane_mask) - 1;
+			win = vop2_find_win_by_phys_id(vop2, phys_id);
+			if (!win) {
+				DRM_WARN("Invalid plane id %d in VP%d assigned plane mask\n",
+					 phys_id, i);
+				return false;
+			}
+
+			if (!(win->possible_vp_mask & BIT(i))) {
+				DRM_WARN("%s can not attach to VP%d\n",
+					 vop2_plane_phys_id_to_string(phys_id), i);
+				return false;
+			}
+
+			plane_mask &= ~BIT(phys_id);
+		}
+
+		if (full_plane_mask & vop2->vps[i].plane_mask) {
 			DRM_WARN("the same window can't be assigned to two vp\n");
 			return false;
 		}
-		plane_mask |= vop2->vps[i].plane_mask;
+		full_plane_mask |= vop2->vps[i].plane_mask;
 	}
 
-	if (plane_mask != vop2_data->plane_mask_base) {
+	/*
+	 * For VOP3, the DTS assignment of plane_mask is not mandatory. If no plane_mask
+	 * assignment, the planes can be switched between different CRTCs according to
+	 * the &drm_plane.possible_crtcs.
+	 */
+	if (is_vop3(vop2) && !full_plane_mask)
+		return true;
+
+	if (full_plane_mask != vop2_data->plane_mask_base) {
 		full_plane = vop2_plane_mask_to_string(vop2_data->plane_mask_base);
 		current_plane = vop2_plane_mask_to_string(plane_mask);
 		DRM_WARN("all windows should be assigned, full plane mask: %s[0x%x], current plane mask: %s[0x%x]\n",
@@ -15313,6 +15387,12 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 		kfree(current_plane);
 		return false;
 	}
+
+	/*
+	 * If plane_mask assigned in DTS is valid, then convert it to &vop2_win.possible_vp_mask
+	 * and replace the default one with it.
+	 */
+	vop2_plane_mask_to_possible_vp_mask(vop2);
 
 	return true;
 }
@@ -15353,6 +15433,21 @@ static void vop2_plane_mask_assign(struct vop2 *vop2, struct device_node *vop_ou
 	int active_vp_num = 0;
 	int vp_id;
 	int i = 0;
+
+	/*
+	 * For VOP3, users can switch planes between different CRTCs base on the
+	 * &drm_plane.possible_crtcs that exported to the userspace. Therefore,
+	 * there is no need to set the &vop2_video_port.plane_mask and
+	 * &vop2_video_port.primary_plane_phy_id by default, which are used to
+	 * fix the binding relationship between the plane and the CRTC for VOP2.
+	 */
+	if (is_vop3(vop2)) {
+		for (i = 0; i < vop2->data->nr_vps; i++) {
+			vop2->vps[i].plane_mask = 0;
+			vop2->vps[i].primary_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
+		}
+		return;
+	}
 
 	for_each_child_of_node(vop_out_node, child) {
 		if (vop2_get_vp_of_status(child))
