@@ -368,6 +368,102 @@
 		status = "disabled";
 	};
 
+	rkisp_vir0_sditf: rkisp-vir0-sditf {
+		compatible = "rockchip,rkisp-sditf";
+		rockchip,isp = <&rkisp_vir0>;
+		status = "disabled";
+
+		port {
+			isp_sditf0: endpoint {
+				remote-endpoint = <&vpss0_in>;
+			};
+		};
+	};
+
+	rkisp_vir1_sditf: rkisp-vir1-sditf {
+		compatible = "rockchip,rkisp-sditf";
+		rockchip,isp = <&rkisp_vir1>;
+		status = "disabled";
+
+		port {
+			isp_sditf1: endpoint {
+				remote-endpoint = <&vpss1_in>;
+			};
+		};
+	};
+
+	rkisp_vir2_sditf: rkisp-vir2-sditf {
+		compatible = "rockchip,rkisp-sditf";
+		rockchip,isp = <&rkisp_vir2>;
+		status = "disabled";
+
+		port {
+			isp_sditf2: endpoint {
+				remote-endpoint = <&vpss2_in>;
+			};
+		};
+	};
+
+	rkisp_vir3_sditf: rkisp-vir3-sditf {
+		compatible = "rockchip,rkisp-sditf";
+		rockchip,isp = <&rkisp_vir3>;
+		status = "disabled";
+
+		port {
+			isp_sditf3: endpoint {
+				remote-endpoint = <&vpss3_in>;
+			};
+		};
+	};
+
+	rkvpss_vir0: rkvpss-vir0 {
+		compatible = "rockchip,rkvpss-vir";
+		rockchip,hw = <&rkvpss>;
+		status = "disabled";
+
+		port {
+			vpss0_in: endpoint {
+				remote-endpoint = <&isp_sditf0>;
+			};
+		};
+	};
+
+	rkvpss_vir1: rkvpss-vir1 {
+		compatible = "rockchip,rkvpss-vir";
+		rockchip,hw = <&rkvpss>;
+		status = "disabled";
+
+		port {
+			vpss1_in: endpoint {
+				remote-endpoint = <&isp_sditf1>;
+			};
+		};
+	};
+
+	rkvpss_vir2: rkvpss-vir2 {
+		compatible = "rockchip,rkvpss-vir";
+		rockchip,hw = <&rkvpss>;
+		status = "disabled";
+
+		port {
+			vpss2_in: endpoint {
+				remote-endpoint = <&isp_sditf2>;
+			};
+		};
+	};
+
+	rkvpss_vir3: rkvpss-vir3 {
+		compatible = "rockchip,rkvpss-vir";
+		rockchip,hw = <&rkvpss>;
+		status = "disabled";
+
+		port {
+			vpss3_in: endpoint {
+				remote-endpoint = <&isp_sditf3>;
+			};
+		};
+	};
+
 	thermal_zones: thermal-zones {
 		cpu_thermal: cpu-thermal {
 			polling-delay-passive = <20>; /* milliseconds */
@@ -1028,6 +1124,31 @@
 		clock-names = "aclk", "iface";
 		rockchip,disable-mmu-reset;
 		#iommu-cells = <0>;
+		status = "disabled";
+	};
+
+	rkvpss: vpss@21d20000 {
+		compatible = "rockchip,rv1126b-rkvpss";
+		reg = <0x21d20000 0x3f00>;
+		interrupts = <GIC_SPI 161 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 162 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "mi_irq", "vpss_irq";
+		clocks = <&cru ACLK_VPSS>, <&cru HCLK_VPSS>,
+			 <&cru CLK_CORE_VPSS>;
+		clock-names = "aclk_vpss", "hclk_vpss", "clk_vpss";
+		iommus = <&rkvpss_mmu>;
+		status = "disabled";
+	};
+
+	rkvpss_mmu: iommu@21d23f00 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x21d23f00 0x100>;
+		interrupts = <GIC_SPI 163 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "vpss_mmu";
+		clocks = <&cru ACLK_VPSS>, <&cru HCLK_VPSS>;
+		clock-names = "aclk", "iface";
+		#iommu-cells = <0>;
+		rockchip,disable-mmu-reset;
 		status = "disabled";
 	};
 
