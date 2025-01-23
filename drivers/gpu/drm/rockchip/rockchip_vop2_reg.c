@@ -1672,6 +1672,9 @@ static const struct vop2_video_port_regs rk3576_vop_vp0_regs = {
 	.post_urgency_en = VOP_REG(RK3568_VP0_COLOR_BAR_CTRL, 0x1, 8),
 	.post_urgency_thl = VOP_REG(RK3568_VP0_COLOR_BAR_CTRL, 0xf, 16),
 	.post_urgency_thh = VOP_REG(RK3568_VP0_COLOR_BAR_CTRL, 0xf, 20),
+
+	.calc_dclk_cnt = VOP_REG(RK3576_VP0_POST_CLK_CNT, 0x7fff, 0),
+	.calc_clk_en = VOP_REG(RK3576_VP0_POST_CLK_CNT, 0x1, 15),
 };
 
 static const struct vop2_video_port_regs rk3576_vop_vp1_regs = {
@@ -1760,6 +1763,9 @@ static const struct vop2_video_port_regs rk3576_vop_vp1_regs = {
 	.post_urgency_en = VOP_REG(RK3568_VP1_COLOR_BAR_CTRL, 0x1, 8),
 	.post_urgency_thl = VOP_REG(RK3568_VP1_COLOR_BAR_CTRL, 0xf, 16),
 	.post_urgency_thh = VOP_REG(RK3568_VP1_COLOR_BAR_CTRL, 0xf, 20),
+
+	.calc_dclk_cnt = VOP_REG(RK3576_VP1_POST_CLK_CNT, 0x7fff, 0),
+	.calc_clk_en = VOP_REG(RK3576_VP1_POST_CLK_CNT, 0x1, 15),
 };
 
 static const struct vop2_video_port_regs rk3576_vop_vp2_regs = {
@@ -1845,6 +1851,9 @@ static const struct vop2_video_port_regs rk3576_vop_vp2_regs = {
 	.post_urgency_en = VOP_REG(RK3568_VP2_COLOR_BAR_CTRL, 0x1, 8),
 	.post_urgency_thl = VOP_REG(RK3568_VP2_COLOR_BAR_CTRL, 0xf, 16),
 	.post_urgency_thh = VOP_REG(RK3568_VP2_COLOR_BAR_CTRL, 0xf, 20),
+
+	.calc_dclk_cnt = VOP_REG(RK3576_VP2_POST_CLK_CNT, 0x7fff, 0),
+	.calc_clk_en = VOP_REG(RK3576_VP2_POST_CLK_CNT, 0x1, 15),
 };
 
 static const struct vop3_ovl_regs rk3576_vop_vp0_ovl_regs = {

@@ -1078,6 +1078,10 @@ struct vop2_video_port_regs {
 	struct vop_reg crc_val;
 	struct vop_reg crc_check_en;
 	struct vop_reg crc_check_val;
+
+	/* clk calc*/
+	struct vop_reg calc_clk_en;
+	struct vop_reg calc_dclk_cnt;
 };
 
 struct vop2_power_domain_regs {
