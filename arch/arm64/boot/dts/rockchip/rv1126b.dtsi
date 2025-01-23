@@ -2147,6 +2147,29 @@
 		status = "disabled";
 	};
 
+	rkfec: rkfec@21f80000 {
+		compatible = "rockchip,rv1126b-rkfec";
+		reg = <0x21f80000 0xf00>;
+		interrupts = <GIC_SPI 125 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "fec_irq";
+		clocks = <&cru ACLK_FEC>, <&cru HCLK_FEC>, <&cru CLK_CORE_FEC>;
+		clock-names = "aclk_fec", "hclk_fec", "clk_fec";
+		iommus = <&rkfec_mmu>;
+		status = "disabled";
+	};
+
+	rkfec_mmu: iommu@21f80f00 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x21f80f00 0x100>;
+		interrupts = <GIC_SPI 126 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "fec_mmu";
+		clocks = <&cru ACLK_FEC>, <&cru HCLK_FEC>;
+		clock-names = "aclk", "iface";
+		#iommu-cells = <0>;
+		rockchip,disable-mmu-reset;
+		status = "disabled";
+	};
+
 	hw_decompress: decompress@22100000 {
 		compatible = "rockchip,hw-decompress";
 		reg = <0x22100000 0x1000>;
