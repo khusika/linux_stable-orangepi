@@ -821,6 +821,14 @@ static int rockchip_pdm_v2_probe(struct platform_device *pdev)
 	 */
 	pdm->version = (pdm->version >> 16) & 0xffff;
 
+	if (pdm->version == RK3506_PDM) {
+		regmap_update_bits(pdm->regmap, PDM_V2_GAIN_CTRL, PDM_V2_GAIN_CTRL_MSK,
+				   PDM_V2_GAIN_CTRL_0DB);
+	} else if (pdm->version == RK3576_PDM) {
+		regmap_update_bits(pdm->regmap, PDM_V2_FILTER_CTRL, PDM_V2_GAIN_MSK,
+				   PDM_V2_GAIN_0DB);
+	}
+
 	ret = rockchip_pdm_v2_path_parse(pdm, node);
 	if (ret != 0 && ret != -ENOENT)
 		goto err_hclk;
