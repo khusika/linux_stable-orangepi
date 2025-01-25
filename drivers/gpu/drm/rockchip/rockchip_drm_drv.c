@@ -66,7 +66,7 @@
 	    (idx) += sizeof(struct displayid_block) + (block)->num_bytes, \
 	    (block) = (struct displayid_block *)&(displayid)[idx])
 
-#if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
+#if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VKMS)
 static bool is_support_iommu = false;
 #else
 static bool is_support_iommu = true;
@@ -2473,7 +2473,7 @@ static int rockchip_drm_platform_probe(struct platform_device *pdev)
 	int ret;
 
 	ret = rockchip_drm_platform_of_probe(dev);
-#if !IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
+#if !IS_ENABLED(CONFIG_DRM_ROCKCHIP_VKMS)
 	if (ret)
 		return ret;
 #endif
@@ -2545,8 +2545,8 @@ static int __init rockchip_drm_init(void)
 		return -ENODEV;
 
 	num_rockchip_sub_drivers = 0;
-#if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VVOP)
-	ADD_ROCKCHIP_SUB_DRIVER(vvop_platform_driver, CONFIG_DRM_ROCKCHIP_VVOP);
+#if IS_ENABLED(CONFIG_DRM_ROCKCHIP_VKMS)
+	ADD_ROCKCHIP_SUB_DRIVER(rockchip_vkms_platform_driver, CONFIG_DRM_ROCKCHIP_VKMS);
 #else
 	ADD_ROCKCHIP_SUB_DRIVER(vop_platform_driver, CONFIG_ROCKCHIP_VOP);
 	ADD_ROCKCHIP_SUB_DRIVER(vop2_platform_driver, CONFIG_ROCKCHIP_VOP2);

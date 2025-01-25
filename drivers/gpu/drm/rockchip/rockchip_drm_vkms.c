@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Virtual vop driver based on vkms
+ * Virtual display driver based on vkms
  *
  */
 
@@ -17,7 +17,7 @@
 #include <drm/drm_probe_helper.h>
 #include <drm/drm_vblank.h>
 
-#define DRIVER_NAME	"virtual-vop"
+#define DRIVER_NAME	"rockchip-vkms"
 
 #define XRES_MIN	32
 #define YRES_MIN	32
@@ -28,11 +28,11 @@
 #define XRES_MAX	8192
 #define YRES_MAX	8192
 
-#define VVOP_MAX_CRTC	8
+#define VKMS_MAX_CRTC	8
 
-static struct platform_device *vvop_pdev;
+static struct platform_device *vkms_pdev;
 
-struct vvop_crtc {
+struct rockchip_vkms_crtc {
 	struct drm_crtc crtc;
 	struct drm_plane plane;
 	struct drm_encoder encoder;
@@ -45,25 +45,25 @@ struct vvop_crtc {
 	struct drm_property *soc_id_prop;
 };
 
-struct vvop {
+struct rockchip_vkms {
 	struct device *dev;
 	struct drm_device *drm_dev;
 	struct platform_device *pdev;
 
-	struct vvop_crtc vcrtc[VVOP_MAX_CRTC];
+	struct rockchip_vkms_crtc vcrtc[VKMS_MAX_CRTC];
 
 	uint32_t crtc_mask;
 };
 
-static const u32 vvop_formats[] = {
+static const u32 rockchip_vkms_formats[] = {
 	DRM_FORMAT_XRGB8888,
 };
 
-#define drm_crtc_to_vvop_crtc(crtc) \
-	container_of(crtc, struct vvop_crtc, crtc)
+#define drm_crtc_to_rockchip_vkms_crtc(crtc) \
+	container_of(crtc, struct rockchip_vkms_crtc, crtc)
 
 
-static const struct drm_plane_funcs vvop_plane_funcs = {
+static const struct drm_plane_funcs rockchip_vkms_plane_funcs = {
 	.update_plane		= drm_atomic_helper_update_plane,
 	.disable_plane		= drm_atomic_helper_disable_plane,
 	.destroy		= drm_plane_cleanup,
@@ -72,33 +72,33 @@ static const struct drm_plane_funcs vvop_plane_funcs = {
 	.atomic_destroy_state	= drm_atomic_helper_plane_destroy_state,
 };
 
-static void vvop_plane_atomic_update(struct drm_plane *plane, struct drm_atomic_state *state)
+static void rockchip_vkms_plane_atomic_update(struct drm_plane *plane, struct drm_atomic_state *state)
 {
 }
 
-static const struct drm_plane_helper_funcs vvop_plane_helper_funcs = {
-	.atomic_update		= vvop_plane_atomic_update,
+static const struct drm_plane_helper_funcs rockchip_vkms_plane_helper_funcs = {
+	.atomic_update		= rockchip_vkms_plane_atomic_update,
 };
 
-static int vvop_plane_init(struct drm_device *dev, struct drm_plane *primary)
+static int rockchip_vkms_plane_init(struct drm_device *dev, struct drm_plane *primary)
 {
 	int ret;
 
 	ret = drm_universal_plane_init(dev, primary, 0,
-				       &vvop_plane_funcs,
-				       vvop_formats, ARRAY_SIZE(vvop_formats),
+				       &rockchip_vkms_plane_funcs,
+				       rockchip_vkms_formats, ARRAY_SIZE(rockchip_vkms_formats),
 				       NULL, DRM_PLANE_TYPE_PRIMARY, NULL);
 	if (ret)
 		return ret;
 
-	drm_plane_helper_add(primary, &vvop_plane_helper_funcs);
+	drm_plane_helper_add(primary, &rockchip_vkms_plane_helper_funcs);
 
 	return 0;
 }
 
-static enum hrtimer_restart vvop_vblank_simulate(struct hrtimer *timer)
+static enum hrtimer_restart rockchip_vkms_vblank_simulate(struct hrtimer *timer)
 {
-	struct vvop_crtc *vcrtc = container_of(timer, struct vvop_crtc, vblank_hrtimer);
+	struct rockchip_vkms_crtc *vcrtc = container_of(timer, struct rockchip_vkms_crtc, vblank_hrtimer);
 	struct drm_crtc *crtc = &vcrtc->crtc;
 	bool ret;
 
@@ -114,9 +114,9 @@ static enum hrtimer_restart vvop_vblank_simulate(struct hrtimer *timer)
 	return HRTIMER_RESTART;
 }
 
-static int vvop_enable_vblank(struct drm_crtc *crtc)
+static int rockchip_vkms_enable_vblank(struct drm_crtc *crtc)
 {
-	struct vvop_crtc *vcrtc = drm_crtc_to_vvop_crtc(crtc);
+	struct rockchip_vkms_crtc *vcrtc = drm_crtc_to_rockchip_vkms_crtc(crtc);
 	struct drm_device *dev = crtc->dev;
 	unsigned int pipe = drm_crtc_index(crtc);
 	struct drm_vblank_crtc *vblank = &dev->vblank[pipe];
@@ -129,32 +129,32 @@ static int vvop_enable_vblank(struct drm_crtc *crtc)
 	return 0;
 }
 
-static void vvop_disable_vblank(struct drm_crtc *crtc)
+static void rockchip_vkms_disable_vblank(struct drm_crtc *crtc)
 {
-	struct vvop_crtc *vcrtc = drm_crtc_to_vvop_crtc(crtc);
+	struct rockchip_vkms_crtc *vcrtc = drm_crtc_to_rockchip_vkms_crtc(crtc);
 
 	hrtimer_try_to_cancel(&vcrtc->vblank_hrtimer);
 }
 
-static void vvop_connector_destroy(struct drm_connector *connector)
+static void rockchip_vkms_connector_destroy(struct drm_connector *connector)
 {
 	drm_connector_unregister(connector);
 	drm_connector_cleanup(connector);
 }
 
-static const struct drm_connector_funcs vvop_connector_funcs = {
+static const struct drm_connector_funcs rockchip_vkms_connector_funcs = {
 	.fill_modes = drm_helper_probe_single_connector_modes,
-	.destroy = vvop_connector_destroy,
+	.destroy = rockchip_vkms_connector_destroy,
 	.reset = drm_atomic_helper_connector_reset,
 	.atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
 	.atomic_destroy_state = drm_atomic_helper_connector_destroy_state,
 };
 
-static const struct drm_encoder_funcs vvop_encoder_funcs = {
+static const struct drm_encoder_funcs rockchip_vkms_encoder_funcs = {
 	.destroy = drm_encoder_cleanup,
 };
 
-static struct drm_display_mode vvop_modes_builtin[] = {
+static struct drm_display_mode rockchip_vkms_modes_builtin[] = {
 	/* 1280x720@30Hz */
 	{ DRM_MODE("1280x720", DRM_MODE_TYPE_DRIVER, 37125, 1280, 1390,
 		   1430, 1650, 0, 720, 725, 730, 750, 0,
@@ -361,7 +361,7 @@ static struct drm_display_mode vvop_modes_builtin[] = {
 		   DRM_MODE_FLAG_PHSYNC | DRM_MODE_FLAG_PVSYNC) },
 };
 
-static int vvop_conn_get_modes(struct drm_connector *connector)
+static int rockchip_vkms_conn_get_modes(struct drm_connector *connector)
 {
 	struct drm_display_mode *mode = NULL;
 	struct drm_display_mode *bmode;
@@ -369,8 +369,8 @@ static int vvop_conn_get_modes(struct drm_connector *connector)
 	int i;
 
 	count += drm_add_modes_noedid(connector, XRES_MAX, YRES_MAX);
-	for (i = 0; vvop_modes_builtin[i].type != 0; i++) {
-		bmode = &vvop_modes_builtin[i];
+	for (i = 0; rockchip_vkms_modes_builtin[i].type != 0; i++) {
+		bmode = &rockchip_vkms_modes_builtin[i];
 
 		mode = drm_mode_duplicate(connector->dev, bmode);
 		if (!mode)
@@ -384,27 +384,27 @@ static int vvop_conn_get_modes(struct drm_connector *connector)
 	return count;
 }
 
-static const struct drm_connector_helper_funcs vvop_conn_helper_funcs = {
-	.get_modes    = vvop_conn_get_modes,
+static const struct drm_connector_helper_funcs rockchip_vkms_conn_helper_funcs = {
+	.get_modes    = rockchip_vkms_conn_get_modes,
 };
 
-static const struct drm_crtc_funcs vvop_crtc_funcs = {
+static const struct drm_crtc_funcs rockchip_vkms_crtc_funcs = {
 	.set_config		= drm_atomic_helper_set_config,
 	.destroy		= drm_crtc_cleanup,
 	.page_flip		= drm_atomic_helper_page_flip,
 	.reset			= drm_atomic_helper_crtc_reset,
 	.atomic_duplicate_state	= drm_atomic_helper_crtc_duplicate_state,
 	.atomic_destroy_state	= drm_atomic_helper_crtc_destroy_state,
-	.enable_vblank		= vvop_enable_vblank,
-	.disable_vblank		= vvop_disable_vblank,
+	.enable_vblank		= rockchip_vkms_enable_vblank,
+	.disable_vblank		= rockchip_vkms_disable_vblank,
 };
 
-static void vvop_crtc_atomic_enable(struct drm_crtc *crtc, struct drm_atomic_state *state)
+static void rockchip_vkms_crtc_atomic_enable(struct drm_crtc *crtc, struct drm_atomic_state *state)
 {
 	drm_crtc_vblank_on(crtc);
 }
 
-static void vvop_crtc_atomic_disable(struct drm_crtc *crtc, struct drm_atomic_state *state)
+static void rockchip_vkms_crtc_atomic_disable(struct drm_crtc *crtc, struct drm_atomic_state *state)
 {
 	unsigned long flags;
 
@@ -419,7 +419,7 @@ static void vvop_crtc_atomic_disable(struct drm_crtc *crtc, struct drm_atomic_st
 
 }
 
-static void vvop_crtc_atomic_flush(struct drm_crtc *crtc, struct drm_atomic_state *state)
+static void rockchip_vkms_crtc_atomic_flush(struct drm_crtc *crtc, struct drm_atomic_state *state)
 {
 	unsigned long flags;
 
@@ -437,13 +437,13 @@ static void vvop_crtc_atomic_flush(struct drm_crtc *crtc, struct drm_atomic_stat
 	}
 }
 
-static const struct drm_crtc_helper_funcs vvop_crtc_helper_funcs = {
-	.atomic_flush	= vvop_crtc_atomic_flush,
-	.atomic_enable	= vvop_crtc_atomic_enable,
-	.atomic_disable	= vvop_crtc_atomic_disable,
+static const struct drm_crtc_helper_funcs rockchip_vkms_crtc_helper_funcs = {
+	.atomic_flush	= rockchip_vkms_crtc_atomic_flush,
+	.atomic_enable	= rockchip_vkms_crtc_atomic_enable,
+	.atomic_disable	= rockchip_vkms_crtc_atomic_disable,
 };
 
-static u64 vvop_get_soc_id(void)
+static u64 rockchip_vkms_get_soc_id(void)
 {
 	if (of_machine_is_compatible("rockchip,rk3588"))
 		return 0x3588;
@@ -459,28 +459,28 @@ static u64 vvop_get_soc_id(void)
 		return 0;
 }
 
-static void vvop_crtc_deinit(struct drm_crtc *crtc)
+static void rockchip_vkms_crtc_deinit(struct drm_crtc *crtc)
 {
-	struct vvop_crtc *vcrtc = drm_crtc_to_vvop_crtc(crtc);
+	struct rockchip_vkms_crtc *vcrtc = drm_crtc_to_rockchip_vkms_crtc(crtc);
 
 	hrtimer_cancel(&vcrtc->vblank_hrtimer);
 	drm_crtc_cleanup(crtc);
 }
 
-static int vvop_crtc_init(struct drm_device *dev, struct drm_crtc *crtc,
+static int rockchip_vkms_crtc_init(struct drm_device *dev, struct drm_crtc *crtc,
 			  struct drm_plane *primary, struct drm_plane *cursor)
 {
-	struct vvop_crtc *vcrtc = drm_crtc_to_vvop_crtc(crtc);
+	struct rockchip_vkms_crtc *vcrtc = drm_crtc_to_rockchip_vkms_crtc(crtc);
 	int ret;
 
 	ret = drm_crtc_init_with_planes(dev, crtc, primary, cursor,
-					&vvop_crtc_funcs, NULL);
+					&rockchip_vkms_crtc_funcs, NULL);
 	if (ret) {
 		DRM_ERROR("Failed to init CRTC\n");
 		return ret;
 	}
 
-	drm_crtc_helper_add(crtc, &vvop_crtc_helper_funcs);
+	drm_crtc_helper_add(crtc, &rockchip_vkms_crtc_helper_funcs);
 
 	vcrtc->is_virtual_prop = drm_property_create_object(dev,
 							    DRM_MODE_PROP_ATOMIC |
@@ -492,41 +492,41 @@ static int vvop_crtc_init(struct drm_device *dev, struct drm_crtc *crtc,
 							DRM_MODE_PROP_ATOMIC |
 							DRM_MODE_PROP_IMMUTABLE,
 							"SOC_ID", DRM_MODE_OBJECT_CRTC);
-	drm_object_attach_property(&crtc->base, vcrtc->soc_id_prop, vvop_get_soc_id());
+	drm_object_attach_property(&crtc->base, vcrtc->soc_id_prop, rockchip_vkms_get_soc_id());
 
 	hrtimer_init(&vcrtc->vblank_hrtimer, CLOCK_MONOTONIC, HRTIMER_MODE_REL);
-	vcrtc->vblank_hrtimer.function = &vvop_vblank_simulate;
+	vcrtc->vblank_hrtimer.function = &rockchip_vkms_vblank_simulate;
 
 	return ret;
 }
 
-static int vvop_create_crtc(struct vvop *vvop, int index)
+static int rockchip_vkms_create_crtc(struct rockchip_vkms *rockchip_vkms, int index)
 {
-	struct drm_crtc *crtc = &vvop->vcrtc[index].crtc;
-	struct drm_connector *connector = &vvop->vcrtc[index].connector;
-	struct drm_encoder *encoder = &vvop->vcrtc[index].encoder;
-	struct drm_plane *primary = &vvop->vcrtc[index].plane;
+	struct drm_crtc *crtc = &rockchip_vkms->vcrtc[index].crtc;
+	struct drm_connector *connector = &rockchip_vkms->vcrtc[index].connector;
+	struct drm_encoder *encoder = &rockchip_vkms->vcrtc[index].encoder;
+	struct drm_plane *primary = &rockchip_vkms->vcrtc[index].plane;
 	int ret;
 
-	ret = vvop_plane_init(vvop->drm_dev, primary);
+	ret = rockchip_vkms_plane_init(rockchip_vkms->drm_dev, primary);
 	if (ret) {
 		DRM_ERROR("Failed to init primary plane for crtc-%d\n", index);
 		return ret;
 	}
 
-	ret = vvop_crtc_init(vvop->drm_dev, crtc, primary, NULL);
+	ret = rockchip_vkms_crtc_init(rockchip_vkms->drm_dev, crtc, primary, NULL);
 	if (ret) {
 		DRM_ERROR("Failed to init crtc-%d\n", index);
 		goto err_crtc;
 	}
 
-	ret = drm_connector_init(vvop->drm_dev, connector, &vvop_connector_funcs,
+	ret = drm_connector_init(rockchip_vkms->drm_dev, connector, &rockchip_vkms_connector_funcs,
 				 DRM_MODE_CONNECTOR_VIRTUAL);
 	if (ret) {
 		DRM_ERROR("Failed to init connector-%d\n", index);
 		goto err_connector;
 	}
-	drm_connector_helper_add(connector, &vvop_conn_helper_funcs);
+	drm_connector_helper_add(connector, &rockchip_vkms_conn_helper_funcs);
 
 	ret = drm_connector_register(connector);
 	if (ret) {
@@ -534,7 +534,7 @@ static int vvop_create_crtc(struct vvop *vvop, int index)
 		goto err_connector_register;
 	}
 
-	ret = drm_encoder_init(vvop->drm_dev, encoder, &vvop_encoder_funcs,
+	ret = drm_encoder_init(rockchip_vkms->drm_dev, encoder, &rockchip_vkms_encoder_funcs,
 			       DRM_MODE_ENCODER_VIRTUAL, NULL);
 	if (ret) {
 		DRM_ERROR("Failed to init encoder-%d\n", index);
@@ -548,7 +548,7 @@ static int vvop_create_crtc(struct vvop *vvop, int index)
 		goto err_attach;
 	}
 
-	vvop->crtc_mask |= drm_crtc_mask(crtc);
+	rockchip_vkms->crtc_mask |= drm_crtc_mask(crtc);
 
 	return 0;
 
@@ -559,119 +559,119 @@ err_encoder:
 err_connector_register:
 	drm_connector_cleanup(connector);
 err_connector:
-	vvop_crtc_deinit(crtc);
+	rockchip_vkms_crtc_deinit(crtc);
 err_crtc:
 	drm_plane_cleanup(primary);
 
 	return ret;
 }
 
-static int vvop_create_crtcs(struct vvop *vvop)
+static int rockchip_vkms_create_crtcs(struct rockchip_vkms *rockchip_vkms)
 {
 	int ret;
 	int i;
 
-	for (i = 0; i < VVOP_MAX_CRTC; i++) {
-		ret = vvop_create_crtc(vvop, i);
+	for (i = 0; i < VKMS_MAX_CRTC; i++) {
+		ret = rockchip_vkms_create_crtc(rockchip_vkms, i);
 		if (ret) {
 			DRM_WARN("Failed to create virtual crtc, index = %d\n", i);
 			break;
 		}
 	}
 
-	DRM_INFO("Create %d(total: %d) virtual crtcs\n", i, VVOP_MAX_CRTC);
+	DRM_INFO("Create %d(total: %d) virtual crtcs\n", i, VKMS_MAX_CRTC);
 
 	return 0;
 }
 
-static int vvop_bind(struct device *dev, struct device *master, void *data)
+static int rockchip_vkms_bind(struct device *dev, struct device *master, void *data)
 {
 	struct drm_device *drm_dev = data;
-	struct vvop *vvop;
+	struct rockchip_vkms *rockchip_vkms;
 
-	vvop = devm_kzalloc(dev, sizeof(*vvop), GFP_KERNEL);
-	if (!vvop)
+	rockchip_vkms = devm_kzalloc(dev, sizeof(*rockchip_vkms), GFP_KERNEL);
+	if (!rockchip_vkms)
 		return -ENOMEM;
 
-	vvop->dev = dev;
-	vvop->drm_dev = drm_dev;
-	dev_set_drvdata(dev, vvop);
+	rockchip_vkms->dev = dev;
+	rockchip_vkms->drm_dev = drm_dev;
+	dev_set_drvdata(dev, rockchip_vkms);
 
-	vvop_create_crtcs(vvop);
+	rockchip_vkms_create_crtcs(rockchip_vkms);
 
 	return 0;
 }
 
-static void vvop_unbind(struct device *dev, struct device *master, void *data)
+static void rockchip_vkms_unbind(struct device *dev, struct device *master, void *data)
 {
-	struct vvop *vvop = dev_get_drvdata(dev);
-	struct drm_device *drm_dev = vvop->drm_dev;
+	struct rockchip_vkms *rockchip_vkms = dev_get_drvdata(dev);
+	struct drm_device *drm_dev = rockchip_vkms->drm_dev;
 	struct list_head *crtc_list = &drm_dev->mode_config.crtc_list;
 	struct drm_crtc *crtc, *tmp_crtc;
-	struct vvop_crtc *vcrtc;
+	struct rockchip_vkms_crtc *vcrtc;
 
 	list_for_each_entry_safe(crtc, tmp_crtc, crtc_list, head) {
-		if (vvop->crtc_mask & drm_crtc_mask(crtc)) {
-			vcrtc = drm_crtc_to_vvop_crtc(crtc);
+		if (rockchip_vkms->crtc_mask & drm_crtc_mask(crtc)) {
+			vcrtc = drm_crtc_to_rockchip_vkms_crtc(crtc);
 
 			drm_encoder_cleanup(&vcrtc->encoder);
 			drm_connector_unregister(&vcrtc->connector);
 			drm_connector_cleanup(&vcrtc->connector);
 			drm_plane_cleanup(&vcrtc->plane);
-			vvop->crtc_mask &= ~(drm_crtc_mask(crtc));
-			vvop_crtc_deinit(crtc);
+			rockchip_vkms->crtc_mask &= ~(drm_crtc_mask(crtc));
+			rockchip_vkms_crtc_deinit(crtc);
 		}
 	}
 }
 
-const struct component_ops vvop_component_ops = {
-	.bind = vvop_bind,
-	.unbind = vvop_unbind,
+const struct component_ops rockchip_vkms_component_ops = {
+	.bind = rockchip_vkms_bind,
+	.unbind = rockchip_vkms_unbind,
 };
 
-static int vvop_probe(struct platform_device *pdev)
+static int rockchip_vkms_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 
 	DRM_DEV_INFO(dev, "virtual vop probe\n");
 
-	return component_add(dev, &vvop_component_ops);
+	return component_add(dev, &rockchip_vkms_component_ops);
 }
 
-static int vvop_remove(struct platform_device *pdev)
+static int rockchip_vkms_remove(struct platform_device *pdev)
 {
-	component_del(&pdev->dev, &vvop_component_ops);
+	component_del(&pdev->dev, &rockchip_vkms_component_ops);
 
 	return 0;
 }
 
 
-struct platform_driver vvop_platform_driver = {
-	.probe = vvop_probe,
-	.remove = vvop_remove,
+struct platform_driver rockchip_vkms_platform_driver = {
+	.probe = rockchip_vkms_probe,
+	.remove = rockchip_vkms_remove,
 	.driver = {
 		.name = DRIVER_NAME,
 	},
 };
 
-static int __init vvop_init(void)
+static int __init rockchip_vkms_init(void)
 {
-	vvop_pdev = platform_device_register_simple(DRIVER_NAME, -1, NULL, 0);
-	if (IS_ERR(vvop_pdev)) {
+	vkms_pdev = platform_device_register_simple(DRIVER_NAME, -1, NULL, 0);
+	if (IS_ERR(vkms_pdev)) {
 		DRM_ERROR("failed to register platform device %s\n", DRIVER_NAME);
-		return PTR_ERR(vvop_pdev);
+		return PTR_ERR(vkms_pdev);
 	}
 
 	return 0;
 }
 
-static void __exit vvop_exit(void)
+static void __exit rockchip_vkms_exit(void)
 {
-	platform_device_unregister(vvop_pdev);
+	platform_device_unregister(vkms_pdev);
 }
 
-rootfs_initcall(vvop_init);
-module_exit(vvop_exit);
+rootfs_initcall(rockchip_vkms_init);
+module_exit(rockchip_vkms_exit);
 
 MODULE_AUTHOR("Andy Yan <rock-chips@.com>");
 MODULE_LICENSE("GPL");
