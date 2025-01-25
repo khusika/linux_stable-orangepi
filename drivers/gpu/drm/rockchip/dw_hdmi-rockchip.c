@@ -1945,8 +1945,8 @@ static void dw_hdmi_rockchip_encoder_atomic_disable(struct drm_encoder *encoder,
 	struct drm_crtc *old_crtc, *new_crtc;
 	struct rockchip_crtc_state *s;
 
-	old_crtc = rockchip_drm_encoder_get_old_crtc(encoder, state);
-	new_crtc = rockchip_drm_encoder_get_new_crtc(encoder, state);
+	old_crtc = drm_atomic_get_old_crtc_for_encoder(state, encoder);
+	new_crtc = drm_atomic_get_new_crtc_for_encoder(state, encoder);
 
 	if (old_crtc && old_crtc != new_crtc) {
 		s = to_rockchip_crtc_state(old_crtc->state);

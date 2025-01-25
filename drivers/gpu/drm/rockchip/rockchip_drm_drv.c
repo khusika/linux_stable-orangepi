@@ -473,57 +473,43 @@ void rockchip_drm_te_handle(struct drm_crtc *crtc)
 }
 EXPORT_SYMBOL(rockchip_drm_te_handle);
 
-struct drm_crtc *rockchip_drm_encoder_get_old_crtc(struct drm_encoder *encoder,
-						   struct drm_atomic_state *state)
+struct drm_crtc *
+drm_atomic_get_old_crtc_for_encoder(struct drm_atomic_state *state,
+				    struct drm_encoder *encoder)
 {
-	struct drm_device *drm_dev = state->dev;
 	struct drm_connector *connector;
-	struct drm_connector_list_iter conn_iter;
 	struct drm_connector_state *conn_state;
 
-	drm_connector_list_iter_begin(drm_dev, &conn_iter);
-	drm_for_each_connector_iter(connector, &conn_iter) {
-		conn_state = drm_atomic_get_old_connector_state(state, connector);
-		if (!conn_state)
-			continue;
+	connector = drm_atomic_get_old_connector_for_encoder(state, encoder);
+	if (!connector)
+		return NULL;
 
-		if (conn_state->best_encoder != encoder)
-			continue;
+	conn_state = drm_atomic_get_old_connector_state(state, connector);
+	if (!conn_state)
+		return NULL;
 
-		drm_connector_list_iter_end(&conn_iter);
-		return conn_state->crtc;
-	}
-	drm_connector_list_iter_end(&conn_iter);
-
-	return NULL;
+	return conn_state->crtc;
 }
-EXPORT_SYMBOL(rockchip_drm_encoder_get_old_crtc);
+EXPORT_SYMBOL(drm_atomic_get_old_crtc_for_encoder);
 
-struct drm_crtc *rockchip_drm_encoder_get_new_crtc(struct drm_encoder *encoder,
-						   struct drm_atomic_state *state)
+struct drm_crtc *
+drm_atomic_get_new_crtc_for_encoder(struct drm_atomic_state *state,
+				    struct drm_encoder *encoder)
 {
-	struct drm_device *drm_dev = state->dev;
 	struct drm_connector *connector;
-	struct drm_connector_list_iter conn_iter;
 	struct drm_connector_state *conn_state;
 
-	drm_connector_list_iter_begin(drm_dev, &conn_iter);
-	drm_for_each_connector_iter(connector, &conn_iter) {
-		conn_state = drm_atomic_get_new_connector_state(state, connector);
-		if (!conn_state)
-			continue;
+	connector = drm_atomic_get_new_connector_for_encoder(state, encoder);
+	if (!connector)
+		return NULL;
 
-		if (conn_state->best_encoder != encoder)
-			continue;
+	conn_state = drm_atomic_get_new_connector_state(state, connector);
+	if (!conn_state)
+		return NULL;
 
-		drm_connector_list_iter_end(&conn_iter);
-		return conn_state->crtc;
-	}
-	drm_connector_list_iter_end(&conn_iter);
-
-	return NULL;
+	return conn_state->crtc;
 }
-EXPORT_SYMBOL(rockchip_drm_encoder_get_new_crtc);
+EXPORT_SYMBOL(drm_atomic_get_new_crtc_for_encoder);
 
 static const struct drm_display_mode rockchip_drm_default_modes[] = {
 	/* 4 - 1280x720@60Hz 16:9 */
