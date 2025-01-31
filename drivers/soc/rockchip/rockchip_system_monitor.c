@@ -19,6 +19,7 @@
 #include <linux/pm_opp.h>
 #include <linux/pm_qos.h>
 #include <linux/pm_runtime.h>
+#include <linux/property.h>
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/coupler.h>
 #include <linux/regulator/driver.h>
@@ -1909,7 +1910,6 @@ MODULE_DEVICE_TABLE(of, rockchip_system_monitor_of_match);
 static int rockchip_system_monitor_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	const struct of_device_id *match;
 	int (*init)(struct platform_device *pdev);
 
 	system_monitor = devm_kzalloc(dev, sizeof(struct system_monitor),
@@ -1933,11 +1933,9 @@ static int rockchip_system_monitor_probe(struct platform_device *pdev)
 
 	rockchip_system_monitor_parse_dt(system_monitor);
 
-	match = of_match_device(rockchip_system_monitor_of_match, &pdev->dev);
-	if (match && match->data) {
-		init = match->data;
+	init = device_get_match_data(dev);
+	if (init)
 		init(pdev);
-	}
 
 	if (system_monitor->tz) {
 		system_monitor->last_temp = INT_MAX;
