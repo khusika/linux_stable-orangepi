@@ -24,6 +24,7 @@
 #include <linux/ptrace.h>
 #include <linux/sched/clock.h>
 #include <linux/slab.h>
+#include <linux/vmalloc.h>
 #include <soc/rockchip/rockchip_sip.h>
 
 #ifdef CONFIG_64BIT
