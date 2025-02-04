@@ -20,6 +20,7 @@
 #include <linux/ktime.h>
 #include <linux/module.h>
 #include <linux/of_address.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/prandom.h>
