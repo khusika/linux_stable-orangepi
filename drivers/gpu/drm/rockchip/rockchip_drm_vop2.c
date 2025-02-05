@@ -1233,6 +1233,11 @@ static bool vop2_is_mirror_win(struct vop2_win *win)
 	return soc_is_rk3566() && (win->feature & WIN_FEATURE_MIRROR);
 }
 
+static bool vop2_win_can_attach_to_vp(struct vop2_video_port *vp, struct vop2_win *win)
+{
+	return win->possible_vp_mask & BIT(vp->id);
+}
+
 static uint64_t vop2_soc_id_fixup(uint64_t soc_id)
 {
 	switch (soc_id) {
@@ -14425,6 +14430,13 @@ static struct drm_plane *vop2_cursor_plane_init(struct vop2_video_port *vp, u8 e
 
 	win = vop2_find_win_by_phys_id(vop2, vp->cursor_win_id);
 	if (win) {
+		if (!vop2_win_can_attach_to_vp(vp, win)) {
+			DRM_DEV_ERROR(vop2->dev,
+				      "Assigned cursor plane: %s can not attach to VP%d\n",
+				      vop2_plane_phys_id_to_string(vp->cursor_win_id), vp->id);
+			return NULL;
+		}
+
 		if (vop2->disable_win_move)
 			possible_crtcs = BIT(registered_num_crtcs);
 		else
@@ -14681,11 +14693,6 @@ static int vop2_crtc_create_post_sharp_property(struct vop2 *vop2, struct drm_cr
 }
 #define RK3566_MIRROR_PLANE_MASK (BIT(ROCKCHIP_VOP2_CLUSTER1) | BIT(ROCKCHIP_VOP2_ESMART1) | \
 				  BIT(ROCKCHIP_VOP2_SMART1))
-
-static inline bool vop2_win_can_attach_to_vp(struct vop2_video_port *vp, struct vop2_win *win)
-{
-	return win->possible_vp_mask & BIT(vp->id);
-}
 
 /*
  * Returns:
