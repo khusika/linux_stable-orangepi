@@ -14526,7 +14526,12 @@ static int vop2_create_crtc(struct vop2 *vop2, uint8_t enabled_vp_mask)
 			drm_object_attach_property(&crtc->base,
 						   drm_dev->mode_config.tv_bottom_margin_property, 100);
 		}
-		if (plane_mask)
+		/*
+		 * For vop3, user can switch planes between different CRTCs based
+		 * on the &drm_plane.possible_crtcs in userspace, so the 'PLANE_MASK'
+		 * property is not required.
+		 */
+		if (plane_mask && !is_vop3(vop2))
 			vop2_crtc_create_plane_mask_property(vop2, crtc, plane_mask);
 		vop2_crtc_create_feature_property(vop2, crtc);
 		vop2_crtc_create_vrr_property(vop2, crtc);
