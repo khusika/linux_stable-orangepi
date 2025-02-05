@@ -9844,6 +9844,37 @@ static inline char *vop2_output_if_to_string(unsigned long inf)
 				      ARRAY_SIZE(vop2_output_if_name_list));
 }
 
+/* vop2_layer_phy_id */
+static const char *const vop2_layer_name_list[] = {
+	"Cluster0",
+	"Cluster1",
+	"Esmart0",
+	"Esmart1",
+	"Smart0",
+	"Smart1",
+	"Cluster2",
+	"Cluster3",
+	"Esmart2",
+	"Esmart3",
+};
+
+static char *vop2_plane_mask_to_string(unsigned long mask)
+{
+	return vop2_bitmask_to_string(mask, vop2_layer_name_list,
+				      ARRAY_SIZE(vop2_layer_name_list));
+}
+
+static inline const char *vop2_plane_phys_id_to_string(unsigned long phys_id)
+{
+	if (phys_id == ROCKCHIP_VOP2_PHY_ID_INVALID)
+		return "INVALID";
+
+	if (WARN_ON(phys_id >= ARRAY_SIZE(vop2_layer_name_list)))
+		return NULL;
+
+	return vop2_layer_name_list[phys_id];
+}
+
 static bool vop2_is_left_right_or_odd_even_mode(struct rockchip_crtc_state *vcstate)
 {
 	if (!(vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_LEFT_RIGHT_MODE) &&
@@ -14874,37 +14905,6 @@ static void post_buf_empty_work_event(struct work_struct *work)
 	}
 }
 
-/* vop2_layer_phy_id */
-static const char *const vop2_layer_name_list[] = {
-	"Cluster0",
-	"Cluster1",
-	"Esmart0",
-	"Esmart1",
-	"Smart0",
-	"Smart1",
-	"Cluster2",
-	"Cluster3",
-	"Esmart2",
-	"Esmart3",
-};
-
-static char *vop2_plane_mask_to_string(unsigned long mask)
-{
-	return vop2_bitmask_to_string(mask, vop2_layer_name_list,
-				      ARRAY_SIZE(vop2_layer_name_list));
-}
-
-static inline const char *vop2_plane_id_to_string(unsigned long phy)
-{
-	if (phy == ROCKCHIP_VOP2_PHY_ID_INVALID)
-		return "INVALID";
-
-	if (WARN_ON(phy >= ARRAY_SIZE(vop2_layer_name_list)))
-		return NULL;
-
-	return vop2_layer_name_list[phy];
-}
-
 static bool vop2_plane_mask_check(struct vop2 *vop2)
 {
 	const struct vop2_data *vop2_data = vop2->data;
@@ -15514,7 +15514,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 			plane_mask_string = vop2_plane_mask_to_string(vop2->vps[i].plane_mask);
 			DRM_DEV_INFO(dev, "vp%d assign plane mask: %s[0x%x], primary plane phy id: %s[%d]\n",
 				     i, plane_mask_string, vop2->vps[i].plane_mask,
-				     vop2_plane_id_to_string(vop2->vps[i].primary_plane_phy_id),
+				     vop2_plane_phys_id_to_string(vop2->vps[i].primary_plane_phy_id),
 				     vop2->vps[i].primary_plane_phy_id);
 			kfree(plane_mask_string);
 		}
