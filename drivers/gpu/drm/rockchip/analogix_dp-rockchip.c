@@ -60,6 +60,7 @@ struct rockchip_grf_reg_field {
  * @audio: check if audio is supported by source
  * @split_mode: check if split mode is supported
  * @format_yuv: check if YUV output format is supported
+ * @support_dp_mode: check if dp mode is supported
  * @max_bpc: the maximum supported bpc
  */
 struct rockchip_dp_chip_data {
@@ -73,6 +74,7 @@ struct rockchip_dp_chip_data {
 	bool	audio;
 	bool	split_mode;
 	bool	format_yuv;
+	bool	support_dp_mode;
 	u8	max_bpc;
 };
 
@@ -906,6 +908,7 @@ static const struct rockchip_dp_chip_data rk3576_edp[] = {
 		.audio = true,
 		.split_mode = true,
 		.format_yuv = true,
+		.support_dp_mode = true,
 		.max_bpc = 10,
 	},
 	{ /* sentinel */ }
@@ -921,6 +924,7 @@ static const struct rockchip_dp_chip_data rk3588_edp[] = {
 		.audio = true,
 		.split_mode = true,
 		.format_yuv = true,
+		.support_dp_mode = true,
 		.max_bpc = 10,
 	},
 	{
@@ -932,6 +936,7 @@ static const struct rockchip_dp_chip_data rk3588_edp[] = {
 		.audio = true,
 		.split_mode = true,
 		.format_yuv = true,
+		.support_dp_mode = true,
 		.max_bpc = 10,
 	},
 	{ /* sentinel */ }
