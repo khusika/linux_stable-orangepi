@@ -858,6 +858,11 @@ struct vop2_video_port {
 	 * @irq: independent irq for each vp
 	 */
 	int irq;
+	/**
+	 * @sharp_disabled: Sharp is mutually exclusive with post-scaler and split,
+	 * we configure whether sharp is disabled in dts
+	 */
+	bool sharp_disabled;
 };
 
 struct vop2_extend_pll {
@@ -4578,7 +4583,7 @@ static void vop2_initial(struct drm_crtc *crtc)
 		 * After vop initialization, keep sw_sharp_enable always on.
 		 * Only enable/disable sharp submodule to avoid black screen.
 		 */
-		if (vp_data->feature & VOP_FEATURE_POST_SHARP)
+		if (vp_data->feature & VOP_FEATURE_POST_SHARP && vp->sharp_disabled)
 			writel(0x1, vop2->sharp_res.regs);
 
 		/* disable immediately enable bit for dp */
@@ -9507,6 +9512,27 @@ static void vop2_setup_dual_channel_if(struct drm_crtc *crtc)
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
 	struct vop2 *vop2 = vp->vop2;
+	const struct vop2_data *vop2_data = vop2->data;
+	const struct vop2_video_port_data *vp_data = &vop2_data->vp[vp->id];
+
+	/*
+	 * RK3576 VOP split and post-scaler use the same line buffer.
+	 * If enable split, post-scaler must be disabled.
+	 */
+	if (vop2->version == VOP_VERSION_RK3576) {
+		DRM_ERROR("split is enabled, post-scaler shouldn't be set\n");
+		vcstate->left_margin = 100;
+		vcstate->right_margin = 100;
+		vcstate->top_margin = 100;
+		vcstate->bottom_margin = 100;
+	}
+
+	/*
+	 * VOP split and sharp use the same line buffer. If enable
+	 * split, sharp must be disabled completely.
+	 */
+	if (vp_data->feature & VOP_FEATURE_POST_SHARP)
+		writel(0, vop2->sharp_res.regs);
 
 	if (output_if_is_lvds(vcstate->output_if) &&
 	    (vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_ODD_EVEN_MODE)) {
@@ -9818,6 +9844,15 @@ static inline char *vop2_output_if_to_string(unsigned long inf)
 				      ARRAY_SIZE(vop2_output_if_name_list));
 }
 
+static bool vop2_is_left_right_or_odd_even_mode(struct rockchip_crtc_state *vcstate)
+{
+	if (!(vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_LEFT_RIGHT_MODE) &&
+	    !(vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_ODD_EVEN_MODE))
+		return false;
+
+	return true;
+}
+
 static void vop2_crtc_atomic_enable(struct drm_crtc *crtc, struct drm_atomic_state *state)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
@@ -10038,8 +10073,7 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc, struct drm_atomic_sta
 		}
 	}
 
-	if (vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_LEFT_RIGHT_MODE ||
-	    vcstate->output_flags & ROCKCHIP_OUTPUT_DUAL_CHANNEL_ODD_EVEN_MODE)
+	if (vop2_is_left_right_or_odd_even_mode(vcstate))
 		vop2_setup_dual_channel_if(crtc);
 
 	if (vcstate->output_if & VOP_OUTPUT_IF_eDP0) {
@@ -12470,6 +12504,17 @@ static void vop2_post_sharp_config(struct drm_crtc *crtc)
 	struct post_sharp *post_sharp;
 	int i;
 
+	if (vp->sharp_disabled)
+		return;
+
+	if (vop2_is_left_right_or_odd_even_mode(vcstate)) {
+		if (post_sharp_enabled(crtc))
+			DRM_WARN("split is enabled, can't enable sharp\n");
+
+		vcstate->sharp_en = false;
+		return;
+	}
+
 	/* sharp work in yuv color space, if it is rgb overlay sharp shouldn't be enabled */
 	if (!vcstate->yuv_overlay || !post_sharp_enabled(crtc)) {
 		/*
@@ -13089,12 +13134,19 @@ static int vop2_crtc_atomic_set_property(struct drm_crtc *crtc,
 	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(state);
 	struct drm_mode_config *mode_config = &drm_dev->mode_config;
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct vop2 *vop2 = vp->vop2;
 	bool replaced = false;
 	int ret;
 
 	if (property == mode_config->tv_left_margin_property) {
 		if (vcstate->sharp_en) {
 			DRM_ERROR("sharp is enabled, failed to set %s\n", property->name);
+			return 0;
+		}
+
+		if (vop2_is_left_right_or_odd_even_mode(vcstate) &&
+		    vop2->version == VOP_VERSION_RK3576) {
+			DRM_ERROR("split is enabled, failed to set %s\n", property->name);
 			return 0;
 		}
 		vcstate->left_margin = val;
@@ -13106,6 +13158,12 @@ static int vop2_crtc_atomic_set_property(struct drm_crtc *crtc,
 			DRM_ERROR("sharp is enabled, failed to set %s\n", property->name);
 			return 0;
 		}
+
+		if (vop2_is_left_right_or_odd_even_mode(vcstate) &&
+		    vop2->version == VOP_VERSION_RK3576) {
+			DRM_ERROR("split is enabled, failed to set %s\n", property->name);
+			return 0;
+		}
 		vcstate->right_margin = val;
 		return 0;
 	}
@@ -13115,6 +13173,12 @@ static int vop2_crtc_atomic_set_property(struct drm_crtc *crtc,
 			DRM_ERROR("sharp is enabled, failed to set %s\n", property->name);
 			return 0;
 		}
+
+		if (vop2_is_left_right_or_odd_even_mode(vcstate) &&
+		    vop2->version == VOP_VERSION_RK3576) {
+			DRM_ERROR("split is enabled, failed to set %s\n", property->name);
+			return 0;
+		}
 		vcstate->top_margin = val;
 		return 0;
 	}
@@ -13122,6 +13186,12 @@ static int vop2_crtc_atomic_set_property(struct drm_crtc *crtc,
 	if (property == mode_config->tv_bottom_margin_property) {
 		if (vcstate->sharp_en) {
 			DRM_ERROR("sharp is enabled, failed to set %s\n", property->name);
+			return 0;
+		}
+
+		if (vop2_is_left_right_or_odd_even_mode(vcstate) &&
+		    vop2->version == VOP_VERSION_RK3576) {
+			DRM_ERROR("split is enabled, failed to set %s\n", property->name);
 			return 0;
 		}
 		vcstate->bottom_margin = val;
@@ -14318,6 +14388,8 @@ static int vop2_create_crtc(struct vop2 *vop2, uint8_t enabled_vp_mask)
 		}
 		crtc->port = port;
 		of_property_read_u32(port, "cursor-win-id", &vp->cursor_win_id);
+
+		vp->sharp_disabled = of_property_read_bool(port, "sharp-disabled");
 
 		plane_mask = vp->plane_mask;
 		if (vop2_soc_is_rk3566()) {
