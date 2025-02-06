@@ -748,6 +748,7 @@ static int rockchip_dp_probe(struct platform_device *pdev)
 	dp->adp = ERR_PTR(-ENODEV);
 	dp->data = &dp_data[id];
 	dp->plat_data.ssc = dp->data->ssc;
+	dp->plat_data.support_dp_mode = dp->data->support_dp_mode;
 	dp->plat_data.max_bpc = dp->data->max_bpc ? dp->data->max_bpc : 8;
 	dp->plat_data.panel = panel;
 	dp->plat_data.dev_type = dp->data->chip_type;

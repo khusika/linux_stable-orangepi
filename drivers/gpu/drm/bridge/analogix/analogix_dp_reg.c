@@ -1103,9 +1103,13 @@ int analogix_dp_send_psr_spd(struct analogix_dp_device *dp,
 
 int analogix_dp_phy_power_on(struct analogix_dp_device *dp)
 {
+	int submode = PHY_SUBMODE_EDP;
 	int ret;
 
-	ret = phy_set_mode(dp->phy, PHY_MODE_DP);
+	if (dp->plat_data->support_dp_mode && dp->dp_mode)
+		submode = PHY_SUBMODE_DP;
+
+	ret = phy_set_mode_ext(dp->phy, PHY_MODE_DP, submode);
 	if (ret) {
 		dev_err(dp->dev, "phy_set_mode failed: %d\n", ret);
 		return ret;

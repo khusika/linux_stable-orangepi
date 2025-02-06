@@ -27,6 +27,7 @@
 #include <drm/drm_crtc.h>
 #include <drm/drm_device.h>
 #include <drm/drm_edid.h>
+#include <drm/drm_of.h>
 #include <drm/drm_panel.h>
 #include <drm/drm_print.h>
 #include <drm/drm_probe_helper.h>
@@ -1685,12 +1686,17 @@ static int analogix_dp_bridge_attach(struct drm_bridge *bridge,
 	struct analogix_dp_device *dp = bridge->driver_private;
 	struct drm_encoder *encoder = dp->encoder;
 	struct drm_connector *connector = NULL;
+	struct drm_bridge *last_bridge;
+	struct drm_panel *panel = NULL;
 	int ret = 0;
 
 	if (!bridge->encoder) {
 		DRM_ERROR("Parent encoder object not found");
 		return -ENODEV;
 	}
+
+	if (!dp->plat_data->panel)
+		dp->dp_mode = true;
 
 	if (dp->plat_data->bridge) {
 		ret = drm_bridge_attach(bridge->encoder, dp->plat_data->bridge, bridge,
@@ -1700,6 +1706,12 @@ static int analogix_dp_bridge_attach(struct drm_bridge *bridge,
 			DRM_ERROR("Failed to attach external bridge: %d\n", ret);
 			return ret;
 		}
+
+		last_bridge = list_last_entry(&bridge->encoder->bridge_chain,
+					      struct drm_bridge, chain_node);
+		ret = drm_of_find_panel_or_bridge(last_bridge->of_node, 1, -1, &panel, NULL);
+		if (!ret && panel)
+			dp->dp_mode = false;
 	}
 
 	if (flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR)

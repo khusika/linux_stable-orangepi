@@ -209,6 +209,8 @@ struct analogix_dp_device {
 	u32 split_area;
 
 	const struct analogix_dp_output_format *output_fmt;
+
+	bool dp_mode;
 };
 
 /* analogix_dp_reg.c */
