@@ -335,6 +335,11 @@
 		status = "disabled";
 	};
 
+	rkdvbm: rkdvbm {
+		compatible = "rockchip,rk-dvbm";
+		status = "disabled";
+	};
+
 	thermal_zones: thermal-zones {
 		cpu_thermal: cpu-thermal {
 			polling-delay-passive = <20>; /* milliseconds */
