@@ -306,6 +306,7 @@ struct rockchip_drv {
  * @irq: interrupt of the gpio bank
  * @irq_pins: masks of the irq pins
  * @irq_pin_id: pin number of the irq pin
+ * @cpu_affinity: cpu affinity of the irq pin
  * @saved_masks: Saved content of GPIO_INTEN at suspend time.
  * @pin_base: first pin number
  * @nr_pins: number of pins in this bank
@@ -336,6 +337,7 @@ struct rockchip_pin_bank {
 	int				irq[RK_GPIO_IRQ_MAX_NUM];
 	u32				irq_pins[RK_GPIO_IRQ_MAX_NUM];
 	int				irq_pin_id[RK_GPIO_IRQ_MAX_NUM][RK_GPIO_EXP_IRQ_MAX_PIN_NUM];
+	int				cpu_affinity[RK_GPIO_IRQ_MAX_NUM];
 	u32				saved_masks;
 	u32				pin_base;
 	u8				nr_pins;
