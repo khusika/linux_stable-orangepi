@@ -439,6 +439,46 @@
 		};
 	};
 
+	lpmcu_mbox0: mailbox@20500000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20500000 0x20>;
+		interrupts = <GIC_SPI 101 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_LPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
+	lpmcu_mbox1: mailbox@20510000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20510000 0x20>;
+		interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_LPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
+	lpmcu_mbox2: mailbox@20520000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20520000 0x20>;
+		interrupts = <GIC_SPI 103 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_LPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
+	lpmcu_mbox3: mailbox@20530000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20530000 0x20>;
+		interrupts = <GIC_SPI 104 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_LPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
 	i2c2: i2c@20800000 {
 		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
 		reg = <0x20800000 0x1000>;
@@ -663,6 +703,46 @@
 		clock-names = "pclk", "timer";
 	};
 
+	hpmcu_mbox0: mailbox@20d00000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20d00000 0x20>;
+		interrupts = <GIC_SPI 109 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_HPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
+	hpmcu_mbox1: mailbox@20d10000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20d10000 0x20>;
+		interrupts = <GIC_SPI 110 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_HPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
+	hpmcu_mbox2: mailbox@20d20000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20d20000 0x20>;
+		interrupts = <GIC_SPI 111 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_HPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
+	hpmcu_mbox3: mailbox@20d30000 {
+		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
+		reg = <0x20d30000 0x20>;
+		interrupts = <GIC_SPI 112 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_HPMCU_MAILBOX>;
+		clock-names = "pclk_mailbox";
+		#mbox-cells = <1>;
+		status = "disabled";
+	};
+
 	i2c0: i2c@21100000 {
 		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
 		reg = <0x21100000 0x1000>;
@@ -748,6 +828,14 @@
 		      <0x21204000 0x2000>,
 		      <0x21206000 0x2000>;
 		interrupts = <GIC_PPI 9 (GIC_CPU_MASK_SIMPLE(4) | IRQ_TYPE_LEVEL_LOW)>;
+	};
+
+	hwlock: hwspinlock@21210000 {
+		compatible = "rockchip,hwspinlock";
+		reg = <0x21210000 0x100>;
+		#hwlock-cells = <1>;
+		rockchip,hwlock-num-locks = <64>;
+		status = "disabled";
 	};
 
 	rtc: rtc@21280000 {
