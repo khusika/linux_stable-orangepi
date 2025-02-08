@@ -340,6 +340,34 @@
 		status = "disabled";
 	};
 
+	rkisp_vir0: rkisp-vir0 {
+		compatible = "rockchip,rkisp-vir";
+		rockchip,hw = <&rkisp>;
+		dvbm = <&rkdvbm>;
+		status = "disabled";
+	};
+
+	rkisp_vir1: rkisp-vir1 {
+		compatible = "rockchip,rkisp-vir";
+		rockchip,hw = <&rkisp>;
+		dvbm = <&rkdvbm>;
+		status = "disabled";
+	};
+
+	rkisp_vir2: rkisp-vir2 {
+		compatible = "rockchip,rkisp-vir";
+		rockchip,hw = <&rkisp>;
+		dvbm = <&rkdvbm>;
+		status = "disabled";
+	};
+
+	rkisp_vir3: rkisp-vir3 {
+		compatible = "rockchip,rkisp-vir";
+		rockchip,hw = <&rkisp>;
+		dvbm = <&rkdvbm>;
+		status = "disabled";
+	};
+
 	thermal_zones: thermal-zones {
 		cpu_thermal: cpu-thermal {
 			polling-delay-passive = <20>; /* milliseconds */
@@ -937,6 +965,39 @@
 		reset-names = "srst_p_csiphy1";
 		rockchip,grf = <&grf>;
 		status = "okay";
+	};
+
+	rkisp: isp@21d00000 {
+		compatible = "rockchip,rv1126b-rkisp";
+		reg = <0x21d00000 0x7f00>, <0x21d30000 0x2f00>;
+		interrupts = <GIC_SPI 156 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 157 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 158 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 164 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 165 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "isp_mipi_irq", "isp_mi_irq", "isp_irq",
+				  "vpsl_mi_irq", "vpsl_irq";
+		clocks = <&cru HCLK_ISP>, <&cru ACLK_ISP>,
+			 <&cru CLK_CORE_ISP>, <&cru ISP0CLK_VICAP>,
+			 <&cru HCLK_VPSL>, <&cru ACLK_VPSL>, <&cru CLK_CORE_VPSL>;
+		clock-names = "hclk_isp", "aclk_isp",
+			      "clk_isp_core", "clk_isp_vicap",
+			      "hclk_vpsl", "aclk_vpsl", "clk_core_vpsl";
+		iommus = <&rkisp_mmu>;
+		status = "disabled";
+	};
+
+	rkisp_mmu: iommu@21d07f00 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x21d07f00 0x100>, <0x21d32f00 0x100>;
+		interrupts = <GIC_SPI 159 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 166 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "isp_mmu", "vpsl_mmu";
+		clocks = <&cru ACLK_ISP>, <&cru HCLK_ISP>,
+			 <&cru ACLK_VPSL>, <&cru HCLK_VPSL>;
+		clock-names = "aclk0", "iface0", "aclk1", "iface1";
+		#iommu-cells = <0>;
+		rockchip,disable-mmu-reset;
+		status = "disabled";
 	};
 
 	rkcif: rkcif@21d10000 {
