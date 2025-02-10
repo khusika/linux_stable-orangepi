@@ -41,6 +41,8 @@
 		rkcif_mipi_lvds2= &rkcif_mipi_lvds2;
 		rkcif_mipi_lvds3= &rkcif_mipi_lvds3;
 		serial0 = &uart0;
+		spi0 = &spi0;
+		spi1 = &spi1;
 	};
 
 	clocks {
@@ -939,6 +941,36 @@
 		dma-names = "tx", "rx";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2c5m0_pins>;
+		status = "disabled";
+	};
+
+	spi0: spi@211e0000 {
+		compatible = "rockchip,rv1126b-spi", "rockchip,rk3066-spi";
+		reg = <0x211e0000 0x1000>;
+		interrupts = <GIC_SPI 192 IRQ_TYPE_LEVEL_HIGH>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&cru CLK_SPI0>, <&cru PCLK_SPI0>;
+		clock-names = "spiclk", "apb_pclk";
+		dmas = <&dmac 40>, <&dmac 41>;
+		dma-names = "rx", "tx";
+		pinctrl-names = "default";
+		pinctrl-0 = <&spi0m0_clk_pins &spi0m0_csn0_pins &spi0m0_csn1_pins>;
+		status = "disabled";
+	};
+
+	spi1: spi@211f0000 {
+		compatible = "rockchip,rv1126b-spi", "rockchip,rk3066-spi";
+		reg = <0x211f0000 0x1000>;
+		interrupts = <GIC_SPI 193 IRQ_TYPE_LEVEL_HIGH>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		clocks = <&cru CLK_SPI1>, <&cru PCLK_SPI1>;
+		clock-names = "spiclk", "apb_pclk";
+		dmas = <&dmac 42>, <&dmac 43>;
+		dma-names = "rx", "tx";
+		pinctrl-names = "default";
+		pinctrl-0 = <&spi1m0_clk_pins &spi1m0_csn0_pins &spi1m0_csn1_pins>;
 		status = "disabled";
 	};
 
