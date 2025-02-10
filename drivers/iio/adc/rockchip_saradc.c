@@ -80,10 +80,10 @@ struct rockchip_saradc {
 	bool			suspended;
 #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
 	bool			test;
-	u32			chn;
-	spinlock_t		lock;
-	struct workqueue_struct *wq;
-	struct delayed_work	work;
+	u32			test_chn;
+	spinlock_t		test_lock;
+	struct workqueue_struct *test_wq;
+	struct delayed_work	test_work;
 #endif
 };
 
@@ -138,7 +138,7 @@ static int rockchip_saradc_read_v2(struct rockchip_saradc *info)
 	writel_relaxed(0x1, info->regs + SARADC2_END_INT_ST);
 
 #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
-	channel = info->chn;
+	channel = info->test_chn;
 #else
 	channel = info->last_chan->channel;
 #endif
@@ -239,12 +239,13 @@ static irqreturn_t rockchip_saradc_isr(int irq, void *dev_id)
 
 	complete(&info->completion);
 #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
-	spin_lock_irqsave(&info->lock, flags);
+	spin_lock_irqsave(&info->test_lock, flags);
 	if (info->test) {
-		pr_info("chn[%d] val = %d\n", info->chn, info->last_val);
-		mod_delayed_work(info->wq, &info->work, msecs_to_jiffies(100));
+		pr_info("chn[%d] val = %d\n", info->test_chn, info->last_val);
+		mod_delayed_work(info->test_wq, &info->test_work,
+				 msecs_to_jiffies(100));
 	}
-	spin_unlock_irqrestore(&info->lock, flags);
+	spin_unlock_irqrestore(&info->test_lock, flags);
 #endif
 	return IRQ_HANDLED;
 }
@@ -538,22 +539,23 @@ static ssize_t saradc_test_chn_store(struct device *dev,
 	if (err)
 		return err;
 
-	spin_lock_irqsave(&info->lock, flags);
+	spin_lock_irqsave(&info->test_lock, flags);
 
 	if (val > SARADC_CTRL_CHN_MASK && info->test) {
 		info->test = false;
-		spin_unlock_irqrestore(&info->lock, flags);
-		cancel_delayed_work_sync(&info->work);
+		spin_unlock_irqrestore(&info->test_lock, flags);
+		cancel_delayed_work_sync(&info->test_work);
 		return size;
 	}
 
 	if (!info->test && val <= SARADC_CTRL_CHN_MASK) {
 		info->test = true;
-		info->chn = val;
-		mod_delayed_work(info->wq, &info->work, msecs_to_jiffies(100));
+		info->test_chn = val;
+		mod_delayed_work(info->test_wq, &info->test_work,
+				 msecs_to_jiffies(100));
 	}
 
-	spin_unlock_irqrestore(&info->lock, flags);
+	spin_unlock_irqrestore(&info->test_lock, flags);
 
 	return size;
 }
@@ -580,15 +582,15 @@ static void rockchip_saradc_destroy_wq(void *data)
 {
 	struct rockchip_saradc *info = data;
 
-	destroy_workqueue(info->wq);
+	destroy_workqueue(info->test_wq);
 }
 
 static void rockchip_saradc_test_work(struct work_struct *work)
 {
 	struct rockchip_saradc *info = container_of(work,
-					struct rockchip_saradc, work.work);
+					struct rockchip_saradc, test_work.work);
 
-	rockchip_saradc_start(info, info->chn);
+	rockchip_saradc_start(info, info->test_chn);
 }
 #endif
 
@@ -748,9 +750,9 @@ static int rockchip_saradc_probe(struct platform_device *pdev)
 		return ret;
 
 #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
-	info->wq = create_singlethread_workqueue("adc_wq");
-	INIT_DELAYED_WORK(&info->work, rockchip_saradc_test_work);
-	spin_lock_init(&info->lock);
+	info->test_wq = create_singlethread_workqueue("adc_wq");
+	INIT_DELAYED_WORK(&info->test_work, rockchip_saradc_test_work);
+	spin_lock_init(&info->test_lock);
 	ret = sysfs_create_group(&pdev->dev.kobj, &rockchip_saradc_attr_group);
 	if (ret)
 		return ret;
