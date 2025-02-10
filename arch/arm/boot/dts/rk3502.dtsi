@@ -853,6 +853,7 @@
 			interrupt-names = "otg-bvalid",
 					  "otg-id",
 					  "linestate";
+			rockchip,low-power-mode;
 			status = "disabled";
 		};
 
