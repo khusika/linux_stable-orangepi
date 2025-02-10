@@ -59,6 +59,8 @@ struct rockchip_grf_reg_field {
  * @ssc: check if SSC is supported by source
  * @audio: check if audio is supported by source
  * @split_mode: check if split mode is supported
+ * @format_yuv: check if YUV output format is supported
+ * @max_bpc: the maximum supported bpc
  */
 struct rockchip_dp_chip_data {
 	const struct rockchip_grf_reg_field lcdc_sel;
