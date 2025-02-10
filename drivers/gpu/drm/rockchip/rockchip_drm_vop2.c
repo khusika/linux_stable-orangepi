@@ -15948,7 +15948,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 
 		for_each_child_of_node(vop_out_node, child) {
 			u32 plane_mask = 0;
-			u32 primary_plane_phy_id = 0;
+			u32 primary_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
 			u32 vp_id = 0;
 			u32 val = 0;
 
