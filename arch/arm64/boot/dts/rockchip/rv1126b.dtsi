@@ -795,6 +795,15 @@
 		status = "disabled";
 	};
 
+	wdt: watchdog@20b60000 {
+		compatible = "snps,dw-wdt";
+		reg = <0x20b60000 0x100>;
+		clocks = <&cru TCLK_WDT_NS>, <&cru PCLK_WDT_NS>;
+		clock-names = "tclk", "pclk";
+		interrupts = <GIC_SPI 74 IRQ_TYPE_LEVEL_HIGH>;
+		status = "disabled";
+	};
+
 	dmac: dma-controller@20b80000 {
 		compatible = "rockchip,rv1126b-dma", "rockchip,dma";
 		reg = <0x20b80000 0x2000>;
@@ -1340,6 +1349,30 @@
 		};
 	};
 
+	saradc1: saradc@21cb0000 {
+		compatible = "rockchip,rv1126b-saradc";
+		reg = <0x21cb0000 0x10000>;
+		interrupts = <GIC_SPI 212 IRQ_TYPE_LEVEL_HIGH>;
+		#io-channel-cells = <1>;
+		clocks = <&cru CLK_SARADC1>, <&cru PCLK_SARADC1>;
+		clock-names = "saradc", "apb_pclk";
+		resets = <&cru SRST_PRESETN_SARADC1>;
+		reset-names = "saradc-apb";
+		status = "disabled";
+	};
+
+	saradc2: saradc@21cc0000 {
+		compatible = "rockchip,rv1126b-saradc";
+		reg = <0x21cc0000 0x10000>;
+		interrupts = <GIC_SPI 213 IRQ_TYPE_LEVEL_HIGH>;
+		#io-channel-cells = <1>;
+		clocks = <&cru CLK_SARADC2>, <&cru PCLK_SARADC2>;
+		clock-names = "saradc", "apb_pclk";
+		resets = <&cru SRST_PRESETN_SARADC2>;
+		reset-names = "saradc-apb";
+		status = "disabled";
+	};
+
 	rkisp: isp@21d00000 {
 		compatible = "rockchip,rv1126b-rkisp";
 		reg = <0x21d00000 0x7f00>, <0x21d30000 0x2f00>;
@@ -1466,6 +1499,18 @@
 		pinctrl-names = "normal", "idle";
 		pinctrl-0 = <&sdmmc0_clk_pins &sdmmc0_cmd_pins &sdmmc0_detn_pins &sdmmc0_bus4_pins>;
 		pinctrl-1 = <&sdmmc0_idle_pins &sdmmc0_detn_pins>;
+		status = "disabled";
+	};
+
+	saradc0: saradc@21f10000 {
+		compatible = "rockchip,rv1126b-saradc";
+		reg = <0x21f10000 0x10000>;
+		interrupts = <GIC_SPI 211 IRQ_TYPE_LEVEL_HIGH>;
+		#io-channel-cells = <1>;
+		clocks = <&cru CLK_SARADC0>, <&cru PCLK_SARADC0>;
+		clock-names = "saradc", "apb_pclk";
+		resets = <&cru SRST_PRESETN_SARADC0>;
+		reset-names = "saradc-apb";
 		status = "disabled";
 	};
 
