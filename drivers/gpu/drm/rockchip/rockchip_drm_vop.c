@@ -3349,7 +3349,7 @@ static bool vop_crtc_mode_fixup(struct drm_crtc *crtc,
 	     s->output_if & VOP_OUTPUT_IF_BT656))
 		adj_mode->crtc_clock *= 2;
 
-	if (vop->mcu_timing.mcu_pix_total)
+	if (s->output_if & VOP_OUTPUT_IF_RGB)
 		adj_mode->crtc_clock *= rockchip_drm_get_cycles_per_pixel(s->bus_format) *
 					(vop->mcu_timing.mcu_pix_total + 1);
 
