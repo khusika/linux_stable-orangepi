@@ -41,6 +41,13 @@
 		rkcif_mipi_lvds2= &rkcif_mipi_lvds2;
 		rkcif_mipi_lvds3= &rkcif_mipi_lvds3;
 		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		serial3 = &uart3;
+		serial4 = &uart4;
+		serial5 = &uart5;
+		serial6 = &uart6;
+		serial7 = &uart7;
 		spi0 = &spi0;
 		spi1 = &spi1;
 	};
@@ -626,6 +633,9 @@
 		clock-names = "baudclk", "apb_pclk";
 		reg-shift = <2>;
 		reg-io-width = <4>;
+		dmas = <&dmac 1>, <&dmac 0>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart0m0_xfer_pins>;
 		status = "disabled";
 	};
 
@@ -984,6 +994,104 @@
 		dma-names = "tx", "rx";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2c5m0_pins>;
+		status = "disabled";
+	};
+
+	uart1: serial@21160000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x21160000 0x100>;
+		interrupts = <GIC_SPI 57 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART1>, <&cru PCLK_UART1>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		dmas = <&dmac 3>, <&dmac 2>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart1m0_xfer_pins &uart1m0_ctsn_pins &uart1m0_rtsn_pins>;
+		status = "disabled";
+	};
+
+	uart2: serial@21170000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x21170000 0x100>;
+		interrupts = <GIC_SPI 58 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART2>, <&cru PCLK_UART2>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		dmas = <&dmac 5>, <&dmac 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart2m0_xfer_pins &uart2m0_ctsn_pins &uart2m0_rtsn_pins>;
+		status = "disabled";
+	};
+
+	uart3: serial@21180000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x21180000 0x100>;
+		interrupts = <GIC_SPI 59 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART3>, <&cru PCLK_UART3>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		dmas = <&dmac 7>, <&dmac 6>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart3m0_xfer_pins &uart3m0_ctsn_pins &uart3m0_rtsn_pins>;
+		status = "disabled";
+	};
+
+	uart4: serial@21190000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x21190000 0x100>;
+		interrupts = <GIC_SPI 60 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART4>, <&cru PCLK_UART4>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		dmas = <&dmac 9>, <&dmac 8>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart4m0_xfer_pins &uart4m0_ctsn_pins &uart4m0_rtsn_pins>;
+		status = "disabled";
+	};
+
+	uart5: serial@211a0000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x211a0000 0x100>;
+		interrupts = <GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART5>, <&cru PCLK_UART5>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		dmas = <&dmac 11>, <&dmac 10>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart5m0_xfer_pins &uart5m0_ctsn_pins &uart5m0_rtsn_pins>;
+		status = "disabled";
+	};
+
+	uart6: serial@211b0000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x211b0000 0x100>;
+		interrupts = <GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART6>, <&cru PCLK_UART6>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		dmas = <&dmac 13>, <&dmac 12>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart6m0_xfer_pins &uart6m0_ctsn_pins &uart6m0_rtsn_pins>;
+		status = "disabled";
+	};
+
+	uart7: serial@211c0000 {
+		compatible = "rockchip,rv1126b-uart", "snps,dw-apb-uart";
+		reg = <0x211c0000 0x100>;
+		interrupts = <GIC_SPI 63 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_UART7>, <&cru PCLK_UART7>;
+		clock-names = "baudclk", "apb_pclk";
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		dmas = <&dmac 15>, <&dmac 14>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&uart7m0_xfer_pins &uart7m0_ctsn_pins &uart7m0_rtsn_pins>;
 		status = "disabled";
 	};
 
