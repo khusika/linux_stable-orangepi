@@ -527,6 +527,10 @@ struct icm42670_data {
 	u16  gyro_frequency;
 	u16  accel_frequency_buff;
 	u16  gyro_frequency_buff;
+	u16  accel_lpf_bw;
+	u16  gyro_lpf_bw;
+	u16  accel_lpf_bw_buff;
+	u16  gyro_lpf_bw_buff;
 	int irq;
 	u8 irq_mask;
 	int chip_type; // not used
