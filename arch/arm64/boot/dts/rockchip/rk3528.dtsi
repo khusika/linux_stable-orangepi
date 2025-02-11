@@ -452,7 +452,8 @@
 		compatible = "rockchip,mpp-service";
 		rockchip,taskqueue-count = <5>;
 		rockchip,resetgroup-count = <5>;
-		rockchip,iommu-shared-mask = <0xa>; /* 0x2: avsd, 0x8: vdpu */
+		/* avsd:0x2, vdpu:0x8, iep:0x200, vdpp:0x4000 */
+		rockchip,iommu-shared-mask = <0x420a>;
 		status = "disabled";
 	};
 
