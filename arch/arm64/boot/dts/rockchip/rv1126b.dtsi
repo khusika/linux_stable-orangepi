@@ -804,6 +804,40 @@
 		#dma-cells = <1>;
 	};
 
+	otp: otp@20b90000 {
+		compatible = "rockchip,rv1126b-otp";
+		reg = <0x20b90000 0x4000>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		clocks = <&cru CLK_USER_OTPC_NS>, <&cru CLK_SBPI_OTPC_NS>,
+			 <&cru PCLK_OTPC_NS>, <&cru PCLK_OTP_MASK>;
+		clock-names = "usr", "sbpi", "apb", "phy";
+		resets = <&cru SRST_RESETN_USER_OTPC_NS>, <&cru SRST_RESETN_SBPI_OTPC_NS>,
+			 <&cru SRST_PRESETN_OTPC_NS>, <&cru SRST_PRESETN_OTP_MASK>;
+		reset-names = "usr", "sbpi", "apb", "phy";
+
+		/* Data cells */
+		cpu_code: cpu-code@2 {
+			reg = <0x02 0x2>;
+		};
+		cpu_version: cpu-version@21 {
+			reg = <0x21 0x1>;
+			bits = <3 3>;
+		};
+		otp_id: otp-id@22 {
+			reg = <0x22 0x10>;
+		};
+		cpu_leakage: cpu-leakage@32 {
+			reg = <0x32 0x1>;
+		};
+		log_leakage: log-leakage@33 {
+			reg = <0x33 0x1>;
+		};
+		npu_leakage: npu-leakage@34 {
+			reg = <0x34 0x1>;
+		};
+	};
+
 	tsadc: tsadc@20bb0000 {
 		compatible = "rockchip,rv1126b-tsadc";
 		reg = <0x20bb0000 0x400>;
