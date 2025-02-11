@@ -108,6 +108,12 @@
 		};
 	};
 
+	cpuinfo {
+		compatible = "rockchip,cpuinfo";
+		nvmem-cells = <&otp_id>, <&cpu_version>, <&cpu_code>;
+		nvmem-cell-names = "id", "cpu-version", "cpu-code";
+	};
+
 	/* dphy0 full mode */
 	csi2_dphy0: csi2-dphy0 {
 		compatible = "rockchip,rv1126b-csi2-dphy";
