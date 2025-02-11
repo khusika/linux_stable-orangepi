@@ -8702,7 +8702,7 @@ static bool vop2_crtc_mode_fixup(struct drm_crtc *crtc,
 	if (vop2->version == VOP_VERSION_RK3528 && vcstate->output_if & VOP_OUTPUT_IF_BT656)
 		adj_mode->crtc_clock *= 4;
 
-	if (vp->mcu_timing.mcu_pix_total)
+	if (vcstate->output_if & VOP_OUTPUT_IF_RGB)
 		adj_mode->crtc_clock *= rockchip_drm_get_cycles_per_pixel(vcstate->bus_format) *
 					(vp->mcu_timing.mcu_pix_total + 1);
 
