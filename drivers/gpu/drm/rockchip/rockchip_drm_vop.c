@@ -5399,10 +5399,6 @@ static int vop_bind(struct device *dev, struct device *master, void *data)
 	spin_lock_init(&vop->irq_lock);
 	mutex_init(&vop->vop_lock);
 
-	ret = devm_request_irq(dev, vop->irq, vop_isr,
-			       IRQF_SHARED, dev_name(dev), vop);
-	if (ret)
-		return ret;
 	ret = vop_create_crtc(vop);
 	if (ret)
 		return ret;
@@ -5466,7 +5462,21 @@ static int vop_bind(struct device *dev, struct device *master, void *data)
 
 	rockchip_drm_dma_init_device(drm_dev, dev);
 
+	ret = devm_request_irq(dev, vop->irq, vop_isr,
+			       IRQF_SHARED, dev_name(dev), vop);
+	if (ret)
+		goto err_pm_detach;
+
 	return 0;
+
+err_pm_detach:
+	if (vop->genpd_dev1)
+		dev_pm_domain_detach(vop->genpd_dev1, true);
+	if (vop->genpd_dev0)
+		dev_pm_domain_detach(vop->genpd_dev0, true);
+	pm_runtime_disable(dev);
+	vop_destroy_crtc(vop);
+	return ret;
 }
 
 static void vop_unbind(struct device *dev, struct device *master, void *data)
