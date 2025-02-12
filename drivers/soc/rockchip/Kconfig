@@ -348,6 +348,12 @@ config RK_MEMBLOCK_PROCFS
 	  Extend memblock procfs to show size of each memblock, and shows the
 	  result of total size by KiB format.
 
+config RK_ZONEINFO_PROCFS
+	bool "Zoneinfo procfs support"
+	depends on PROC_FS
+	help
+	  Dump all zone information.
+
 source "drivers/soc/rockchip/minidump/Kconfig"
 
 endmenu
