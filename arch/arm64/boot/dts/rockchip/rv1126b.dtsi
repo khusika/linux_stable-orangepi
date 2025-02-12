@@ -1063,6 +1063,217 @@
 		status = "okay";
 	};
 
+	dsmc: dsmc@21ca0000 {
+		compatible = "rockchip,rv1126b-dsmc", "rockchip,rk3506-dsmc";
+		reg = <0x21ca0000 0x10000>;
+		rockchip,grf = <&grf>;
+		interrupts = <GIC_SPI 216 IRQ_TYPE_LEVEL_HIGH>;
+		resets = <&cru SRST_ARESETN_DSMC>, <&cru SRST_PRESETN_DSMC>;
+		reset-names = "dsmc", "apb";
+		clocks = <&cru CLK_SYS_DSMC_ROOT>,
+			 <&cru ACLK_DSMC>,
+			 <&cru PCLK_DSMC>,
+			 <&cru CLK_SYS_DSMC_ROOT>;
+		clock-names = "clk_sys", "aclk_dsmc", "pclk", "aclk_root";
+		clock-frequency = <100000000>;
+		dmas = <&dmac 46>, <&dmac 47>;
+		dma-names = "req0", "req1";
+		pinctrl-names = "default", "active", "lb-slave";
+		pinctrl-0 = <&dsmc_csn_idle
+			     &dsmc_bus16_pins
+			     &dsmc_clk_pins>;
+		pinctrl-1 = <&dsmc_csn_pins>;
+		pinctrl-2 = <&dsmc_int_pins>;
+		status = "disabled";
+		slave {
+			rockchip,dqs-dll = <0x20 0x20
+					    0x20 0x20
+					    0x20 0x20
+					    0x20 0x20>;
+			rockchip,ranges = <0x0 0x10000000 0x0 0x2000000>;
+			rockchip,slave-dev = <&dsmc_slave>;
+		};
+	};
+
+	dsmc_slave: dsmc-slave {
+		compatible = "rockchip,dsmc-slave";
+		rockchip,clk-mode = <0>;
+		status = "disabled";
+		psram {
+			dsmc_psram0: psram0 {
+				status = "disabled";
+			};
+			dsmc_psram1: psram1 {
+				status = "disabled";
+			};
+			dsmc_psram2: psram2 {
+				status = "disabled";
+			};
+			dsmc_psram3: psram3 {
+				status = "disabled";
+			};
+		};
+
+		lb-slave {
+			dsmc_lb_slave0: lb-slave0 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
+				rockchip,int-en = <0x0>;
+				status = "disabled";
+				dsmc_p0_region: region {
+					dsmc_p0_region0: region0 {
+						rockchip,attribute = "Merged FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p0_region1: region1 {
+						rockchip,attribute = "No-Merge FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p0_region2: region2 {
+						rockchip,attribute = "DPRA";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p0_region3: region3 {
+						rockchip,attribute = "Register";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+				};
+			};
+			dsmc_lb_slave1: lb-slave1 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
+				rockchip,int-en = <0x1>;
+				status = "disabled";
+				dsmc_p1_region: region {
+					dsmc_p1_region0: region0 {
+						rockchip,attribute = "Merged FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p1_region1: region1 {
+						rockchip,attribute = "No-Merge FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p1_region2: region2 {
+						rockchip,attribute = "DPRA";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p1_region3: region3 {
+						rockchip,attribute = "Register";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+				};
+			};
+			dsmc_lb_slave2: lb-slave2 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
+				rockchip,int-en = <0x2>;
+				status = "disabled";
+				dsmc_p2_region: region {
+					dsmc_p2_region0: region0 {
+						rockchip,attribute = "Merged FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p2_region1: region1 {
+						rockchip,attribute = "No-Merge FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p2_region2: region2 {
+						rockchip,attribute = "DPRA";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p2_region3: region3 {
+						rockchip,attribute = "Register";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+				};
+			};
+			dsmc_lb_slave3: lb-slave3 {
+				rockchip,mtr-timing = <1 0 0 0 0 0 2 2>;
+				rockchip,int-en = <0x3>;
+				status = "disabled";
+				dsmc_p3_region: region {
+					dsmc_p3_region0: region0 {
+						rockchip,attribute = "Merged FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p3_region1: region1 {
+						rockchip,attribute = "No-Merge FIFO";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p3_region2: region2 {
+						rockchip,attribute = "DPRA";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+					dsmc_p3_region3: region3 {
+						rockchip,attribute = "Register";
+						rockchip,ca-addr-width = <0>;
+						rockchip,dummy-clk-num = <1>;
+						rockchip,cs0-be-ctrled = <0>;
+						rockchip,cs0-ctrl = <0>;
+						status = "disabled";
+					};
+				};
+			};
+		};
+	};
+
 	rkisp: isp@21d00000 {
 		compatible = "rockchip,rv1126b-rkisp";
 		reg = <0x21d00000 0x7f00>, <0x21d30000 0x2f00>;
