@@ -637,6 +637,7 @@ struct rkcif_stream {
 	struct list_head		done_fence_list_head;
 	spinlock_t			fence_lock;
 	u32				rounding_bit;
+	int				frame_loss;
 	struct kfifo			exp_kfifo;
 	struct kfifo			gain_kfifo;
 	struct kfifo			vts_kfifo;
