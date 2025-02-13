@@ -50,6 +50,8 @@
 		serial7 = &uart7;
 		spi0 = &spi0;
 		spi1 = &spi1;
+		spi2 = &fspi0;
+		spi3 = &fspi1;
 	};
 
 	clocks {
@@ -710,6 +712,20 @@
 				reg = <RV1126B_PD_AISP>;
 			};
 		};
+	};
+
+	fspi1: spi@208c0000 {
+		compatible = "rockchip,rv1126b-fspi", "rockchip,fspi";
+		reg = <0x208c0000 0x4000>;
+		interrupts = <GIC_SPI 190 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_1X_FSPI1>, <&cru HCLK_FSPI1>;
+		clock-names = "clk_sfc", "hclk_sfc";
+		rockchip,grf = <&grf>;
+		rockchip,max-dll = <0x7F>;
+		rockchip,sclk-x2-bypass;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "disabled";
 	};
 
 	crypto: crypto@20940000 {
@@ -1490,6 +1506,19 @@
 		clock-names = "pclk_phy";
 		assigned-clocks = <&cru PCLK_RTC_ROOT>;
 		assigned-clock-rates = <50000000>;
+		status = "disabled";
+	};
+
+	fspi0: spi@21460000 {
+		compatible = "rockchip,rv1126b-fspi", "rockchip,fspi";
+		reg = <0x21460000 0x4000>;
+		interrupts = <GIC_SPI 191 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru SCLK_2X_FSPI0>, <&cru HCLK_FSPI0>;
+		clock-names = "clk_sfc", "hclk_sfc";
+		rockchip,grf = <&grf>;
+		rockchip,max-dll = <0xFF>;
+		#address-cells = <1>;
+		#size-cells = <0>;
 		status = "disabled";
 	};
 
