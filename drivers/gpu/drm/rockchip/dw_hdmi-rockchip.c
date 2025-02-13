@@ -1847,6 +1847,7 @@ dw_hdmi_rockchip_mode_valid(struct dw_hdmi *dw_hdmi, void *data,
 	struct rockchip_drm_private *priv = dev->dev_private;
 	struct drm_crtc *crtc;
 	struct rockchip_hdmi *hdmi;
+	struct rockchip_crtc_state *s;
 
 	if (!encoder) {
 		const struct drm_connector_helper_funcs *funcs;
@@ -1891,6 +1892,19 @@ dw_hdmi_rockchip_mode_valid(struct dw_hdmi *dw_hdmi, void *data,
 		    is_hdmi2_mode(mode))
 			return MODE_BAD;
 	};
+
+	if (encoder->crtc) {
+		s = to_rockchip_crtc_state(encoder->crtc->state);
+		s->output_type = DRM_MODE_CONNECTOR_HDMIA;
+	} else {
+		drm_for_each_crtc(crtc, connector->dev) {
+			if (!drm_encoder_crtc_ok(encoder, crtc))
+				continue;
+
+			s = to_rockchip_crtc_state(crtc->state);
+			s->output_type = DRM_MODE_CONNECTOR_HDMIA;
+		}
+	}
 
 	if (hdmi->is_hdmi_qp) {
 		if (!hdmi->enable_gpio && mode->clock > 600000)
