@@ -528,11 +528,10 @@ static int icm42670_gyro_off(struct icm42670_data *data)
 		return ret;
 
 	cmd &= (~(BIT_PWR_MGMT0_GYRO(INV_ICM42670_SENSOR_MODE_LOW_NOISE)));	 // Gyro off
-	msleep(80);
 	ret = regmap_write(data->regmap, REG_PWR_MGMT_0, cmd);
 	if (ret < 0)
 		return ret;
-	msleep(200);
+	usleep_range(200, 201);
 	return ret;
 }
 
@@ -1339,14 +1338,13 @@ EXPORT_SYMBOL_GPL(icm42670_core_probe);
  */
 static int __maybe_unused sleep_icm42670_resume(struct device *dev)
 {
-	int ret;
-	struct icm42670_data *st =  iio_priv(dev_get_drvdata(dev));
+	int ret = 0;
+	struct icm42670_data *st = iio_priv(dev_get_drvdata(dev));
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 
 	mutex_lock(&st->lock);
 
-	ret = regulator_enable(st->vdd_supply);
-	if (ret)
+	if (!pm_runtime_suspended(dev))
 		goto out_unlock;
 
 	usleep_range(3000, 4000);
@@ -1361,10 +1359,7 @@ static int __maybe_unused sleep_icm42670_resume(struct device *dev)
 	icm42670_set_lpf_bw(st, ICM42670_GYRO, st->gyro_lpf_bw_buff);
 
 	ret = icm42670_set_enable(indio_dev, 1);
-	if (ret)
-		goto out_unlock;
 
-	devm_regulator_put(st->vdd_supply);
 out_unlock:
 	mutex_unlock(&st->lock);
 	return ret;
@@ -1376,28 +1371,21 @@ out_unlock:
  */
 static int __maybe_unused sleep_icm42670_suspend(struct device *dev)
 {
-	struct icm42670_data *st =  iio_priv(dev_get_drvdata(dev));
+	struct icm42670_data *st = iio_priv(dev_get_drvdata(dev));
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
-	int ret;
+	int ret = 0;
 
 	mutex_lock(&st->lock);
+
+	if (pm_runtime_suspended(dev))
+		goto out_unlock;
 
 	st->gyro_frequency_buff = st->gyro_frequency;
 	st->accel_frequency_buff = st->accel_frequency;
 	st->accel_lpf_bw_buff = st->accel_lpf_bw;
 	st->gyro_lpf_bw_buff = st->gyro_lpf_bw;
 
-	if (pm_runtime_suspended(dev)) {
-		ret = 0;
-		goto out_unlock;
-	}
-
 	ret = icm42670_set_enable(indio_dev, 0);
-	if (ret)
-		goto out_unlock;
-
-	regulator_disable(st->vdd_supply);
-	devm_regulator_put(st->vdd_supply);
 
 out_unlock:
 	mutex_unlock(&st->lock);
