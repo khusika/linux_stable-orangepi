@@ -2071,6 +2071,32 @@ static void vop2_power_domain_off_work(struct work_struct *work)
 	spin_unlock(&pd->lock);
 }
 
+/*
+ * Don't dynamic turn on/off PD_ESMART at RK3588.
+ * (1) There is a design issue for PD_EMSART when attached
+ *     on VP1/2/3, we found it will trigger POST_BUF_EMPTY irq at vp0
+ *     in splice mode.
+ * (2) PD_ESMART will be closed at esmart layers attathed on VPs
+ *     config done + FS, but different VP FS time is different, this
+ *     maybe lead to PD_ESMART closed at wrong time and display error.
+ * (3) PD_ESMART power up maybe have 4 us delay, this will lead to POST_BUF_EMPTY.
+ *
+ * Don't dynamic turn on/off RK3576 PD_ESMART and PD_CLUSTER.
+ * (1) The 4 ESMART win share one PD_ESMART and 2 CLUSTER win share one PD_CLUSTER
+ * (2) The 4 ESMART win and 2 CLUSTER win maybe used by different VP
+ * (3) But different VP FS time is different, this maybe lead to PD up and down at
+       unexpected time.
+ */
+static bool vop2_ignore_dynamic_control_sub_pd(struct vop2 *vop2, struct vop2_power_domain *pd)
+{
+	if (vop2->version == VOP_VERSION_RK3588 && pd->data->id == VOP2_PD_ESMART)
+		return true;
+	else if (vop2->version == VOP_VERSION_RK3576)
+		return true;
+	else
+		return false;
+}
+
 static void vop2_win_enable(struct vop2_win *win)
 {
 	/*
@@ -2090,8 +2116,7 @@ static void vop2_win_enable(struct vop2_win *win)
 	 */
 	if (!VOP_WIN_GET_REG_BAK(win->vop2, win, enable)) {
 		if (win->pd) {
-			if ((win->pd->data->id == VOP2_PD_ESMART && win->vop2->version == VOP_VERSION_RK3588) ||
-			    win->vop2->version == VOP_VERSION_RK3576)
+			if (vop2_ignore_dynamic_control_sub_pd(win->vop2, win->pd))
 				return;
 
 			vop2_power_domain_get(win->pd);
@@ -2167,18 +2192,7 @@ static void vop2_win_disable(struct vop2_win *win, bool skip_splice_win)
 			VOP_CLUSTER_SET(vop2, win, dci_en, 0);
 
 		if (win->pd) {
-
-			/*
-			 * Don't dynamic turn on/off PD_ESMART at RK3588/RK3576.
-			 * (1) There is a design issue for PD_EMSART when attached
-			 *     on VP1/2/3, we found it will trigger POST_BUF_EMPTY irq at vp0
-			 *     in splice mode.
-			 * (2) PD_ESMART will be closed at esmart layers attathed on VPs
-			 *     config done + FS, but different VP FS time is different, this
-			 *     maybe lead to PD_ESMART closed at wrong time and display error.
-			 * (3) PD_ESMART power up maybe have 4 us delay, this will lead to POST_BUF_EMPTY.
-			 */
-			if (win->pd->data->id != VOP2_PD_ESMART) {
+			if (!vop2_ignore_dynamic_control_sub_pd(vop2, win->pd)) {
 				vop2_power_domain_put(win->pd);
 				win->pd->vp_mask &= ~win->vp_mask;
 			}
