@@ -358,6 +358,19 @@ struct arm_smccc_res sip_hdcp_config(u32 arg0, u32 arg1, u32 arg2)
 }
 EXPORT_SYMBOL_GPL(sip_hdcp_config);
 
+struct arm_smccc_res sip_smc_gpio_config(u32 sub_func_id, u32 arg1, u32 arg2,
+					 u32 arg3)
+{
+	struct arm_smccc_res res;
+
+	/*
+	 * res.a0: error code(0: success, !0: error).
+	 */
+	arm_smccc_smc(SIP_GPIO_CFG, sub_func_id, arg1, arg2, arg3, 0, 0, 0, &res);
+	return res;
+}
+EXPORT_SYMBOL_GPL(sip_smc_gpio_config);
+
 /************************** fiq debugger **************************************/
 /*
  * AArch32 is not allowed to call SMC64(ATF framework does not support), so we
