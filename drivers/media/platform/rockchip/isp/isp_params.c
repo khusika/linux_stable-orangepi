@@ -61,8 +61,8 @@ static int rkisp_params_querycap(struct file *file,
 	snprintf(cap->driver, sizeof(cap->driver),
 		 "%s_v%d", DRIVER_NAME,
 		 params_vdev->dev->isp_ver >> 4);
-	strlcpy(cap->card, vdev->name, sizeof(cap->card));
-	strlcpy(cap->bus_info, "platform: " DRIVER_NAME, sizeof(cap->bus_info));
+	strscpy(cap->card, vdev->name, sizeof(cap->card));
+	strscpy(cap->bus_info, "platform: " DRIVER_NAME, sizeof(cap->bus_info));
 	cap->version = RKISP_DRIVER_VERSION;
 	return 0;
 }
@@ -594,7 +594,7 @@ int rkisp_register_params_vdev(struct rkisp_isp_params_vdev *params_vdev,
 	params_vdev->is_subs_evt = false;
 	spin_lock_init(&params_vdev->config_lock);
 
-	strlcpy(vdev->name, PARAMS_NAME, sizeof(vdev->name));
+	strscpy(vdev->name, PARAMS_NAME, sizeof(vdev->name));
 
 	vdev->ioctl_ops = &rkisp_params_ioctl;
 	vdev->fops = &rkisp_params_fops;

@@ -979,7 +979,7 @@ static int rkisp_querycap(struct file *file, void *priv,
 	struct device *dev = stream->ispdev->dev;
 	struct video_device *vdev = video_devdata(file);
 
-	strlcpy(cap->card, vdev->name, sizeof(cap->card));
+	strscpy(cap->card, vdev->name, sizeof(cap->card));
 	snprintf(cap->driver, sizeof(cap->driver),
 		 "%s_v%d", dev->driver->name,
 		 stream->ispdev->isp_ver >> 4);
@@ -1158,25 +1158,25 @@ static int dmarx_init(struct rkisp_device *dev, u32 id)
 
 	switch (id) {
 	case RKISP_STREAM_DMARX:
-		strlcpy(vdev->name, DMA_VDEV_NAME,
+		strscpy(vdev->name, DMA_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp_dmarx_streams_ops;
 		stream->config = &rkisp_dmarx_stream_config;
 		break;
 	case RKISP_STREAM_RAWRD0:
-		strlcpy(vdev->name, DMARX0_VDEV_NAME,
+		strscpy(vdev->name, DMARX0_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp2_dmarx_streams_ops;
 		stream->config = &rkisp2_dmarx0_stream_config;
 		break;
 	case RKISP_STREAM_RAWRD1:
-		strlcpy(vdev->name, DMARX1_VDEV_NAME,
+		strscpy(vdev->name, DMARX1_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp2_dmarx_streams_ops;
 		stream->config = &rkisp2_dmarx1_stream_config;
 		break;
 	case RKISP_STREAM_RAWRD2:
-		strlcpy(vdev->name, DMARX2_VDEV_NAME,
+		strscpy(vdev->name, DMARX2_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp2_dmarx_streams_ops;
 		stream->config = &rkisp2_dmarx2_stream_config;

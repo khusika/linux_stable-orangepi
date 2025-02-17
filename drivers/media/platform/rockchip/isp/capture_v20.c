@@ -2002,7 +2002,7 @@ static int rkisp_stream_init(struct rkisp_device *dev, u32 id)
 
 	switch (id) {
 	case RKISP_STREAM_SP:
-		strlcpy(vdev->name, SP_VDEV_NAME,
+		strscpy(vdev->name, SP_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp_sp_streams_ops;
 		stream->config = &rkisp_sp_stream_config;
@@ -2010,31 +2010,31 @@ static int rkisp_stream_init(struct rkisp_device *dev, u32 id)
 		stream->config->fmt_size = ARRAY_SIZE(sp_fmts);
 		break;
 	case RKISP_STREAM_DMATX0:
-		strlcpy(vdev->name, DMATX0_VDEV_NAME,
+		strscpy(vdev->name, DMATX0_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp2_dmatx0_streams_ops;
 		stream->config = &rkisp2_dmatx0_stream_config;
 		break;
 	case RKISP_STREAM_DMATX1:
-		strlcpy(vdev->name, DMATX1_VDEV_NAME,
+		strscpy(vdev->name, DMATX1_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp2_dmatx1_streams_ops;
 		stream->config = &rkisp2_dmatx1_stream_config;
 		break;
 	case RKISP_STREAM_DMATX2:
-		strlcpy(vdev->name, DMATX2_VDEV_NAME,
+		strscpy(vdev->name, DMATX2_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp2_dmatx2_streams_ops;
 		stream->config = &rkisp2_dmatx2_stream_config;
 		break;
 	case RKISP_STREAM_DMATX3:
-		strlcpy(vdev->name, DMATX3_VDEV_NAME,
+		strscpy(vdev->name, DMATX3_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp2_dmatx3_streams_ops;
 		stream->config = &rkisp2_dmatx3_stream_config;
 		break;
 	default:
-		strlcpy(vdev->name, MP_VDEV_NAME,
+		strscpy(vdev->name, MP_VDEV_NAME,
 			sizeof(vdev->name));
 		stream->ops = &rkisp_mp_streams_ops;
 		stream->config = &rkisp_mp_stream_config;

@@ -950,7 +950,7 @@ static int rkisp_plat_probe(struct platform_device *pdev)
 
 	v4l2_dev = &isp_dev->v4l2_dev;
 	v4l2_dev->mdev = &isp_dev->media_dev;
-	strlcpy(v4l2_dev->name, isp_dev->name, sizeof(v4l2_dev->name));
+	strscpy(v4l2_dev->name, isp_dev->name, sizeof(v4l2_dev->name));
 	v4l2_ctrl_handler_init(&isp_dev->ctrl_handler, 5);
 	v4l2_dev->ctrl_handler = &isp_dev->ctrl_handler;
 

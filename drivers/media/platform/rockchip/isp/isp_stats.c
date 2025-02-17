@@ -61,8 +61,8 @@ static int rkisp_stats_querycap(struct file *file,
 	snprintf(cap->driver, sizeof(cap->driver),
 		 "%s_v%d", DRIVER_NAME,
 		 stats_vdev->dev->isp_ver >> 4);
-	strlcpy(cap->card, vdev->name, sizeof(cap->card));
-	strlcpy(cap->bus_info, "platform: " DRIVER_NAME, sizeof(cap->bus_info));
+	strscpy(cap->card, vdev->name, sizeof(cap->card));
+	strscpy(cap->bus_info, "platform: " DRIVER_NAME, sizeof(cap->bus_info));
 	cap->version = RKISP_DRIVER_VERSION;
 	return 0;
 }
@@ -410,7 +410,7 @@ int rkisp_register_stats_vdev(struct rkisp_isp_stats_vdev *stats_vdev,
 	spin_lock_init(&stats_vdev->irq_lock);
 	spin_lock_init(&stats_vdev->rd_lock);
 
-	strlcpy(vdev->name, STATS_NAME, sizeof(vdev->name));
+	strscpy(vdev->name, STATS_NAME, sizeof(vdev->name));
 
 	vdev->ioctl_ops = &rkisp_stats_ioctl;
 	vdev->fops = &rkisp_stats_fops;
