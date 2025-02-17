@@ -554,7 +554,7 @@ bool hx83192_chip_detect(struct himax_ts_data *ts)
 		  tmp_data[1]);
 
 		if ((tmp_data[3] == 0x83) && (tmp_data[2] == 0x19) && (tmp_data[1] == 0x2a)) {
-			strlcpy(ts->chip_name, HX_83192A_SERIES_PWON, 30);
+			strscpy(ts->chip_name, HX_83192A_SERIES_PWON, 30);
 			I("%s:IC name = %s\n", __func__, ts->chip_name);
 			I("Himax IC package %x%x%x in\n", tmp_data[3], tmp_data[2], tmp_data[1]);
 
