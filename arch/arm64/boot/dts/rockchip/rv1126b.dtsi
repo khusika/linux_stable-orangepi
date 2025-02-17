@@ -1587,6 +1587,28 @@
 		status = "disabled";
 	};
 
+	rga2_core0: rga@209f0000 {
+		compatible = "rockchip,rga2";
+		reg = <0x209f0000 0x1000>;
+		interrupts = <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rga2_core0_irq";
+		clocks = <&cru ACLK_RGA>, <&cru HCLK_RGA>, <&cru CLK_CORE_RGA>;
+		clock-names = "aclk_rga", "hclk_rga", "clk_rga";
+		iommus = <&rga2_core0_mmu>;
+		status = "disabled";
+	};
+
+	rga2_core0_mmu: iommu@209f0f00 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x209f0f00 0x100>;
+		interrupts = <GIC_SPI 142 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rga2_0_mmu";
+		clocks = <&cru ACLK_RGA>, <&cru HCLK_RGA>;
+		clock-names = "aclk", "iface";
+		#iommu-cells = <0>;
+		status = "disabled";
+	};
+
 	wdt: watchdog@20b60000 {
 		compatible = "snps,dw-wdt";
 		reg = <0x20b60000 0x100>;
