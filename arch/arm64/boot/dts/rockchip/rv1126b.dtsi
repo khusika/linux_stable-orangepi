@@ -6,6 +6,7 @@
 #include <dt-bindings/clock/rockchip,rv1126b-cru.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/phy/phy.h>
 #include <dt-bindings/pinctrl/rockchip.h>
 #include <dt-bindings/power/rockchip,rv1126b-power.h>
 #include <dt-bindings/soc/rockchip,boot-mode.h>
@@ -1515,6 +1516,49 @@
 		status = "disabled";
 	};
 
+	usb2phy: usb2-phy@21400000 {
+		compatible = "rockchip,rv1126b-usb2phy";
+		reg = <0x21400000 0x10000>;
+		clocks = <&cru PCLK_USB2PHY>;
+		clock-names = "pclk";
+		clock-output-names = "usb480m_phy";
+		#clock-cells = <0>;
+		rockchip,usbctrl-grf = <&grf>;
+		rockchip,usbgrf = <&grf>;
+		status = "disabled";
+
+		usb2phy_host: host-port {
+			#phy-cells = <0>;
+			interrupts = <GIC_SPI 35 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "linestate";
+			status = "disabled";
+		};
+
+		usb2phy_otg: otg-port {
+			#phy-cells = <0>;
+			interrupts = <GIC_SPI 32 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 33 IRQ_TYPE_LEVEL_HIGH>,
+				     <GIC_SPI 34 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-names = "otg-id", "otg-bvalid", "linestate";
+			status = "disabled";
+		};
+	};
+
+	usb3phy: usb3-phy@21410000 {
+		compatible = "rockchip,rv1126b-usb3-phy";
+		reg = <0x21410000 0x10000>;
+		clocks = <&cru CLK_REF_PIPEPHY>, <&cru PCLK_PIPEPHY>;
+		clock-names = "refclk", "apbclk";
+		assigned-clocks = <&cru CLK_REF_PIPEPHY>;
+		assigned-clock-rates = <100000000>;
+		#phy-cells = <1>;
+		resets = <&cru SRST_PRESETN_PIPEPHY>, <&cru SRST_RESETN_REF_PIPEPHY>;
+		reset-names = "combphy-apb", "combphy";
+		rockchip,pipe-grf = <&grf>;
+		rockchip,pipe-phy-grf = <&grf>;
+		status = "disabled";
+	};
+
 	fspi0: spi@21460000 {
 		compatible = "rockchip,rv1126b-fspi", "rockchip,fspi";
 		reg = <0x21460000 0x4000>;
@@ -1536,6 +1580,54 @@
 		clock-names = "biu", "ciu";
 		fifo-depth = <0x100>;
 		max-frequency = <200000000>;
+		status = "disabled";
+	};
+
+	usb_host_ehci: usb@21480000 {
+		compatible = "generic-ehci";
+		reg = <0x21480000 0x40000>;
+		interrupts = <GIC_SPI 207 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru HCLK_USB2HOST>, <&cru HCLK_ARB_USB2HOST>, <&usb2phy>;
+		clock-names = "usbhost", "arbiter", "utmi";
+		phys = <&usb2phy_host>;
+		phy-names = "usb2-phy";
+		status = "disabled";
+	};
+
+	usb_host_ohci: usb@214c0000 {
+		compatible = "generic-ohci";
+		reg = <0x214c0000 0x40000>;
+		interrupts = <GIC_SPI 208 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru HCLK_USB2HOST>, <&cru HCLK_ARB_USB2HOST>, <&usb2phy>;
+		clock-names = "usbhost", "arbiter", "utmi";
+		phys = <&usb2phy_host>;
+		phy-names = "usb2-phy";
+		status = "disabled";
+	};
+
+	usb_drd_dwc3: usb@21500000 {
+		compatible = "rockchip,rv1126b-dwc3", "rockchip,rk3576-dwc3", "snps,dwc3";
+		reg = <0x21500000 0x100000>;
+		clocks = <&cru CLK_REF_USB3OTG>,
+			 <&cru CLK_SUSPEND_USB3OTG>,
+			 <&cru ACLK_USB3OTG>;
+		clock-names = "ref", "suspend", "bus_clk";
+		interrupts = <GIC_SPI 209 IRQ_TYPE_LEVEL_HIGH>;
+		resets = <&cru SRST_ARESETN_USB3OTG>;
+		reset-names = "usb3-otg";
+		dr_mode = "otg";
+		phys = <&usb2phy_otg>, <&usb3phy PHY_TYPE_USB3>;
+		phy-names = "usb2-phy", "usb3-phy";
+		phy_type = "utmi_wide";
+		snps,dis_enblslpm_quirk;
+		snps,dis-u1-entry-quirk;
+		snps,dis-u2-entry-quirk;
+		snps,dis-u2-freeclk-exists-quirk;
+		snps,dis-del-phy-power-chg-quirk;
+		snps,dis-tx-ipgap-linecheck-quirk;
+		snps,dis_rxdet_inp3_quirk;
+		snps,parkmode-disable-hs-quirk;
+		snps,parkmode-disable-ss-quirk;
 		status = "disabled";
 	};
 
