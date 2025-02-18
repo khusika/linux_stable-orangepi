@@ -3060,7 +3060,10 @@ static enum drm_mode_status dw_dp_encoder_mode_valid(struct drm_encoder *encoder
 	struct drm_device *dev = encoder->dev;
 	struct rockchip_crtc_state *s;
 
-	if (!crtc) {
+	if (crtc) {
+		s = to_rockchip_crtc_state(crtc->state);
+		s->output_type = DRM_MODE_CONNECTOR_DisplayPort;
+	} else {
 		drm_for_each_crtc(crtc, dev) {
 			if (!drm_encoder_crtc_ok(encoder, crtc))
 				continue;
