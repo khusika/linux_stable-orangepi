@@ -1546,6 +1546,7 @@
 		ddc-i2c-scl-low-time-ns = <10000>;
 		reg-io-width = <4>;
 		rockchip,grf = <&grf>;
+		rockchip,cts-manual;
 		pinctrl-names = "default";
 		pinctrl-0 = <&hdmi_pins>;
 		phys = <&hdmiphy>;
