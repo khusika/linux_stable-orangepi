@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
+/*
+ * Copyright (c) 2025 Rockchip Electronics Co., Ltd.
+ */
+
+#include <dt-bindings/input/input.h>
+
+/ {
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x20810000 console=ttyFIQ0 root=/dev/mmcblk0p5 rootfstype=ext4 rootwait snd_soc_core.prealloc_buffer_size_kbytes=16 coherent_pool=32K";
+	};
+};
+
+&fiq_debugger {
+	status = "okay";
+};
+
