@@ -446,7 +446,6 @@ struct dw_dp {
 	struct clk *hclk;
 	struct clk *hdcp_clk;
 	struct reset_control *rstc;
-	struct regmap *grf;
 	struct completion complete;
 	struct completion hdcp_complete;
 	int irq;
