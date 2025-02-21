@@ -1906,6 +1906,7 @@ static int rockchip_drm_bind(struct device *dev)
 		goto err_drm_fbdev_fini;
 
 	rockchip_drm_error_event_init(drm_dev);
+	rockchip_clocks_loader_unprotect();
 
 	return 0;
 err_drm_fbdev_fini:
