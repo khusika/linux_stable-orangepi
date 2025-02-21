@@ -554,8 +554,6 @@ struct rockchip_drm_private {
 	struct gen_pool *secure_buffer_pool;
 	struct mutex mm_lock;
 	struct drm_mm mm;
-	struct list_head psr_list;
-	struct mutex psr_list_lock;
 	struct mutex commit_lock;
 
 	/* private crtc prop */
