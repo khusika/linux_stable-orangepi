@@ -587,6 +587,7 @@ struct rockchip_drm_private {
 	 * OVL_LAYER_SEL/OVL_PORT_SEL
 	 */
 	struct mutex ovl_lock;
+	bool need_ovl_lock;
 
 	struct rockchip_drm_vcnt vcnt[ROCKCHIP_MAX_CRTC];
 	struct rockchip_drm_error_event error_event;

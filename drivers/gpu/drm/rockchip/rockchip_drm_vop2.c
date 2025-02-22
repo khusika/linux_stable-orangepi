@@ -15317,6 +15317,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 	struct platform_device *pdev = to_platform_device(dev);
 	const struct vop2_data *vop2_data;
 	struct drm_device *drm_dev = data;
+	struct rockchip_drm_private *private;
 	struct vop2 *vop2;
 	struct resource *res;
 	size_t alloc_size;
@@ -15348,6 +15349,17 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 	vop2->data = vop2_data;
 	vop2->drm_dev = drm_dev;
 	vop2->version = vop2_data->version;
+	private = drm_dev->dev_private;
+	/*
+	 * 1. RK3566/RK3568/RK3588 VOP different VPs share one overlay logic,
+	 *    so need use ovl lock to make sure they're mutually exclusive;
+	 * 2. RK3528 need to reset the p2i_en bit when POST_BUF_EMPTY at
+	 *    post_buf_empty_work_event(), the vop2_cfg_done() must exclusive
+	 *    with userspace commit new frame.
+	 */
+	private->need_ovl_lock = vop2->version == VOP_VERSION_RK3528 ||
+					vop2->version == VOP_VERSION_RK3568 ||
+					vop2->version == VOP_VERSION_RK3588;
 
 	dev_set_drvdata(dev, vop2);
 
