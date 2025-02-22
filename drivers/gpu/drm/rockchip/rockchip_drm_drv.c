@@ -1919,8 +1919,6 @@ static int rockchip_drm_bind(struct device *dev)
 
 	drm_dev->dev_private = private;
 
-	mutex_init(&private->commit_lock);
-
 	private->hdmi_pll.pll = devm_clk_get_optional(dev, "hdmi-tmds-pll");
 	if (PTR_ERR(private->hdmi_pll.pll) == -EPROBE_DEFER) {
 		ret = -EPROBE_DEFER;
