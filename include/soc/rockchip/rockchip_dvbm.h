@@ -60,7 +60,7 @@ struct dvbm_port {
 
 struct dvbm_isp_cfg_t {
 	u32 chan_id;
-	struct dmabuf *buf;
+	struct dma_buf *buf;
 	dma_addr_t dma_addr;
 	u32 ybuf_top;
 	u32 ybuf_bot;
