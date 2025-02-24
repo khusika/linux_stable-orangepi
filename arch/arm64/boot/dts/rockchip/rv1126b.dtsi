@@ -245,6 +245,30 @@
 		};
 	};
 
+	rkaiisp_vir0: rkaiisp-vir0 {
+		compatible = "rockchip,rkaiisp-vir";
+		rockchip,hw = <&rkaiisp>;
+		status = "disabled";
+	};
+
+	rkaiisp_vir1: rkaiisp-vir1 {
+		compatible = "rockchip,rkaiisp-vir";
+		rockchip,hw = <&rkaiisp>;
+		status = "disabled";
+	};
+
+	rkaiisp_vir2: rkaiisp-vir2 {
+		compatible = "rockchip,rkaiisp-vir";
+		rockchip,hw = <&rkaiisp>;
+		status = "disabled";
+	};
+
+	rkaiisp_vir3: rkaiisp-vir3 {
+		compatible = "rockchip,rkaiisp-vir";
+		rockchip,hw = <&rkaiisp>;
+		status = "disabled";
+	};
+
 	rkcif_mipi_lvds: rkcif-mipi-lvds {
 		compatible = "rockchip,rkcif-mipi-lvds";
 		rockchip,hw = <&rkcif>;
@@ -2167,6 +2191,32 @@
 		clock-names = "aclk", "iface";
 		#iommu-cells = <0>;
 		rockchip,disable-mmu-reset;
+		status = "disabled";
+	};
+
+	rkaiisp: rkaiisp@21fa0000 {
+		compatible = "rockchip,rv1126b-rkaiisp";
+		reg = <0x21fa0000 0x3f00>;
+		interrupts = <GIC_SPI 217 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "irq";
+		clocks = <&cru ACLK_AISP>, <&cru HCLK_AISP>,
+			 <&cru CLK_CORE_AISP>;
+		clock-names = "aclk_aiisp", "hclk_aiisp", "clk_aiisp_core";
+		iommus = <&rkaiisp_mmu>;
+		power-domains = <&power RV1126B_PD_AISP>;
+		status = "disabled";
+	};
+
+	rkaiisp_mmu: iommu@21fa3f00 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x21fa3f00 0x100>;
+		interrupts = <GIC_SPI 218 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "aiisp_mmu";
+		clocks = <&cru ACLK_AISP>, <&cru HCLK_AISP>;
+		clock-names = "aclk", "iface";
+		power-domains = <&power RV1126B_PD_AISP>;
+		rockchip,disable-mmu-reset;
+		#iommu-cells = <0>;
 		status = "disabled";
 	};
 
