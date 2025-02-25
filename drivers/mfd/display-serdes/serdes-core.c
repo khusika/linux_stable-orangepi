@@ -331,7 +331,7 @@ int serdes_set_pinctrl_default(struct serdes *serdes)
 {
 	int ret = 0;
 
-	if ((!IS_ERR(serdes->pinctrl_node)) && (!IS_ERR(serdes->pins_init))) {
+	if ((!IS_ERR_OR_NULL(serdes->pinctrl_node)) && (!IS_ERR_OR_NULL(serdes->pins_init))) {
 		ret = pinctrl_select_state(serdes->pinctrl_node, serdes->pins_init);
 		if (ret)
 			dev_err(serdes->dev, "could not set init pins\n");
@@ -346,7 +346,7 @@ int serdes_set_pinctrl_sleep(struct serdes *serdes)
 {
 	int ret = 0;
 
-	if ((!IS_ERR(serdes->pinctrl_node)) && (!IS_ERR(serdes->pins_sleep))) {
+	if ((!IS_ERR_OR_NULL(serdes->pinctrl_node)) && (!IS_ERR_OR_NULL(serdes->pins_sleep))) {
 		ret = pinctrl_select_state(serdes->pinctrl_node, serdes->pins_sleep);
 		if (ret)
 			dev_err(serdes->dev, "could not set sleep pins\n");
@@ -393,7 +393,7 @@ void serdes_device_poweroff(struct serdes *serdes)
 {
 	int ret = 0;
 
-	if ((!IS_ERR(serdes->pinctrl_node)) && (!IS_ERR(serdes->pins_sleep))) {
+	if ((!IS_ERR_OR_NULL(serdes->pinctrl_node)) && (!IS_ERR_OR_NULL(serdes->pins_sleep))) {
 		ret = pinctrl_select_state(serdes->pinctrl_node, serdes->pins_sleep);
 		if (ret)
 			dev_err(serdes->dev, "could not set sleep pins\n");
