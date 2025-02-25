@@ -72,6 +72,12 @@ config ROCKCHIP_HW_DECOMPRESS
 	  This driver support Decompress IP built-in Rockchip SoC, support
 	  LZ4, GZIP, ZLIB.
 
+config ROCKCHIP_HW_DECOMPRESS_TEST
+	bool "Rockchip Hw-Decompress test"
+	depends on ROCKCHIP_HW_DECOMPRESS
+	help
+	  Say yes here to enable decompress test
+
 config ROCKCHIP_HW_DECOMPRESS_USER
 	tristate "Rockchip HardWare Decompress User Interface Support"
 	default n

@@ -244,7 +244,9 @@ static irqreturn_t rk_decom_irq_handler(int irq, void *priv)
 				g_decom_noblocking = false;
 				wake_up(&g_decom_wait);
 			} else {
+#ifndef CONFIG_ROCKCHIP_HW_DECOMPRESS_TEST
 				writel(DECOM_ENABLE, rk_dec->regs + DECOM_ENR);
+#endif
 			}
 		}
 	}
@@ -254,6 +256,7 @@ static irqreturn_t rk_decom_irq_handler(int irq, void *priv)
 
 static irqreturn_t rk_decom_irq_thread(int irq, void *priv)
 {
+#ifndef CONFIG_ROCKCHIP_HW_DECOMPRESS_TEST
 	struct rk_decom *rk_dec = priv;
 
 	if (g_decom_complete) {
@@ -273,8 +276,53 @@ static irqreturn_t rk_decom_irq_thread(int irq, void *priv)
 		clk_bulk_disable_unprepare(rk_dec->num_clocks, rk_dec->clocks);
 	}
 
+#endif
 	return IRQ_HANDLED;
 }
+
+#ifdef CONFIG_ROCKCHIP_HW_DECOMPRESS_TEST
+static ssize_t start_decom_store(struct device *dev,
+				 struct device_attribute *attr,
+				 const char *buf, size_t size)
+{
+	u32 mode = 0;
+	phys_addr_t src, dst;
+	int ret;
+	struct rk_decom *rk_dec = dev_get_drvdata(dev);
+
+	src = rk_dec->mem_start;
+	dst = rk_dec->mem_start + rk_dec->mem_size / 2;
+
+	if (src == 0x0 || dst == 0x0)
+		return -EINVAL;
+
+	ret = kstrtou32(buf, 10, &mode);
+	if (ret)
+		return ret;
+
+	if (mode != LZ4_MOD && mode != GZIP_MOD && mode != ZLIB_MOD)
+		return -EINVAL;
+
+	dev_info(dev, "%s,%d, src = %pa, dst = %pa, mode = %d\n",
+		 __func__, __LINE__, &src, &dst, mode);
+
+	ret = rk_decom_start(mode, src, dst, 0x80000000);
+	if (ret)
+		pr_info("%s, user decompress error\n", __func__);
+
+	return size;
+}
+
+static DEVICE_ATTR_WO(start_decom);
+static struct attribute *decom_attrs[] = {
+	&dev_attr_start_decom.attr,
+	NULL
+};
+
+static const struct attribute_group decom_attr_group = {
+	.attrs = decom_attrs,
+};
+#endif
 
 static int __init rockchip_decom_probe(struct platform_device *pdev)
 {
@@ -346,6 +394,13 @@ static int __init rockchip_decom_probe(struct platform_device *pdev)
 		goto disable_clk;
 	}
 
+#ifdef CONFIG_ROCKCHIP_HW_DECOMPRESS_TEST
+	ret = sysfs_create_group(&pdev->dev.kobj, &decom_attr_group);
+	if (ret) {
+		dev_err(dev, "SysFS group creation failed\n");
+		return ret;
+	}
+#endif
 	g_decom = rk_dec;
 	wake_up(&decom_init_done);
 
