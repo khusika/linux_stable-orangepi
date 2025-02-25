@@ -831,6 +831,8 @@ static int monitor_device_parse_status_config(struct device_node *np,
 
 	ret = of_property_read_u32(np, "rockchip,early-suspend-freq",
 				   &info->early_suspend_freq);
+	ret &= of_property_read_u32(np, "rockchip,video-1080p-freq",
+				   &info->video_1080p_freq);
 	ret &= of_property_read_u32(np, "rockchip,video-4k-freq",
 				   &info->video_4k_freq);
 	ret &= of_property_read_u32(np, "rockchip,reboot-freq",
@@ -1675,9 +1677,14 @@ static void rockchip_system_status_cpu_limit_freq(struct monitor_dev_info *info,
 
 	if (info->early_suspend_freq && (status & SYS_STATUS_SUSPEND))
 		target_freq = info->early_suspend_freq;
-
-	if (info->video_4k_freq && (status & SYS_STATUS_VIDEO_4K))
-		target_freq = info->video_4k_freq;
+	if (info->video_1080p_freq && (status & SYS_STATUS_VIDEO_1080P)) {
+		if (!target_freq || target_freq > info->video_1080p_freq)
+			target_freq = info->video_1080p_freq;
+	}
+	if (info->video_4k_freq && (status & SYS_STATUS_VIDEO_4K)) {
+		if (!target_freq || target_freq > info->video_4k_freq)
+			target_freq = info->video_4k_freq;
+	}
 
 	if (target_freq == info->status_max_limit)
 		return;
