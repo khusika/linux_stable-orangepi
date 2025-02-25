@@ -4,8 +4,22 @@
 #ifndef _RKVPSS_HW_H
 #define _RKVPSS_HW_H
 
-#include "common.h"
-#include "vpss_offline.h"
+#include <linux/clk.h>
+#include <linux/delay.h>
+#include <linux/interrupt.h>
+#include <linux/io.h>
+#include <linux/iommu.h>
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_graph.h>
+#include <linux/of_platform.h>
+#include <linux/of_reserved_mem.h>
+#include <linux/pinctrl/consumer.h>
+#include <linux/pm_runtime.h>
+#include <linux/reset.h>
+#include <media/videobuf2-cma-sg.h>
+#include <media/videobuf2-dma-sg.h>
+#include <soc/rockchip/rockchip_iommu.h>
 
 #define VPSS_MAX_BUS_CLK 4
 #define VPSS_MAX_DEV	 8

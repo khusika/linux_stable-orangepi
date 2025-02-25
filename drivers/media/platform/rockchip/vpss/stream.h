@@ -4,8 +4,23 @@
 #ifndef _RKVPSS_STREAM_H
 #define _RKVPSS_STREAM_H
 
+#include <linux/clk.h>
+#include <linux/delay.h>
+#include <linux/pm_runtime.h>
+#include <linux/slab.h>
+#include <media/v4l2-common.h>
+#include <media/v4l2-event.h>
+#include <media/v4l2-fh.h>
+#include <media/v4l2-ioctl.h>
+#include <media/v4l2-mc.h>
+#include <media/v4l2-subdev.h>
+#include <media/videobuf2-dma-contig.h>
+#include <media/videobuf2-dma-sg.h>
+#include <uapi/linux/rk-video-format.h>
+
 #include <linux/interrupt.h>
-#include "common.h"
+
+#define STREAM_OUT_REQ_BUFS_MIN 0
 
 struct rkvpss_stream;
 

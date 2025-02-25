@@ -8,3 +8,7 @@ video_rkvpss-objs += hw.o \
 		stream.o \
 		procfs.o \
 		vpss_offline.o
+
+video_rkvpss-$(CONFIG_VIDEO_ROCKCHIP_VPSS_V1) += \
+						stream_v1.o \
+						vpss_offline_v1.o
