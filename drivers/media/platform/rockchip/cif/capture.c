@@ -3796,9 +3796,10 @@ static void rkcif_csi_set_lvds_sav_eav(struct rkcif_stream *stream,
 	}
 }
 
-static unsigned char get_csi_fmt_val(const struct cif_input_fmt	*cif_fmt_in,
+static unsigned char get_csi_fmt_val(struct rkcif_stream *stream,
 				     struct csi_channel_info *csi_info)
 {
+	const struct cif_input_fmt *cif_fmt_in = stream->cif_fmt_in;
 	unsigned char csi_fmt_val = 0;
 
 	if (cif_fmt_in->mbus_code == MEDIA_BUS_FMT_SPD_2X8 ||
@@ -3817,8 +3818,9 @@ static unsigned char get_csi_fmt_val(const struct cif_input_fmt	*cif_fmt_in,
 			csi_fmt_val = CSI_WRDDR_TYPE_RAW12;
 			break;
 		}
-	} else if (cif_fmt_in->csi_fmt_val == CSI_WRDDR_TYPE_RGB888 ||
-		   cif_fmt_in->csi_fmt_val == CSI_WRDDR_TYPE_RGB565) {
+	} else if (cif_fmt_in->csi_fmt_val == CSI_WRDDR_TYPE_RGB565 ||
+		   (stream->cifdev->chip_id < CHIP_RK3576_CIF &&
+		    cif_fmt_in->csi_fmt_val == CSI_WRDDR_TYPE_RGB888)) {
 		csi_fmt_val = CSI_WRDDR_TYPE_RAW8;
 	} else {
 		csi_fmt_val = cif_fmt_in->csi_fmt_val;
@@ -3954,7 +3956,7 @@ static int rkcif_csi_channel_init(struct rkcif_stream *stream,
 						   channel->cmd_mode_en,
 						   channel->dsi_input);
 	}
-	channel->csi_fmt_val = get_csi_fmt_val(stream->cif_fmt_in,
+	channel->csi_fmt_val = get_csi_fmt_val(stream,
 					       &dev->channels[stream->id]);
 
 	if (dev->hdr.hdr_mode == NO_HDR ||
