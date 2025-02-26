@@ -1716,6 +1716,8 @@ static int analogix_dp_bridge_attach(struct drm_bridge *bridge,
 
 	if (of_property_read_bool(dp->dev->of_node, "dp-mode"))
 		dp->dp_mode = true;
+	else if (of_property_read_bool(dp->dev->of_node, "edp-mode"))
+		dp->dp_mode = false;
 
 	if (flags & DRM_BRIDGE_ATTACH_NO_CONNECTOR)
 		return 0;
