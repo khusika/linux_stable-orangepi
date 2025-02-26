@@ -47,6 +47,7 @@ int rkisp_dvbm_init(struct rkisp_stream *stream)
 	height = stream->out_fmt.height;
 	wrap_line = dev->cap_dev.wrap_line;
 	dvbm_cfg.dma_addr = buf->dma_addr;
+	dvbm_cfg.buf = buf->dbuf;
 	dvbm_cfg.ybuf_bot = 0;
 	dvbm_cfg.ybuf_top = width * wrap_line;
 	dvbm_cfg.ybuf_lstd = width;
