@@ -1501,8 +1501,10 @@ static int rockchip_hdptx_phy_probe(struct platform_device *pdev)
 				     "failed to create regmap\n");
 
 	ret = devm_clk_bulk_get_all(dev, &hdptx->clks);
-	if (ret < 1)
-		return dev_err_probe(dev, ret, "failed to get clocks\n");
+	if (ret < 0)
+		return dev_err_probe(dev, ret, "Failed to get clocks\n");
+	if (ret == 0)
+		return dev_err_probe(dev, -EINVAL, "Missing clocks\n");
 
 	hdptx->nr_clks = ret;
 
