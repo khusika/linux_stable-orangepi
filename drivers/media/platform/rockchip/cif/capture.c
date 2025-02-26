@@ -9015,6 +9015,7 @@ void rkcif_stream_init(struct rkcif_device *dev, u32 id)
 	stream->frame_idx = 0;
 	memset(&stream->sensor_exp_info, 0, sizeof(stream->sensor_exp_info));
 	stream->frame_loss = 0;
+	stream->is_pause_stream = false;
 }
 
 int rkcif_sensor_set_power(struct rkcif_stream *stream, int on)
@@ -13651,6 +13652,7 @@ static void rkcif_toisp_check_stop_status(struct sditf_priv *priv,
 					rkcif_stop_dma_capture(stream);
 				}
 				stream->is_wait_stop_complete = false;
+				stream->is_pause_stream = true;
 				complete(&stream->stop_complete);
 			}
 			if (stream->cifdev->sensor_state_change &&
@@ -15023,6 +15025,7 @@ void rkcif_irq_pingpong_v1(struct rkcif_device *cif_dev)
 
 			if (stream->is_finish_stop_dma && stream->is_wait_stop_complete) {
 				stream->is_wait_stop_complete = false;
+				stream->is_pause_stream = true;
 				complete(&stream->stop_complete);
 			}
 
@@ -15168,8 +15171,11 @@ void rkcif_irq_pingpong_v1(struct rkcif_device *cif_dev)
 				}
 				if (stream->to_stop_dma) {
 					ret = rkcif_stop_dma_capture(stream);
-					if (!ret)
+					if (!ret) {
 						stream->is_finish_stop_dma = true;
+						if (stream->is_wait_stop_complete)
+							stream->is_pause_stream = true;
+					}
 				}
 				spin_unlock_irqrestore(&stream->vbq_lock, flags);
 
