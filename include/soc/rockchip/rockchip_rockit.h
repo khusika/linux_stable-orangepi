@@ -13,6 +13,7 @@
 #define ROCKIT_STREAM_NUM_MAX	12
 
 #define ROCKIT_VICAP_NUM_MAX	6
+#define ROCKIT_VPSS_NUM_MAX 3
 
 enum {
 	RKISP_NORMAL_ONLINE,
@@ -125,6 +126,46 @@ struct rockit_rkcif_cfg {
 	int (*rkcif_rockit_mpibuf_done)(struct rockit_rkcif_cfg *rockit_cif_cfg);
 };
 
+struct rkvpss_stream_cfg {
+	struct rkvpss_rockit_buffer *rkvpss_buff[ROCKIT_BUF_NUM_MAX];
+	int buff_id[ROCKIT_BUF_NUM_MAX];
+	void *node;
+	int fps_cnt;
+	int dst_fps;
+	int cur_fps;
+	u64 old_time;
+	bool is_discard;
+	struct mutex freebuf_lock;
+};
+
+struct rkvpss_dev_cfg {
+	const char *vpss_name;
+	void *vpss_dev;
+	struct rkvpss_stream_cfg rkvpss_stream_cfg[ROCKIT_STREAM_NUM_MAX];
+};
+
+struct rockit_rkvpss_cfg {
+	bool is_alloc;
+	bool is_empty;
+	bool is_qbuf;
+	char *current_name;
+	int *buff_id;
+	int mpi_id;
+	u32 nick_id;
+	u32 event;
+	int vpss_num;
+	u32 y_offset;
+	u32 uv_offset;
+	u32 vir_width;
+	void *node;
+	void *mpibuf;
+	void *vvi_dev[ROCKIT_VPSS_NUM_MAX];
+	struct dma_buf *buf;
+	struct ISP_VIDEO_FRAMES frame;
+	struct rkvpss_dev_cfg rkvpss_dev_cfg[ROCKIT_VPSS_NUM_MAX];
+	int (*rkvpss_rockit_mpibuf_done)(struct rockit_rkvpss_cfg *rockit_vpss_cfg);
+};
+
 #if IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V32) || \
 IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V33) || \
 IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V35)
@@ -189,6 +230,47 @@ static inline int rkisp_rockit_free_stream_buf(struct rockit_cfg *input_rockit_c
 	return -EINVAL;
 }
 
+#endif
+
+#if IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_VPSS_V20)
+void *rkvpss_rockit_function_register(void *function, int cmd);
+int rkvpss_rockit_get_vpssdev(char **name);
+int rkvpss_rockit_buf_queue(struct rockit_rkvpss_cfg *input_cfg);
+int rkvpss_rockit_pause_stream(struct rockit_rkvpss_cfg *input_cfg);
+int rkvpss_rockit_config_stream(struct rockit_rkvpss_cfg *input_cfg,
+				int width, int height, int wrap_line);
+int rkvpss_rockit_resume_stream(struct rockit_rkvpss_cfg *input_cfg);
+int rkvpss_rockit_free_stream_buf(struct rockit_rkvpss_cfg *input_cfg);
+#else
+static inline void *rkvpss_rockit_function_register(void *function, int cmd)
+{
+	return NULL;
+}
+static inline int rkvpss_rockit_get_vpssdev(char **name)
+{
+	return -EINVAL;
+}
+static inline int rkvpss_rockit_buf_queue(struct rockit_rkvpss_cfg *input_cfg)
+{
+	return -EINVAL;
+}
+static inline int rkvpss_rockit_pause_stream(struct rockit_rkvpss_cfg *input_cfg)
+{
+	return -EINVAL;
+}
+static inline int rkvpss_rockit_config_stream(struct rockit_rkvpss_cfg *input_cfg,
+					      int width, int height, int wrap_line)
+{
+	return -EINVAL;
+}
+static inline int rkvpss_rockit_resume_stream(struct rockit_rkvpss_cfg *input_cfg)
+{
+	return -EINVAL;
+}
+static inline int rkvpss_rockit_free_stream_buf(struct rockit_rkvpss_cfg *input_cfg)
+{
+	return -EINVAL;
+}
 #endif
 
 #endif

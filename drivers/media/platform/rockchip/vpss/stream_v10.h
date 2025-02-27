@@ -35,7 +35,7 @@ static inline void rkvpss_stream_default_fmt_v10(struct rkvpss_device *dev, u32 
 static inline void rkvpss_isr_v10(struct rkvpss_device *dev, u32 mis_val) {}
 static inline void rkvpss_mi_isr_v10(struct rkvpss_device *dev, u32 mis_val) {}
 static inline void rkvpss_cmsc_config_v10(struct rkvpss_device *dev, bool sync) {}
-static inline int rkvpss_stream_buf_cnt_v10(struct rkvpss_stream *stream) {return -EINVAL; }
+static inline int rkvpss_stream_buf_cnt_v10(struct rkvpss_stream *stream) {return 0; }
 
 #endif
 

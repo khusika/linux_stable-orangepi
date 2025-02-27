@@ -76,6 +76,7 @@ void rkvpss_unite_clear_bits(struct rkvpss_device *dev, u32 reg, u32 mask)
 		rkvpss_idx_clear_bits(dev, reg, mask, VPSS_UNITE_RIGHT);
 }
 
+// 1126b unite or multi sensor todo
 void rkvpss_update_regs(struct rkvpss_device *dev, u32 start, u32 end)
 {
 	struct rkvpss_hw_dev *hw = dev->hw_dev;

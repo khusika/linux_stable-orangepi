@@ -5,5 +5,6 @@
 #define _RKVPSS_REGS_H
 
 #include "regs_v10.h"
+#include "regs_v20.h"
 
 #endif

@@ -655,6 +655,10 @@ static irqreturn_t mi_irq_hdl(int irq, void *ctx)
 	if (mis_val) {
 		if (mis_val & RKVPSS_MI_BUS_ERR)
 			dev_err(dev, "axi bus error\n");
+		if (is_vpss_v20(hw_dev) &&
+		    mis_val & RKVPSS2X_MI_RD_FBCD_ERR)
+			dev_err(dev, "rd_fbcd_err\n");
+
 		rkvpss_hw_write(hw_dev, RKVPSS_MI_ICR, mis_val);
 		if (vpss)
 			rkvpss_mi_isr(vpss, mis_val);
@@ -681,11 +685,25 @@ static const struct vpss_match_data rk3576_vpss_match_data = {
 	.vpss_ver = VPSS_V10,
 };
 
+static const struct vpss_match_data rv1126b_vpss_match_data = {
+	.irqs = vpss_irqs,
+	.num_irqs = ARRAY_SIZE(vpss_irqs),
+	.clks = vpss_clks,
+	.clks_num = ARRAY_SIZE(vpss_clks),
+	.vpss_ver = VPSS_V20,
+};
+
 static const struct of_device_id rkvpss_hw_of_match[] = {
 #ifdef CONFIG_VIDEO_ROCKCHIP_VPSS_V10
 	{
 		.compatible = "rockchip,rk3576-rkvpss",
 		.data = &rk3576_vpss_match_data,
+	},
+#endif
+#ifdef CONFIG_VIDEO_ROCKCHIP_VPSS_V20
+	{
+		.compatible = "rockchip,rv1126b-rkvpss",
+		.data = &rv1126b_vpss_match_data,
 	},
 #endif
 	{},
@@ -703,7 +721,7 @@ void rkvpss_hw_reg_restore(struct rkvpss_hw_dev *dev)
 {
 	void __iomem *base = dev->base_addr;
 	void *reg_buf = dev->sw_reg;
-	u32 val, *reg, i;
+	u32 val, *reg, i, range;
 
 	dev_info(dev->dev, "%s\n", __func__);
 
@@ -718,7 +736,9 @@ void rkvpss_hw_reg_restore(struct rkvpss_hw_dev *dev)
 	writel(val, base + RKVPSS_CMSC_UPDATE);
 
 	/* crop1 */
-	for (i = RKVPSS_CROP1_CTRL; i <= RKVPSS_CROP1_3_V_SIZE; i += 4) {
+	range = is_vpss_v10(dev) ? RKVPSS_CROP1_3_V_SIZE :
+				   RKVPSS2X_CROP1_5_SIZE;
+	for (i = RKVPSS_CROP1_CTRL; i <= range; i += 4) {
 		if (i == RKVPSS_CROP1_UPDATE)
 			continue;
 		reg = reg_buf + i;
@@ -765,8 +785,30 @@ void rkvpss_hw_reg_restore(struct rkvpss_hw_dev *dev)
 	val = RKVPSS_SCL_GEN_UPD | RKVPSS_SCL_FORCE_UPD;
 	writel(val, base + RKVPSS_SCALE3_UPDATE);
 
+	if (is_vpss_v20(dev)) {
+		for (i = RKVPSS2X_SCALE4_BASE; i <= RKVPSS2X_SCALE4_IN_CROP_OFFSET; i += 4) {
+			if (i == RKVPSS2X_SCALE4_UPDATE)
+				continue;
+			reg = reg_buf + i;
+			writel(*reg, base + i);
+		}
+		val = RKVPSS_SCL_GEN_UPD | RKVPSS_SCL_FORCE_UPD;
+		writel(val, base + RKVPSS2X_SCALE4_UPDATE);
+
+		for (i = RKVPSS2X_SCALE5_BASE; i <= RKVPSS2X_SCALE5_IN_CROP_OFFSET; i += 4) {
+			if (i == RKVPSS2X_SCALE4_UPDATE)
+				continue;
+			reg = reg_buf + i;
+			writel(*reg, base + i);
+		}
+		val = RKVPSS_SCL_GEN_UPD | RKVPSS_SCL_FORCE_UPD;
+		writel(val, base + RKVPSS2X_SCALE5_UPDATE);
+	}
+
 	/* mi */
-	for (i = RKVPSS_MI_BASE; i <= RKVPSS_MI_CHN3_WR_LINE_CNT; i += 4) {
+	range = is_vpss_v10(dev) ? RKVPSS_MI_CHN3_WR_LINE_CNT :
+				   RKVPSS2X_MI_CHN5_WR_LINE_CNT;
+	for (i = RKVPSS_MI_BASE; i <= range; i += 4) {
 		if (i >= RKVPSS_MI_RD_CTRL && i <= RKVPSS_MI_RD_Y_HEIGHT_SHD)
 			continue;
 		if (i == RKVPSS_MI_WR_INIT)
@@ -787,6 +829,8 @@ void rkvpss_hw_reg_restore(struct rkvpss_hw_dev *dev)
 	}
 	val = RKVPSS_CFG_FORCE_UPD | RKVPSS_CFG_GEN_UPD | RKVPSS_MIR_GEN_UPD |
 	      RKVPSS_ONLINE2_CHN_FORCE_UPD;
+	if (is_vpss_v20(dev))
+		val |= RKVPSS_MIR_FORCE_UPD;
 	if (!dev->is_ofl_cmsc)
 		val |= RKVPSS_MIR_FORCE_UPD;
 	writel(val, base + RKVPSS_VPSS_UPDATE);

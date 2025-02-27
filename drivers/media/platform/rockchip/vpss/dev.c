@@ -372,6 +372,7 @@ static int __maybe_unused rkvpss_dev_runtime_resume(struct device *dev)
 	struct rkvpss_device *vpss_dev = dev_get_drvdata(dev);
 	int ret;
 
+	vpss_dev->stream_vdev.wrap_line = rkvpss_wrap_line;
 	mutex_lock(&vpss_dev->hw_dev->dev_lock);
 	ret = pm_runtime_get_sync(vpss_dev->hw_dev->dev);
 	mutex_unlock(&vpss_dev->hw_dev->dev_lock);
