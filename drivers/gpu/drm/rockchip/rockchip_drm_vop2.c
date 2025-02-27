@@ -1073,6 +1073,7 @@ static const struct drm_bus_format_enum_list drm_bus_format_enum_list[] = {
 
 static DRM_ENUM_NAME_FN(drm_get_bus_format_name, drm_bus_format_enum_list)
 
+static inline void rk3588_vop2_dsc_cfg_done(struct drm_crtc *crtc);
 static inline void vop2_cfg_done(struct drm_crtc *crtc);
 static void vop2_wait_for_fs_by_done_bit_status(struct vop2_video_port *vp);
 static int vop2_clk_reset(struct reset_control *rstc);
@@ -1260,6 +1261,7 @@ static void vop2_crtc_output_post_enable(struct drm_crtc *crtc, int intf)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
+	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
 
 	if (intf & VOP_OUTPUT_IF_DP0)
 		VOP_CTRL_SET(vop2, dp0_en, 1);
@@ -1275,6 +1277,15 @@ static void vop2_crtc_output_post_enable(struct drm_crtc *crtc, int intf)
 
 	if (!vp->loader_protect)
 		vop2_clk_reset(vp->dclk_rst);
+
+	/*
+	 * DSC has strict constraint with timing output from VOP.
+	 * If vp reset dclk after DSC ready, something will be
+	 * wrong with DSC. To avoid this issue, it need set dsc
+	 * config done after dclk reset.
+	 */
+	if (vcstate->dsc_enable)
+		rk3588_vop2_dsc_cfg_done(crtc);
 
 	drm_info(vop2, "vop enable intf:%x\n", intf);
 }
@@ -10415,8 +10426,6 @@ static void vop2_crtc_atomic_enable(struct drm_crtc *crtc, struct drm_atomic_sta
 		vop3_mcu_mode_setup(crtc);
 	}
 
-	if (vcstate->dsc_enable)
-		rk3588_vop2_dsc_cfg_done(crtc);
 	drm_crtc_vblank_on(crtc);
 	/*
 	 * restore the lut table.
