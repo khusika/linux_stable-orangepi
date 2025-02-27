@@ -211,6 +211,19 @@ config VIDEO_GC1084
 	  To compile this driver as a module, choose M here: the
 	  module will be called gc1084.
 
+config VIDEO_GC16B3C
+	tristate "GalaxyCore GC16B3C sensor support"
+	depends on I2C && VIDEO_DEV
+	depends on MEDIA_CAMERA_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	select V4L2_FWNODE
+	help
+	  Support for the GalaxyCore GC16B3C sensor.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called gc16B3C.
+
 config VIDEO_GC2035
 	tristate "GalaxyCore GC2035 sensor support"
 	depends on I2C && VIDEO_DEV
