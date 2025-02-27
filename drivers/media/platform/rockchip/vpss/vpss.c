@@ -480,6 +480,7 @@ int rkvpss_register_subdev(struct rkvpss_device *dev,
 	int ret;
 
 	spin_lock_init(&dev->cmsc_lock);
+	spin_lock_init(&dev->idle_lock);
 	memset(vpss_sdev, 0, sizeof(*vpss_sdev));
 	vpss_sdev->dev = dev;
 	sd = &vpss_sdev->sd;
