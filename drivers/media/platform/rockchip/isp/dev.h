@@ -315,6 +315,7 @@ struct rkisp_device {
 	bool is_frm_rd;
 	bool is_multi_one_sync;
 	bool is_wait_aiq;
+	bool is_first_frame;
 
 	struct rkisp_vicap_input vicap_in;
 	struct rkisp_vicap_sof vicap_sof;

@@ -1476,12 +1476,34 @@ static int isp_show(struct seq_file *p, void *v)
 	return 0;
 }
 
+static int rkisp_save_file(struct rkisp_device *dev, char *path, void *vaddr, u32 size)
+{
+	struct file *fp;
+
+	if (!IS_ENABLED(CONFIG_NO_GKI))
+		goto err;
+	if (!path || !vaddr)
+		goto err;
+
+	fp = filp_open(path, O_RDWR | O_CREAT, 0644);
+	if (IS_ERR(fp)) {
+		dev_err(dev->dev, "open %s fail\n", path);
+		goto err;
+	}
+	kernel_write(fp, vaddr, size, &fp->f_pos);
+	filp_close(fp, NULL);
+	return 0;
+err:
+	return -EINVAL;
+}
+
 static void rkisp_proc_dump_mem(struct rkisp_device *dev)
 {
 	const struct vb2_mem_ops *g_ops = dev->hw_dev->mem_ops;
-	void *iir_addr = NULL, *cur_addr = NULL, *ds_addr = NULL;
-	u32 iir_size, cur_size, ds_size;
-	struct file *fp = NULL;
+	struct rkisp_dummy_buffer *buf_iir = NULL, *buf_ds = NULL;
+	struct rkisp_dummy_buffer *buf_cur = NULL, *buf_wgt = NULL;
+	int size, idx;
+	void *vaddr;
 	char file[256];
 
 	if (!IS_ENABLED(CONFIG_NO_GKI))
@@ -1495,58 +1517,79 @@ static void rkisp_proc_dump_mem(struct rkisp_device *dev)
 	if (dev->isp_ver == ISP_V30) {
 		struct rkisp_isp_params_val_v3x *p = dev->params_vdev.priv_val;
 
-		if (p->buf_3dnr_iir.mem_priv) {
-			if (!p->buf_3dnr_iir.is_need_vaddr)
-				p->buf_3dnr_iir.vaddr =
-					g_ops->vaddr(NULL, p->buf_3dnr_iir.mem_priv);
-			iir_addr = p->buf_3dnr_iir.vaddr;
-			iir_size = p->buf_3dnr_iir.size;
-		}
-		if (p->buf_3dnr_cur.mem_priv) {
-			if (!p->buf_3dnr_cur.is_need_vaddr)
-				p->buf_3dnr_cur.vaddr =
-					g_ops->vaddr(NULL, p->buf_3dnr_cur.mem_priv);
-			cur_addr = p->buf_3dnr_cur.vaddr;
-			cur_size = p->buf_3dnr_cur.size;
-		}
-		if (p->buf_3dnr_ds.mem_priv) {
-			if (!p->buf_3dnr_ds.is_need_vaddr)
-				p->buf_3dnr_ds.vaddr =
-					g_ops->vaddr(NULL, p->buf_3dnr_ds.mem_priv);
-			ds_addr = p->buf_3dnr_ds.vaddr;
-			ds_size = p->buf_3dnr_ds.size;
-		}
+		buf_iir = &p->buf_3dnr_iir;
+		buf_cur = &p->buf_3dnr_cur;
+		buf_ds = &p->buf_3dnr_ds;
+	} else if (dev->isp_ver == ISP_V32 || dev->isp_ver == ISP_V32_L) {
+		struct rkisp_isp_params_val_v32 *p = dev->params_vdev.priv_val;
+
+		buf_iir = &p->buf_3dnr_iir;
+		buf_ds = &p->buf_3dnr_ds;
+	} else if (dev->isp_ver == ISP_V33) {
+		struct rkisp_isp_params_val_v33 *p = dev->params_vdev.priv_val;
+
+		buf_iir = &p->buf_3dnr_iir;
+		buf_ds = &p->buf_3dnr_ds;
+		buf_wgt = &p->buf_3dnr_wgt;
+	} else if (dev->isp_ver == ISP_V35) {
+		struct rkisp_isp_params_val_v35 *p = dev->params_vdev.priv_val;
+
+		idx = p->bay3d_iir_cur_idx;
+		if (idx >= 0 && idx < p->bay3d_iir_cnt)
+			buf_iir = &p->buf_bay3d_iir[idx];
+		idx = p->bay3d_ds_cur_idx;
+		if (idx >= 0 && idx < p->bay3d_ds_cnt)
+			buf_ds = &p->buf_bay3d_ds[idx];
+		idx = p->bay3d_wgt_cur_idx;
+		if (idx >= 0 && idx < p->bay3d_wgt_cnt)
+			buf_wgt = &p->buf_bay3d_wgt[idx];
+	} else if (dev->isp_ver == ISP_V39) {
+		struct rkisp_isp_params_val_v39 *p = dev->params_vdev.priv_val;
+
+		idx = p->bay3d_iir_cur_idx;
+		if (idx >= 0 && idx < p->bay3d_iir_cnt)
+			buf_iir = &p->buf_bay3d_iir[idx];
 	}
 
-	if (iir_addr) {
-		snprintf(file, sizeof(file), "/tmp/%s_bay3d_iir", dev->name);
-		fp = filp_open(file, O_RDWR | O_CREAT, 0644);
-		if (IS_ERR(fp)) {
-			dev_err(dev->dev, "open %s fail\n", file);
-			return;
+	if (buf_iir && buf_iir->mem_priv) {
+		if (!buf_iir->is_need_vaddr)
+			buf_iir->vaddr = g_ops->vaddr(NULL, buf_iir->mem_priv);
+		vaddr = buf_iir->vaddr;
+		size = buf_iir->size;
+		if (vaddr) {
+			snprintf(file, sizeof(file), "/tmp/%s_bay3d_iir", dev->name);
+			rkisp_save_file(dev, file, vaddr, size);
 		}
-		kernel_write(fp, iir_addr, iir_size, &fp->f_pos);
-		filp_close(fp, NULL);
 	}
-	if (cur_addr) {
-		snprintf(file, sizeof(file), "/tmp/%s_bay3d_cur", dev->name);
-		fp = filp_open(file, O_RDWR | O_CREAT, 0644);
-		if (IS_ERR(fp)) {
-			dev_err(dev->dev, "open %s fail\n", file);
-			return;
+	if (buf_ds && buf_ds->mem_priv) {
+		if (!buf_ds->is_need_vaddr)
+			buf_ds->vaddr = g_ops->vaddr(NULL, buf_ds->mem_priv);
+		vaddr = buf_ds->vaddr;
+		size = buf_ds->size;
+		if (vaddr) {
+			snprintf(file, sizeof(file), "/tmp/%s_bay3d_ds", dev->name);
+			rkisp_save_file(dev, file, vaddr, size);
 		}
-		kernel_write(fp, cur_addr, cur_size, &fp->f_pos);
-		filp_close(fp, NULL);
 	}
-	if (ds_addr) {
-		snprintf(file, sizeof(file), "/tmp/%s_bay3d_ds", dev->name);
-		fp = filp_open(file, O_RDWR | O_CREAT, 0644);
-		if (IS_ERR(fp)) {
-			dev_err(dev->dev, "open %s fail\n", file);
-			return;
+	if (buf_cur && buf_cur->mem_priv) {
+		if (!buf_cur->is_need_vaddr)
+			buf_cur->vaddr = g_ops->vaddr(NULL, buf_cur->mem_priv);
+		vaddr = buf_cur->vaddr;
+		size = buf_cur->size;
+		if (vaddr) {
+			snprintf(file, sizeof(file), "/tmp/%s_bay3d_cur", dev->name);
+			rkisp_save_file(dev, file, vaddr, size);
 		}
-		kernel_write(fp, ds_addr, ds_size, &fp->f_pos);
-		filp_close(fp, NULL);
+	}
+	if (buf_wgt && buf_wgt->mem_priv) {
+		if (!buf_wgt->is_need_vaddr)
+			buf_wgt->vaddr = g_ops->vaddr(NULL, buf_wgt->mem_priv);
+		vaddr = buf_wgt->vaddr;
+		size = buf_wgt->size;
+		if (vaddr) {
+			snprintf(file, sizeof(file), "/tmp/%s_bay3d_wgt", dev->name);
+			rkisp_save_file(dev, file, vaddr, size);
+		}
 	}
 }
 

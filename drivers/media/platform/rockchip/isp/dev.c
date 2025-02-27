@@ -308,7 +308,7 @@ static int rkisp_pipeline_open(struct rkisp_pipeline *p,
 			rkisp_vicap_buf[dev->dev_id] = RKISP_VICAP_BUF_CNT_MAX;
 		dev->vicap_buf_cnt = rkisp_vicap_buf[dev->dev_id];
 		dev->is_m_online = rkisp_m_online[dev->dev_id];
-		if (hw->is_single ||
+		if (hw->is_single || dev->is_aiisp_en ||
 		    (hw->isp_ver != ISP_V33 && hw->isp_ver != ISP_V35)) {
 			dev->is_m_online = false;
 			rkisp_m_online[dev->dev_id] = false;

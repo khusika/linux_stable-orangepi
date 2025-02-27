@@ -1054,6 +1054,8 @@ void rkisp_soft_reset(struct rkisp_hw_dev *dev, bool is_secure)
 		rv1106_sdmmc_put_lock();
 	if (dev->unite == ISP_UNITE_TWO)
 		writel(0xffff, dev->base_next_addr + CIF_IRCL);
+	if (dev->isp_ver == ISP_V35)
+		writel(1, dev->vpsl_base_addr + VPSL_RESET);
 	udelay(10);
 
 	/* refresh iommu after reset */

@@ -673,6 +673,8 @@ static void rkisp_update_list_reg(struct rkisp_device *dev)
 				rkisp_write(dev, ISP33_BP_SCALE_UPDATE, ISP32_SCALE_FORCE_UPD, true);
 		}
 		if (dev->isp_ver == ISP_V35) {
+			val = rkisp_read(dev, MI_WR_CTRL2, false);
+			writel(val, hw->base_addr + MI_WR_CTRL2);
 			rkisp_update_regs(dev, ISP35_AIAWB_CTRL1, ISP35_AIAWB_WR_BASE_VIR);
 			val = rkisp_read(dev, ISP35_AIAWB_CTRL0, false);
 			if (val & ISP35_AIAWB_EN) {
@@ -683,6 +685,14 @@ static void rkisp_update_list_reg(struct rkisp_device *dev)
 				val = rkisp_read(dev, ISP3X_SWS_CFG, false);
 				val |= ISP3X_3A_DDR_WRITE_EN;
 				writel(val, hw->base_addr + ISP3X_SWS_CFG);
+			}
+			val = rkisp_read(dev, ISP35_AI_CTRL, false);
+			if (val & ISP35_AIISP_EN) {
+				val &= ~ISP35_AIISP_ST;
+				val |= ISP35_AIPRE_ITS_FORCE_UPD;
+				writel(val, hw->base_addr + ISP35_AI_CTRL);
+				val &= ~ISP35_AIPRE_ITS_FORCE_UPD;
+				writel(val, hw->base_addr + ISP35_AI_CTRL);
 			}
 			dev->params_vdev.ops->vpsl_update_regs(&dev->params_vdev);
 		}
@@ -823,11 +833,13 @@ void rkisp_trigger_read_back(struct rkisp_device *dev, u8 dma2frm, u32 mode, boo
 		rkisp_params_cfg(params_vdev, cur_frame_id, RKISP_PARAMS_IMD);
 		rkisp_config_cmsk(dev);
 		rkisp_config_aiisp(dev);
-		if (!dev->is_aiisp_en)
+		if (!dev->is_aiisp_en ||
+		    (dev->is_aiisp_sync && !dev->is_first_frame))
 			rkisp_stream_frame_start(dev, 0);
 	}
 
-	if (!dev->is_aiisp_en)
+	if (!dev->is_aiisp_en ||
+	    (dev->is_aiisp_sync && !dev->is_first_frame))
 		rkisp_sditf_sof(dev, 0);
 
 	if (!hw->is_single) {
@@ -854,7 +866,9 @@ void rkisp_trigger_read_back(struct rkisp_device *dev, u8 dma2frm, u32 mode, boo
 		params_vdev->rdbk_times = dma2frm + 1;
 
 run_next:
-	if (!dev->sw_rd_cnt)
+	if (!dev->sw_rd_cnt &&
+	    (!dev->is_aiisp_en ||
+	     (dev->is_aiisp_sync && !dev->is_first_frame)))
 		rkisp_rockit_frame_start(dev);
 	rkisp_params_cfgsram(params_vdev, true, false);
 	stats_vdev->rdbk_drop = false;
@@ -963,7 +977,8 @@ run_next:
 	if (is_3dlut_upd)
 		rkisp_unite_write(dev, ISP_3DLUT_UPDATE, 1, true);
 
-	if (!dev->is_aiisp_en)
+	if (!dev->is_aiisp_en ||
+	    (dev->is_aiisp_sync && !dev->is_first_frame))
 		rkisp_check_mi_ends_mask(dev);
 
 	if (hw->is_frm_buf) {
@@ -982,7 +997,8 @@ run_next:
 	if (hw->isp_ver == ISP_V35) {
 		val = rkisp_read_reg_cache(dev, ISP3X_CSI2RX_RAW_RD_CTRL);
 		val |= ISP35_RXS_FORCE_UPD;
-		if (dev->rd_mode == HDR_RDBK_FRAME2)
+		if (dev->rd_mode == HDR_RDBK_FRAME2 ||
+		    (dev->rd_mode == HDR_RDBK_FRAME1 && dev->is_aiisp_en))
 			val |= ISP35_RX0_FORCE_UPD;
 		writel(val, hw->base_addr + ISP3X_CSI2RX_RAW_RD_CTRL);
 	}
@@ -995,8 +1011,22 @@ run_next:
 	v4l2_dbg(2, rkisp_debug, &dev->v4l2_dev,
 		 "readback frame:%d time:%d 0x%x try:%d\n",
 		 cur_frame_id, dma2frm + 1, val, is_try);
-	if (!hw->is_shutdown)
+	if (!hw->is_shutdown) {
 		rkisp_unite_write(dev, CSI2RX_CTRL0, val, true);
+		if (dev->is_aiisp_sync && !dev->is_first_frame) {
+			dev->irq_ends_mask |= ISP_FRAME_END;
+			if (dev->isp_ver == ISP_V39) {
+				val = rkisp_read(dev, ISP3X_MI_RD_CTRL2, false);
+				val |= ISP39_AIISP_ST;
+				writel(val, hw->base_addr + ISP3X_MI_RD_CTRL2);
+			} else {
+				dev->irq_ends_mask |= ISP_FRAME_VPSL;
+				val = rkisp_read(dev, ISP35_AI_CTRL, false);
+				val |= ISP35_AIISP_ST;
+				writel(val, hw->base_addr + ISP35_AI_CTRL);
+			}
+		}
+	}
 }
 
 static void rkisp_fast_switch_rx_buf(struct rkisp_device *dev, bool is_current)
@@ -1052,6 +1082,7 @@ static void rkisp_rdbk_trigger_handle(struct rkisp_device *dev, u32 cmd)
 	int len[DEV_MAX] = { 0 };
 	u32 mode = 0;
 	bool is_try = false;
+	bool is_aiisp_ready = false;
 
 	spin_lock_irqsave(&hw->rdbk_lock, lock_flags);
 	if (cmd == T_CMD_END) {
@@ -1112,13 +1143,18 @@ static void rkisp_rdbk_trigger_handle(struct rkisp_device *dev, u32 cmd)
 		}
 	}
 
-	/* wait 2 frame to start isp for fast */
-	if (dev->is_rtt_first && max == 1 &&
-	    dev->dmarx_dev.cur_frame.id == -1)
-		goto end;
-
 	if (max) {
 		isp = hw->isp[id];
+		/* wait 2 frame to start isp for fast */
+		if (isp->is_rtt_first && max == 1 && isp->is_first_frame)
+			goto end;
+		if (isp->is_aiisp_sync && !isp->is_first_frame) {
+			rkisp_rdbk_aiisp_event(isp, T_CMD_LEN, &len[id]);
+			/* wait isp_be frame input */
+			if (len[id] == 0)
+				goto end;
+			is_aiisp_ready =  true;
+		}
 		v4l2_dbg(2, rkisp_debug, &isp->v4l2_dev,
 			 "trigger fifo len:%d\n", max);
 		rkisp_rdbk_trigger_event(isp, T_CMD_DEQUEUE, &t);
@@ -1176,8 +1212,11 @@ static void rkisp_rdbk_trigger_handle(struct rkisp_device *dev, u32 cmd)
 	}
 end:
 	spin_unlock_irqrestore(&hw->rdbk_lock, lock_flags);
-	if (times >= 0)
+	if (times >= 0) {
+		if (is_aiisp_ready)
+			rkisp_rdbk_aiisp_event(isp, T_CMD_QUEUE, NULL);
 		rkisp_trigger_read_back(isp, times, mode, is_try);
+	}
 }
 
 int rkisp_rdbk_trigger_event(struct rkisp_device *dev, u32 cmd, void *arg)
@@ -1415,11 +1454,6 @@ void rkisp_check_idle(struct rkisp_device *dev, u32 irq)
 	}
 	spin_unlock_irqrestore(&hw->rdbk_lock, lock_flags);
 
-	if (isp_frame_end) {
-		if (hw->is_single && !IS_HDR_RDBK(dev->rd_mode))
-			return;
-		rkisp_frame_end_idle(dev);
-	}
 	if (isp_front_end) {
 		if (hw->is_single && !IS_HDR_RDBK(dev->rd_mode))
 			return;
@@ -1427,6 +1461,11 @@ void rkisp_check_idle(struct rkisp_device *dev, u32 irq)
 	}
 	if (isp_back_end)
 		rkisp_back_end_idle(dev);
+	if (isp_frame_end) {
+		if (hw->is_single && !IS_HDR_RDBK(dev->rd_mode))
+			return;
+		rkisp_frame_end_idle(dev);
+	}
 }
 
 static void rkisp_set_state(u32 *state, u32 val)
@@ -2394,6 +2433,7 @@ static int rkisp_isp_stop(struct rkisp_device *dev)
 	hw->is_dvfs = false;
 	hw->is_runing = false;
 	hw->is_idle = true;
+	hw->is_be_idle = true;
 	hw->is_mi_update = false;
 	hw->pre_dev_id = -1;
 end:
@@ -2472,6 +2512,8 @@ static int rkisp_isp_start(struct rkisp_device *dev)
 	dev->irq_ends_mask |= ISP_FRAME_END;
 	if (dev->is_aiisp_en && !dev->is_aiisp_sync)
 		dev->irq_f_ends_mask |= ISP_FRAME_BNR;
+	else if (dev->is_aiisp_en)
+		dev->irq_ends_mask = ISP_FRAME_BNR;
 	dev->irq_ends = 0;
 
 	v4l2_dbg(1, rkisp_debug, &dev->v4l2_dev,
@@ -3203,6 +3245,7 @@ static int rkisp_isp_sd_s_stream(struct v4l2_subdev *sd, int on)
 	}
 
 	hw_dev->is_runing = true;
+	isp_dev->is_first_frame = true;
 	rkisp_start_3a_run(isp_dev);
 	memset(&isp_dev->isp_sdev.dbg, 0, sizeof(isp_dev->isp_sdev.dbg));
 	if (atomic_inc_return(&hw_dev->refcnt) > hw_dev->dev_link_num) {
@@ -3935,15 +3978,16 @@ static void rkisp_aiisp_irq_event(struct rkisp_device *dev, u32 irq)
 static int rkisp_rdbk_aiisp_handle(struct rkisp_device *dev, u32 cmd)
 {
 	struct rkisp_hw_dev *hw = dev->hw_dev;
-	struct rkisp_device *isp = NULL;
 	struct rkisp_aiisp_st st = { 0 };
 	unsigned long lock_flags = 0;
-	int i, max = 0, id = 0, ret = 0;
-	int len[DEV_MAX] = { 0 };
+	int len = 0, ret = 0;
 
 	spin_lock_irqsave(&hw->rdbk_lock, lock_flags);
-	if (cmd == T_CMD_END)
+	if (cmd == T_CMD_END) {
 		hw->is_be_idle = true;
+		if (dev->is_aiisp_sync)
+			goto end;
+	}
 	if (hw->is_shutdown)
 		hw->is_be_idle = false;
 	if (!hw->is_be_idle)
@@ -3954,33 +3998,22 @@ static int rkisp_rdbk_aiisp_handle(struct rkisp_device *dev, u32 cmd)
 		goto end;
 	}
 
-	for (i = 0; i < hw->dev_num; i++) {
-		isp = hw->isp[i];
-		if (!isp ||
-		    (isp && (!(isp->isp_state & ISP_START) || isp->is_suspend)))
-			continue;
-		rkisp_rdbk_aiisp_event(isp, T_CMD_LEN, &len[i]);
-		if (max < len[i]) {
-			max = len[i];
-			id = i;
-		}
-	}
-	if (max) {
-		isp = hw->isp[id];
-		v4l2_dbg(2, rkisp_debug, &isp->v4l2_dev,
-			 "aiisp fifo len:%d\n", max);
-		rkisp_rdbk_aiisp_event(isp, T_CMD_DEQUEUE, &st);
-		isp->dmarx_dev.cur_be_frame.id = st.sequence;
-		isp->dmarx_dev.cur_be_frame.timestamp = st.timestamp;
-		hw->cur_be_dev_id = id;
+	rkisp_rdbk_aiisp_event(dev, T_CMD_LEN, &len);
+	if (len) {
+		v4l2_dbg(2, rkisp_debug, &dev->v4l2_dev,
+			 "aiisp fifo len:%d\n", len);
+		rkisp_rdbk_aiisp_event(dev, T_CMD_DEQUEUE, &st);
+		dev->dmarx_dev.cur_be_frame.id = st.sequence;
+		dev->dmarx_dev.cur_be_frame.timestamp = st.timestamp;
+		hw->cur_be_dev_id = dev->dev_id;
 		hw->is_be_idle = false;
 	}
 end:
 	spin_unlock_irqrestore(&hw->rdbk_lock, lock_flags);
-	if (max) {
-		isp->isp_sdev.dbg.timestamp_be = rkisp_time_get_ns(dev);
-		ret = rkisp_params_aiisp_start(&isp->params_vdev, &st);
-		if (ret == 0) {
+	if (len) {
+		dev->isp_sdev.dbg.timestamp_be = rkisp_time_get_ns(dev);
+		ret = rkisp_params_aiisp_start(&dev->params_vdev, &st);
+		if (ret == 0 && !dev->is_aiisp_sync) {
 			rkisp_stream_frame_start(dev, 0);
 			rkisp_dvbm_start_event(dev);
 			rkisp_rockit_frame_start(dev);
@@ -4030,8 +4063,14 @@ static int rkisp_rdbk_aiisp_event(struct rkisp_device *dev, u32 cmd, void *arg)
 	}
 	spin_unlock_irqrestore(&dev->rdbk_lock, lock_flags);
 
+	if (dev->is_aiisp_sync && arg && cmd == T_CMD_QUEUE) {
+		if (dev->hw_dev->is_idle)
+			rkisp_rdbk_trigger_event(dev, T_CMD_QUEUE, NULL);
+		goto end;
+	}
 	if (cmd == T_CMD_QUEUE || cmd == T_CMD_END)
 		ret = rkisp_rdbk_aiisp_handle(dev, cmd);
+end:
 	return ret;
 }
 
@@ -4973,8 +5012,10 @@ void rkisp_isp_isr(unsigned int isp_mis,
 				complete(&dev->hw_dev->monitor.cmpl);
 		}
 
-		if (!dev->is_aiisp_en)
+		if (!dev->is_aiisp_en ||
+		    (dev->is_aiisp_sync && !dev->is_first_frame))
 			rkisp_dvbm_start_event(dev);
+		dev->is_first_frame = false;
 		if (IS_HDR_RDBK(dev->hdr.op_mode)) {
 			/* disabled frame end to read 3dlut for multi sensor
 			 * 3dlut will update at isp readback
