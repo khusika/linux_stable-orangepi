@@ -15,6 +15,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/soc/rockchip/rockchip_decompress.h>
+#include <linux/dma-mapping.h>
 
 #define DECOM_CTRL		0x0
 #define DECOM_ENR		0x4
@@ -314,8 +315,138 @@ static ssize_t start_decom_store(struct device *dev,
 }
 
 static DEVICE_ATTR_WO(start_decom);
+
+static void *uncomp_virt;
+static dma_addr_t uncomp_phys;
+
+static void *comp_virt;
+static dma_addr_t comp_phys;
+
+static void *decomp_virt;
+static dma_addr_t decomp_phys;
+
+static size_t uncomp_size;
+static size_t comp_size;
+
+#define RK_DECOME_TIMEOUT	3 /* 3 seconds */
+
+#define FILE_UNCOMPRESSED "/data/data/asyoulik.txt"
+#define FILE_COMPRESSED "/data/data/asyoulik.tar.gz"
+
+static int decompress_and_compare(struct rk_decom *rk_decom, int mode)
+{
+	struct file *file1 = NULL, *file2 = NULL;
+	int ret = -EINVAL;
+	u64 decom_len;
+	loff_t pos;
+
+	pr_info("Starting decompress and compare operation\n");
+
+	file1 = filp_open(FILE_UNCOMPRESSED, O_RDONLY, 0);
+	if (IS_ERR(file1))
+		goto err_file1;
+
+	file2 = filp_open(FILE_COMPRESSED, O_RDONLY, 0);
+	if (IS_ERR(file2))
+		goto err_file2;
+
+	uncomp_size = file1->f_inode->i_size;
+	comp_size = file2->f_inode->i_size;
+
+	pr_info("Uncompressed file size: %zu bytes\n", uncomp_size);
+
+	uncomp_virt = dma_alloc_coherent(rk_decom->dev, uncomp_size,
+					 &uncomp_phys, GFP_KERNEL);
+	if (!uncomp_virt)
+		goto out_free;
+
+	comp_virt = dma_alloc_coherent(rk_decom->dev, comp_size, &comp_phys,
+				       GFP_KERNEL);
+	if (!comp_virt)
+		goto out_free1;
+
+	decomp_virt = dma_alloc_coherent(rk_decom->dev, uncomp_size * 2,
+					 &decomp_phys, GFP_KERNEL);
+	if (!decomp_virt)
+		goto out_free2;
+
+	pos = 0;
+	if (kernel_read(file1, uncomp_virt, uncomp_size, &pos) < 0) {
+		pr_err("Failed to read uncompressed file\n");
+		goto out_free3;
+	}
+	filp_close(file1, NULL);
+	file1 = NULL;
+
+	pos = 0;
+	if (kernel_read(file2, comp_virt, comp_size, &pos) < 0) {
+		pr_err("Failed to read compressed file\n");
+		goto out_free3;
+	}
+	filp_close(file2, NULL);
+	file2 = NULL;
+
+	ret = rk_decom_start(mode, comp_phys, decomp_phys, 0x80000000);
+	if (ret) {
+		pr_err("rk_decom_start failed[%d].", ret);
+		goto out_free3;
+	}
+
+	ret = rk_decom_wait_done(RK_DECOME_TIMEOUT, &decom_len);
+	pr_info("Decompression %lld completed\n", decom_len);
+
+	pr_info("Comparing files...\n");
+	if (memcmp(uncomp_virt, decomp_virt, uncomp_size) == 0) {
+		pr_info("Files match exactly!\n");
+		ret = 0;
+	} else {
+		pr_info("Files differ\n");
+		ret = -EINVAL;
+	}
+
+out_free3:
+	dma_free_coherent(rk_decom->dev, uncomp_size * 2, decomp_virt,
+			  decomp_phys);
+out_free2:
+	dma_free_coherent(rk_decom->dev, comp_size, comp_virt, comp_phys);
+out_free1:
+	dma_free_coherent(rk_decom->dev, uncomp_size, uncomp_virt, uncomp_phys);
+out_free:
+	if (file2)
+		filp_close(file2, NULL);
+err_file2:
+	if (file1)
+		filp_close(file1, NULL);
+err_file1:
+	return ret;
+}
+
+static ssize_t dynamic_buf_decom_store(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf, size_t size)
+{
+	u32 mode;
+	int ret;
+	struct rk_decom *rk_dec = dev_get_drvdata(dev);
+
+	ret = kstrtou32(buf, 10, &mode);
+	if (ret)
+		return ret;
+
+	if (mode != LZ4_MOD && mode != GZIP_MOD && mode != ZLIB_MOD)
+		return -EINVAL;
+
+	ret = decompress_and_compare(rk_dec, mode);
+	if (ret)
+		pr_info("%s, user decompress error\n", __func__);
+
+	return size;
+}
+static DEVICE_ATTR_WO(dynamic_buf_decom);
+
 static struct attribute *decom_attrs[] = {
 	&dev_attr_start_decom.attr,
+	&dev_attr_dynamic_buf_decom.attr,
 	NULL
 };
 
@@ -348,14 +479,18 @@ static int __init rockchip_decom_probe(struct platform_device *pdev)
 	mem = of_parse_phandle(np, "memory-region", 0);
 	if (!mem) {
 		dev_err(dev, "missing \"memory-region\" property\n");
+#ifndef CONFIG_ROCKCHIP_HW_DECOMPRESS_TEST
 		return -ENODEV;
+#endif
 	}
 
 	ret = of_address_to_resource(mem, 0, &reg);
 	of_node_put(mem);
 	if (ret) {
 		dev_err(dev, "missing \"reg\" property\n");
+#ifndef CONFIG_ROCKCHIP_HW_DECOMPRESS_TEST
 		return -ENODEV;
+#endif
 	}
 
 	rk_dec->mem_start = reg.start;
