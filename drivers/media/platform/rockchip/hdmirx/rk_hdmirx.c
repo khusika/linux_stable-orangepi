@@ -715,10 +715,10 @@ static void hdmirx_get_colordepth(struct rk_hdmirx_dev *hdmirx_dev)
 			__func__, hdmirx_dev->color_depth, color_depth_reg);
 }
 
-static void hdmirx_get_pix_fmt(struct rk_hdmirx_dev *hdmirx_dev)
+static void hdmirx_get_pix_fmt(struct rk_hdmirx_dev *hdmirx_dev, bool retry)
 {
 	u32 val;
-	int timeout = 10;
+	int timeout = retry ? 10 : 0;
 	struct v4l2_device *v4l2_dev = &hdmirx_dev->v4l2_dev;
 
 try_loop:
@@ -1009,7 +1009,7 @@ static int hdmirx_get_detected_timings(struct rk_hdmirx_dev *hdmirx_dev,
 
 	val = hdmirx_readl(hdmirx_dev, DMA_STATUS11);
 	field_type = (val & HDMIRX_TYPE_MASK) >> 7;
-	hdmirx_get_pix_fmt(hdmirx_dev);
+	hdmirx_get_pix_fmt(hdmirx_dev, true);
 	hdmirx_get_color_range(hdmirx_dev);
 	hdmirx_get_color_space(hdmirx_dev);
 	bt->interlaced = field_type & BIT(0) ?
@@ -2830,7 +2830,7 @@ static void pkt_0_int_handler(struct rk_hdmirx_dev *hdmirx_dev,
 	if ((status & PKTDEC_AVIIF_CHG_IRQ)) {
 		hdmirx_get_color_range(hdmirx_dev);
 		hdmirx_get_color_space(hdmirx_dev);
-		hdmirx_get_pix_fmt(hdmirx_dev);
+		hdmirx_get_pix_fmt(hdmirx_dev, false);
 		if (hdmirx_dev->cur_fmt_fourcc != pre_fmt_fourcc ||
 		    hdmirx_dev->cur_color_range != pre_color_range ||
 		    hdmirx_dev->cur_color_space != pre_color_space) {
