@@ -1310,13 +1310,12 @@ static void rkisp_stop_streaming(struct vb2_queue *queue)
 	atomic_dec(&dev->cap_dev.refcnt);
 	tasklet_disable(&stream->buf_done_tasklet);
 end:
-	mutex_unlock(&dev->hw_dev->dev_lock);
-
-	if (dev->is_pre_on && stream->id == RKISP_STREAM_MP) {
+	if (dev->is_pre_on && !atomic_read(&dev->cap_dev.refcnt)) {
 		dev->is_pre_on = false;
 		dev->params_vdev.first_cfg_params = false;
 		v4l2_pipeline_pm_put(&stream->vnode.vdev.entity);
 	}
+	mutex_unlock(&dev->hw_dev->dev_lock);
 }
 
 static int rkisp_stream_start(struct rkisp_stream *stream)

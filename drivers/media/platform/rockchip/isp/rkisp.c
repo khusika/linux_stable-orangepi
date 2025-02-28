@@ -1103,8 +1103,12 @@ static void rkisp_rdbk_trigger_handle(struct rkisp_device *dev, u32 cmd)
 		}
 		hw->is_idle = true;
 		hw->pre_dev_id = dev->dev_id;
-		/* fast unite offline switch to online */
-		if (dev->unite_div > ISP_UNITE_DIV1 && !IS_HDR_RDBK(dev->rd_mode))
+
+		/* fast offline switch to online for multi sensor or unite mode
+		 * one isp running first and switch to online, then other isp running
+		 */
+		if (!IS_HDR_RDBK(dev->rd_mode) && !hw->is_single &&
+		    (dev->unite_div > ISP_UNITE_DIV1 || atomic_read(&hw->refcnt) == 1))
 			isp = dev;
 		else
 			isp = hw->isp[!dev->dev_id];
@@ -3373,9 +3377,9 @@ static int rkisp_rx_qbuf(struct rkisp_device *dev,
 	}
 
 	v4l2_dbg(2, rkisp_debug, &dev->v4l2_dev,
-		 "%s rd_mode:%d seq:%d dma:0x%x\n",
+		 "%s rd_mode:%d seq:%d dma:0x%x timestamp:%lld\n",
 		 __func__, dev->rd_mode, dbufs->sequence,
-		 pool->buf.buff_addr[RKISP_PLANE_Y]);
+		 pool->buf.buff_addr[RKISP_PLANE_Y], dbufs->timestamp);
 
 	if (!IS_HDR_RDBK(dev->rd_mode)) {
 		rkisp_rx_qbuf_online(stream, pool);

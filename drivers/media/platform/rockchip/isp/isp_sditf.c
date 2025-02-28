@@ -34,18 +34,27 @@ static int rkisp_sditf_s_stream(struct v4l2_subdev *sd, int on)
 	struct rkisp_device *dev = sditf->isp;
 	struct rkisp_hw_dev *hw = dev->hw_dev;
 	struct rkisp_isp_subdev *isp_sdev = &dev->isp_sdev;
-	struct rkisp_stream *stream = &dev->cap_dev.stream[RKISP_STREAM_LDC];
+	struct rkisp_stream *stream;
 	int ret = 0;
 
-	if (stream->linked) {
-		v4l2_err(sd, "isp to vpss online no support for ldcpath link\n");
-		return -EINVAL;
+	if (dev->isp_ver == ISP_V39) {
+		stream = &dev->cap_dev.stream[RKISP_STREAM_LDC];
+		if (stream->linked) {
+			v4l2_err(sd, "isp to vpss online no support for ldcpath link\n");
+			return -EINVAL;
+		}
 	}
 
 	v4l2_dbg(1, rkisp_debug, sd, "%s %d\n", __func__, on);
 
 	mutex_lock(&hw->dev_lock);
 	if (on) {
+		if (dev->is_pre_on &&
+		    !dev->hw_dev->is_single &&
+		    !atomic_read(&dev->hw_dev->refcnt) &&
+		    !atomic_read(&dev->cap_dev.refcnt))
+			rkisp_hw_enum_isp_size(dev->hw_dev);
+
 		atomic_inc(&dev->cap_dev.refcnt);
 		ret = dev->pipe.open(&dev->pipe, &isp_sdev->sd.entity, true);
 		if (ret < 0)
@@ -65,6 +74,12 @@ pipe_close:
 refcnt_dec:
 	atomic_dec(&dev->cap_dev.refcnt);
 unlock:
+	if (dev->is_pre_on && !atomic_read(&dev->cap_dev.refcnt)) {
+		dev->is_pre_on = false;
+		dev->params_vdev.first_cfg_params = false;
+		stream = &dev->cap_dev.stream[0];
+		v4l2_pipeline_pm_put(&stream->vnode.vdev.entity);
+	}
 	mutex_unlock(&hw->dev_lock);
 	return ret;
 }
