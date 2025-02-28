@@ -20,6 +20,7 @@
 #include <linux/io.h>
 #include <linux/clk-provider.h>
 #include <linux/panic_notifier.h>
+#include <linux/platform_device.h>
 
 struct clk;
 
