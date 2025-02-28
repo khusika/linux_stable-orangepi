@@ -12,6 +12,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/mfd/rk808.h>
+#include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regulator/driver.h>
 #include <linux/regulator/of_regulator.h>
