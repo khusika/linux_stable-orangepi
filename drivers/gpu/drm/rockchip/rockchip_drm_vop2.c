@@ -12896,6 +12896,8 @@ static void vop3_post_csc_config(struct drm_crtc *crtc, struct post_acm *acm, st
 
 	if (!vcstate->yuv_overlay || vp->has_dci_enabled_win)
 		convert_mode.is_input_full_range = true;
+	else if (vcstate->yuv_overlay)
+		convert_mode.is_input_full_range = false;
 	else if (has_yuv_plane)
 		convert_mode.is_input_full_range =
 			pstate->color_range == DRM_COLOR_YCBCR_FULL_RANGE ? 1 : 0;
