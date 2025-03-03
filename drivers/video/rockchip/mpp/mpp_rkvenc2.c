@@ -1365,9 +1365,9 @@ static void rkvenc2_calc_timeout_thd(struct mpp_dev *mpp)
 	 * else use x1024 core clk cycles
 	 */
 	if (hw->vepu_type == RKVENC_VEPU_510)
-		timeout_thd |= timeout_ms * clk_get_rate(enc->core_clk_info.clk) / 256000;
+		timeout_thd |= timeout_ms * (clk_get_rate(enc->core_clk_info.clk) / 256000);
 	else
-		timeout_thd |= timeout_ms * clk_get_rate(enc->core_clk_info.clk) / 1024000;
+		timeout_thd |= timeout_ms * (clk_get_rate(enc->core_clk_info.clk) / 1024000);
 
 	mpp_write(mpp, RKVENC_WDG, timeout_thd);
 }
