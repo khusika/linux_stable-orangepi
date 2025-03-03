@@ -14,6 +14,7 @@
 #include <linux/of_platform.h>
 #include <linux/clk.h>
 #include <linux/mfd/syscon.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
 #include <linux/regmap.h>
