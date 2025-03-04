@@ -1450,4 +1450,11 @@ static inline void rockchip_clk_disable_unused(void)
 {
 }
 #endif
+
+#ifdef CONFIG_CLK_RK312X
+extern void rkclk_cpuclk_div_setting(int div);
+#else
+static inline void rkclk_cpuclk_div_setting(int div) {}
+#endif
+
 #endif
