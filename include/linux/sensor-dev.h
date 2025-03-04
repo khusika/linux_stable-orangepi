@@ -270,7 +270,7 @@ extern int sensor_unregister_device(struct i2c_client *client,
 extern void sensor_shutdown(struct i2c_client *client);
 extern const struct dev_pm_ops sensor_pm_ops;
 
-#define DBG(x...)
+#define DBG(x...)	no_printk(x)
 
 #define GSENSOR_IOCTL_MAGIC			'a'
 #define GBUFF_SIZE				12	/* Rx buffer size */
