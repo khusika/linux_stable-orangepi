@@ -2409,7 +2409,7 @@ static int rk312x_platform_remove(struct platform_device *pdev)
 	return 0;
 }
 
-void rk312x_platform_shutdown(struct platform_device *pdev)
+static void rk312x_platform_shutdown(struct platform_device *pdev)
 {
 	unsigned int val = 0;
 	DBG("%s\n", __func__);
