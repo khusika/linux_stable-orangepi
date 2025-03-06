@@ -17,10 +17,10 @@
 #include "dev.h"
 #include "vpss_offline.h"
 #include "hw.h"
-#include "regs_v1.h"
+#include "regs.h"
 
 #include "procfs.h"
-#include "vpss_offline_v1.h"
+#include "vpss_offline_v10.h"
 
 struct rkvpss_output_ch {
 	u32 ctrl;
@@ -571,7 +571,7 @@ static void scale_config(struct file *file,
 	struct rkvpss_offline_dev *ofl = video_drvdata(file);
 	int i;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!cfg->output[i].enable)
 			continue;
 
@@ -590,8 +590,8 @@ static int cmsc_config(struct rkvpss_offline_dev *ofl,
 	struct rkvpss_cmsc_win *win;
 	struct rkvpss_cmsc_point *point;
 	int i, j, k;
-	u32 ch_win_en[RKVPSS_OUT_V1_MAX];
-	u32 ch_win_mode[RKVPSS_OUT_V1_MAX];
+	u32 ch_win_en[RKVPSS_OUT_V10_MAX];
+	u32 ch_win_mode[RKVPSS_OUT_V10_MAX];
 	u32 win_color[RKVPSS_CMSC_WIN_MAX];
 	u32 val, slope, hor, mask, mosaic_block = 0, ctrl = 0;
 	u32 hw_in_w, hw_in_h;
@@ -599,7 +599,7 @@ static int cmsc_config(struct rkvpss_offline_dev *ofl,
 	if (!hw->is_ofl_cmsc)
 		return 0;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!cfg->output[i].enable)
 			continue;
 		ch_win_en[i] = 0;
@@ -632,7 +632,7 @@ static int cmsc_config(struct rkvpss_offline_dev *ofl,
 	}
 
 	/* deal unite left params */
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!unite || !left)
 			break;
 		if (!cfg->output[i].enable)
@@ -666,7 +666,7 @@ static int cmsc_config(struct rkvpss_offline_dev *ofl,
 	}
 
 	/* deal unite right params */
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!unite || left)
 			break;
 		if (!cfg->output[i].enable)
@@ -719,7 +719,7 @@ static int cmsc_config(struct rkvpss_offline_dev *ofl,
 		}
 	}
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!cfg->output[i].enable)
 			continue;
 		if (ch_win_en[i]) {
@@ -788,7 +788,7 @@ static void aspt_config(struct file *file,
 	u32 reg_base, val;
 	int i;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!cfg->output[i].enable)
 			continue;
 
@@ -852,7 +852,7 @@ static void add_cfginfo(struct rkvpss_offline_dev *ofl, struct rkvpss_frame_cfg 
 	new_cfg->input.width = cfg->input.width;
 	new_cfg->input.height = cfg->input.height;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		new_cfg->output[i].enable = cfg->output[i].enable;
 		new_cfg->output[i].buf_fd = cfg->output[i].buf_fd;
 		new_cfg->output[i].format = cfg->output[i].format;
@@ -1126,7 +1126,7 @@ static void crop_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 
 	crop_en = 0;
 	if (!unite) {
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			if (!cfg->output[i].enable)
 				continue;
 			reg = RKVPSS_CROP0_0_H_OFFS;
@@ -1145,7 +1145,7 @@ static void crop_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 		}
 	} else {
 		if (left) {
-			for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+			for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 				if (!cfg->output[i].enable)
 					continue;
 
@@ -1168,7 +1168,7 @@ static void crop_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 				crop_en |= RKVPSS_CROP_CHN_EN(i);
 			}
 		} else {
-			for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+			for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 				if (!cfg->output[i].enable)
 					continue;
 				reg = RKVPSS_CROP0_0_H_OFFS;
@@ -1192,7 +1192,7 @@ static void crop_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 	rkvpss_hw_write(hw, RKVPSS_CROP0_CTRL, crop_en);
 	rkvpss_hw_write(hw, RKVPSS_CROP0_UPDATE, RKVPSS_CROP_FORCE_UPD);
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!cfg->output[i].enable)
 			continue;
 		v4l2_dbg(3, rkvpss_debug, &ofl->v4l2_dev,
@@ -1212,12 +1212,12 @@ static int write_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 	const struct vb2_mem_ops *mem_ops = hw->mem_ops;
 	struct sg_table  *sg_tbl;
 	struct rkvpss_offline_buf *buf;
-	struct rkvpss_output_ch out_ch[RKVPSS_OUT_V1_MAX] = { 0 };
+	struct rkvpss_output_ch out_ch[RKVPSS_OUT_V10_MAX] = { 0 };
 	int i;
 	u32 w, h, val, reg, mask, mi_update, flip_en, unite_off = 0;
 	bool ch_en = false, wr_uv_swap = false;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!hw->is_ofl_ch[i] && cfg->output[i].enable) {
 			v4l2_err(&ofl->v4l2_dev,
 				 "dev_id:%d ch%d no select for offline mode, set to disable\n",
@@ -1360,7 +1360,7 @@ static int write_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 	mi_update = 0;
 	flip_en = 0;
 	mask = 0;
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (hw->is_ofl_ch[i])
 			mask |= RKVPSS_MI_CHN_V_FLIP(i);
 		if (!cfg->output[i].enable)
@@ -1441,7 +1441,7 @@ static int write_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 	rkvpss_hw_set_bits(hw, RKVPSS_MI_WR_VFLIP_CTRL, mask, flip_en);
 
 	/* config output uv swap */
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (cfg->output[i].enable &&
 		    (cfg->output[i].format == V4L2_PIX_FMT_VYUY ||
 		     cfg->output[i].format == V4L2_PIX_FMT_NV21 ||
@@ -1449,7 +1449,7 @@ static int write_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 			wr_uv_swap = true;
 	}
 	if (wr_uv_swap) {
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			if (cfg->output[i].enable && (cfg->output[i].format == V4L2_PIX_FMT_UYVY ||
 			    cfg->output[i].format == V4L2_PIX_FMT_NV12 ||
 			    cfg->output[i].format == V4L2_PIX_FMT_NV16)) {
@@ -1460,7 +1460,7 @@ static int write_config(struct file *file, struct rkvpss_frame_cfg *cfg, bool un
 			}
 		}
 	}
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (cfg->output[i].format == V4L2_PIX_FMT_VYUY ||
 		    cfg->output[i].format == V4L2_PIX_FMT_NV21 ||
 		    cfg->output[i].format == V4L2_PIX_FMT_NV61) {
@@ -1507,7 +1507,7 @@ static void calc_unite_scl_params(struct file *file, struct rkvpss_frame_cfg *cf
 	u32 right_y_crop_total;
 	u32 right_c_crop_total;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (cfg->output[i].enable == 0)
 			continue;
 		params = &ofl->unite_params[i];
@@ -1619,7 +1619,7 @@ static int rkvpss_ofl_run(struct file *file, struct rkvpss_frame_cfg *cfg, bool 
 
 	mask = 0;
 	val = 0;
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!hw->is_ofl_ch[i])
 			continue;
 		mask |= (RKVPSS_ISP2VPSS_CHN0_SEL(3) << i * 2);
@@ -1670,7 +1670,7 @@ static int rkvpss_module_get(struct file *file,
 	else
 		get->mirror_cmsc_en = 0;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (hw->is_ofl_ch[i])
 			get->ch_en[i] = 1;
 		else
@@ -1707,7 +1707,7 @@ static int rkvpss_module_sel(struct file *file,
 	}
 
 	hw->is_ofl_cmsc = !!sel->mirror_cmsc_en;
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++)
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++)
 		hw->is_ofl_ch[i] = !!sel->ch_en[i];
 unlock:
 	mutex_unlock(&hw->dev_lock);
@@ -1772,7 +1772,7 @@ static int rkvpss_check_params(struct file *file, struct rkvpss_frame_cfg *cfg, 
 		goto end;
 	}
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		if (!cfg->output[i].enable)
 			continue;
 		/* check output format */
@@ -1955,7 +1955,7 @@ static int rkvpss_check_params(struct file *file, struct rkvpss_frame_cfg *cfg, 
 			ret = -EINVAL;
 			goto end;
 		}
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			if (!cfg->output[i].enable)
 				continue;
 			if (cfg->output[i].format != V4L2_PIX_FMT_NV12 &&
@@ -2019,7 +2019,7 @@ static int rkvpss_prepare_run(struct file *file, struct rkvpss_frame_cfg *cfg)
 			  cfg->input.format, cfg->input.format >> 8,
 			  cfg->input.format >> 16, cfg->input.format >> 24,
 			  cfg->input.stride, cfg->input.rotate);
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			v4l2_info(&ofl->v4l2_dev,
 				  "\t\t\tch%d enable:%d crop:(%d,%d)/%dx%d scl:%dx%d flip:%d buffd:%d format:%c%c%c%c stride:%d\n",
 				  i, cfg->output[i].enable,
@@ -2210,7 +2210,7 @@ static const struct video_device offline_videodev = {
 	.release = video_device_release_empty,
 };
 
-void rkvpss_offline_irq_v1(struct rkvpss_hw_dev *hw, u32 irq)
+void rkvpss_offline_irq_v10(struct rkvpss_hw_dev *hw, u32 irq)
 {
 	struct rkvpss_offline_dev *ofl = &hw->ofl_dev;
 
@@ -2221,7 +2221,7 @@ void rkvpss_offline_irq_v1(struct rkvpss_hw_dev *hw, u32 irq)
 		complete(&ofl->cmpl);
 }
 
-int rkvpss_register_offline_v1(struct rkvpss_hw_dev *hw)
+int rkvpss_register_offline_v10(struct rkvpss_hw_dev *hw)
 {
 	struct rkvpss_offline_dev *ofl = &hw->ofl_dev;
 	struct v4l2_device *v4l2_dev;
@@ -2261,7 +2261,7 @@ unreg_v4l2:
 	return ret;
 }
 
-void rkvpss_unregister_offline_v1(struct rkvpss_hw_dev *hw)
+void rkvpss_unregister_offline_v10(struct rkvpss_hw_dev *hw)
 {
 	mutex_destroy(&hw->ofl_dev.apilock);
 	video_unregister_device(&hw->ofl_dev.vfd);

@@ -8,9 +8,9 @@
 #include "vpss_offline.h"
 #include "hw.h"
 #include "procfs.h"
-#include "regs_v1.h"
+#include "regs.h"
 
-#include "stream_v1.h"
+#include "stream_v10.h"
 
 
 #define STREAM_OUT_REQ_BUFS_MIN 0
@@ -631,7 +631,7 @@ static void calc_unite_scl_params(struct rkvpss_stream *stream)
 	}
 }
 
-int rkvpss_stream_buf_cnt_v1(struct rkvpss_stream *stream)
+int rkvpss_stream_buf_cnt_v10(struct rkvpss_stream *stream)
 {
 	unsigned long lock_flags = 0;
 	struct rkvpss_buffer *buf, *tmp;
@@ -1783,7 +1783,7 @@ static int check_wr_uvswap(struct rkvpss_stream *stream)
 	bool wr_uv_swap = false;
 	int i, ret = 0;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		check_stream = &dev->stream_vdev.stream[i];
 		if (check_stream->streaming) {
 			fmt = &check_stream->out_cap_fmt;
@@ -2311,7 +2311,7 @@ static void cmsc_config_hw(struct rkvpss_device *dev, struct rkvpss_cmsc_cfg *cf
 	int i, j, k, slope, hor;
 	u32 win_en, mode, val, ctrl = 0;
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		win_en = cfg->win[i].win_en;
 		v4l2_dbg(4, rkvpss_debug, &dev->v4l2_dev,
 		 "%s unite:%d, unite_index:%d ch:%d win_en:0x%x\n", __func__,
@@ -2367,7 +2367,7 @@ static void cmsc_config_hw(struct rkvpss_device *dev, struct rkvpss_cmsc_cfg *cf
 	rkvpss_idx_write(dev, RKVPSS_CMSC_UPDATE, val, unite_index);
 }
 
-void rkvpss_cmsc_config_v1(struct rkvpss_device *dev, bool sync)
+void rkvpss_cmsc_config_v10(struct rkvpss_device *dev, bool sync)
 {
 	unsigned long lock_flags = 0;
 	struct rkvpss_cmsc_cfg left_cfg = {0}, right_cfg = {0};
@@ -2395,12 +2395,12 @@ void rkvpss_cmsc_config_v1(struct rkvpss_device *dev, bool sync)
 				left_cfg.win[i].point[j] = dev->cmsc_cfg.win[i].point[j];
 		}
 		left_cfg.mosaic_block = dev->cmsc_cfg.mosaic_block;
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			left_cfg.win[i].win_en = dev->cmsc_cfg.win[i].win_en;
 			left_cfg.win[i].mode = dev->cmsc_cfg.win[i].mode;
 		}
 
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			for (j = 0; j < RKVPSS_CMSC_WIN_MAX; j++) {
 				win = &left_cfg.win[j];
 				if (!(left_cfg.win[i].win_en & BIT(j)))
@@ -2440,12 +2440,12 @@ void rkvpss_cmsc_config_v1(struct rkvpss_device *dev, bool sync)
 				right_cfg.win[i].point[j] = dev->cmsc_cfg.win[i].point[j];
 		}
 		right_cfg.mosaic_block = dev->cmsc_cfg.mosaic_block;
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			right_cfg.win[i].win_en = dev->cmsc_cfg.win[i].win_en;
 			right_cfg.win[i].mode = dev->cmsc_cfg.win[i].mode;
 		}
 
-		for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+		for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 			for (j = 0; j < RKVPSS_CMSC_WIN_MAX; j++) {
 				win = &right_cfg.win[j];
 				if (!(right_cfg.win[i].win_en & BIT(j)))
@@ -2689,7 +2689,7 @@ unreg:
 	return ret;
 }
 
-void rkvpss_stream_default_fmt_v1(struct rkvpss_device *dev, u32 id,
+void rkvpss_stream_default_fmt_v10(struct rkvpss_device *dev, u32 id,
 			       u32 width, u32 height, u32 pixelformat)
 {
 	struct rkvpss_stream *stream = &dev->stream_vdev.stream[id];
@@ -2712,7 +2712,7 @@ void rkvpss_stream_default_fmt_v1(struct rkvpss_device *dev, u32 id,
 	rkvpss_set_fmt(stream, &pixm, false);
 }
 
-int rkvpss_register_stream_vdevs_v1(struct rkvpss_device *dev)
+int rkvpss_register_stream_vdevs_v10(struct rkvpss_device *dev)
 {
 	struct rkvpss_stream_vdev *stream_vdev;
 	struct rkvpss_stream *stream;
@@ -2723,7 +2723,7 @@ int rkvpss_register_stream_vdevs_v1(struct rkvpss_device *dev)
 	stream_vdev = &dev->stream_vdev;
 	memset(stream_vdev, 0, sizeof(*stream_vdev));
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		stream = &stream_vdev->stream[i];
 		stream->id = i;
 		stream->dev = dev;
@@ -2770,20 +2770,20 @@ err:
 	return ret;
 }
 
-void rkvpss_unregister_stream_vdevs_v1(struct rkvpss_device *dev)
+void rkvpss_unregister_stream_vdevs_v10(struct rkvpss_device *dev)
 {
 	struct rkvpss_stream_vdev *stream_vdev;
 	struct rkvpss_stream *stream;
 	int i;
 
 	stream_vdev = &dev->stream_vdev;
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		stream = &stream_vdev->stream[i];
 		rkvpss_unregister_stream_video(stream);
 	}
 }
 
-void rkvpss_isr_v1(struct rkvpss_device *dev, u32 mis_val)
+void rkvpss_isr_v10(struct rkvpss_device *dev, u32 mis_val)
 {
 	v4l2_dbg(3, rkvpss_debug, &dev->v4l2_dev,
 		 "isr:0x%x\n", mis_val);
@@ -2792,7 +2792,7 @@ void rkvpss_isr_v1(struct rkvpss_device *dev, u32 mis_val)
 		rkvpss_check_idle(dev, VPSS_FRAME_END);
 }
 
-void rkvpss_mi_isr_v1(struct rkvpss_device *dev, u32 mis_val)
+void rkvpss_mi_isr_v10(struct rkvpss_device *dev, u32 mis_val)
 {
 	struct rkvpss_stream *stream;
 	int i, ris = readl(dev->hw_dev->base_addr + RKVPSS_MI_RIS);
@@ -2800,7 +2800,7 @@ void rkvpss_mi_isr_v1(struct rkvpss_device *dev, u32 mis_val)
 	v4l2_dbg(3, rkvpss_debug, &dev->v4l2_dev,
 		 "mi isr:0x%x, ris:0x%x\n", mis_val, ris);
 
-	for (i = 0; i < RKVPSS_OUT_V1_MAX; i++) {
+	for (i = 0; i < RKVPSS_OUT_V10_MAX; i++) {
 		stream = &dev->stream_vdev.stream[i];
 
 		if (!stream->streaming ||

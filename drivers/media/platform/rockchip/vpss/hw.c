@@ -8,7 +8,7 @@
 #include "vpss_offline.h"
 #include "hw.h"
 #include "procfs.h"
-#include "regs_v1.h"
+#include "regs.h"
 
 struct irqs_data {
 	const char *name;
@@ -682,10 +682,12 @@ static const struct vpss_match_data rk3576_vpss_match_data = {
 };
 
 static const struct of_device_id rkvpss_hw_of_match[] = {
+#ifdef CONFIG_VIDEO_ROCKCHIP_VPSS_V10
 	{
 		.compatible = "rockchip,rk3576-rkvpss",
 		.data = &rk3576_vpss_match_data,
 	},
+#endif
 	{},
 };
 

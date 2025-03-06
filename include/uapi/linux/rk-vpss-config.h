@@ -27,7 +27,7 @@
  * ioctl RKVPSS_CMD_MODULE_SEL to select function using
  */
 
-#define RKVPSS_OUT_V1_MAX 4
+#define RKVPSS_OUT_V10_MAX 4
 
 /******vpss(online mode) v4l2 ioctl***************************/
 /* set before VIDIOC_S_FMT if dynamically changing output resolution */

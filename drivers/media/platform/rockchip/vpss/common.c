@@ -8,7 +8,7 @@
 #include "vpss_offline.h"
 #include "hw.h"
 #include "procfs.h"
-#include "regs_v1.h"
+#include "regs.h"
 
 
 void rkvpss_idx_write(struct rkvpss_device *dev, u32 reg, u32 val, int idx)

@@ -70,6 +70,12 @@ struct rkvpss_hw_dev {
 	bool is_suspend;
 };
 
+#ifdef CONFIG_VIDEO_ROCKCHIP_VPSS_V10
+static inline bool is_vpss_v10(const struct rkvpss_hw_dev *hw_dev) { return hw_dev->vpss_ver == VPSS_V10; }
+#else
+static inline bool is_vpss_v10(const struct rkvpss_hw_dev *hw_dev) { return false; }
+#endif
+
 #define RKVPSS_ZME_TAP_COE(x, y) (((x) & 0x3ff) | (((y) & 0x3ff) << 16))
 extern const s16 rkvpss_zme_tap8_coe[11][17][8];
 extern const s16 rkvpss_zme_tap6_coe[11][17][8];

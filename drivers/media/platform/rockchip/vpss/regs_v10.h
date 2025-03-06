@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /* Copyright (c) 2023 Rockchip Electronics Co., Ltd. */
 
-#ifndef _RKVPSS_REGS_H
-#define _RKVPSS_REGS_H
+#ifndef _RKVPSS_REGS_V10_H
+#define _RKVPSS_REGS_V10_H
 
 #define RKVPSS_VPSS_BASE			0x0000
 #define RKVPSS_VPSS_CTRL			(RKVPSS_VPSS_BASE + 0x0000)

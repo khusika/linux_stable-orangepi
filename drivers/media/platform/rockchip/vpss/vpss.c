@@ -8,7 +8,7 @@
 #include "vpss_offline.h"
 #include "hw.h"
 #include "procfs.h"
-#include "regs_v1.h"
+#include "regs.h"
 
 static const struct vpsssd_fmt rkvpss_formats[] = {
 	{
