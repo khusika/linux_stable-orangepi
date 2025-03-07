@@ -10636,23 +10636,51 @@ static void vop2_update_post_csc_info(struct vop2_video_port *vp,
 }
 
 /*
- * Check hdr_ext_data switch from valid to NULL or
- * NULL to valid.
- * This is used to check a switch from dynamic HDR2SDR
- * or SDR2HDR output mode switch.
+ * DOVI will set mode changed at the following case:
+ * (1) Enter or Exit dovi output mode[judge by old/new crtc state];
+ * (2) Keep dovi output mode, and change from non dovi video to dovi video[judge
+ *     by core1 bypass_composer state];
  */
-static bool vop_hdr_ext_data_switch(struct drm_crtc_state *old_state,
+static bool vop2_dovi_mode_changed(struct drm_crtc_state *old_state,
 				   struct drm_crtc_state *new_state)
 {
 	struct rockchip_crtc_state *new_vcstate = to_rockchip_crtc_state(new_state);
 	struct rockchip_crtc_state *old_vcstate = to_rockchip_crtc_state(old_state);
 	struct drm_property_blob *new_blob = new_vcstate->hdr_ext_data;
 	struct drm_property_blob *old_blob = old_vcstate->hdr_ext_data;
+	struct hdr_extend *old_hdr_data, *new_hdr_data;
+	bool mode_changed = false;
 
-	if ((!old_blob && new_blob) || (!new_blob && old_blob))
-		return false;
+	if (!old_blob && new_blob) {
+		new_hdr_data = (struct hdr_extend *)new_vcstate->hdr_ext_data->data;
+		if (new_hdr_data->hdr_type == HDR_DOVI)
+			mode_changed = true;
+	} else if (!new_blob && old_blob) {
+		old_hdr_data = (struct hdr_extend *)old_vcstate->hdr_ext_data->data;
+		if (old_hdr_data->hdr_type == HDR_DOVI)
+			mode_changed = true;
+	} else if (old_blob && new_blob) {
+		struct dovi_regs *old_dovi_reg_data, *new_dovi_reg_data;
 
-	return true;
+		new_hdr_data = (struct hdr_extend *)new_vcstate->hdr_ext_data->data;
+		old_hdr_data = (struct hdr_extend *)old_vcstate->hdr_ext_data->data;
+		if (old_hdr_data->hdr_type != new_hdr_data->hdr_type) {
+			mode_changed = true;
+		} else if (old_hdr_data->hdr_type == new_hdr_data->hdr_type &&
+			   old_hdr_data->hdr_type == HDR_DOVI) {
+			old_dovi_reg_data = &old_hdr_data->dovi_data;
+			new_dovi_reg_data = &new_hdr_data->dovi_data;
+
+			/* dovi core1 bypass_composer change from 1 to 0 must enter mode_changed */
+			if ((old_dovi_reg_data->core1[1] & BIT(0)) == 1 &&
+			    (new_dovi_reg_data->core1[1] & BIT(0)) == 0) {
+				mode_changed = true;
+				DRM_INFO("dovi core1 bypass_composer from 1 to 0\n");
+			}
+		}
+	}
+
+	return mode_changed;
 }
 
 static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
@@ -10669,7 +10697,6 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
 	struct rockchip_crtc_state *new_vcstate = to_rockchip_crtc_state(new_crtc_state);
 	struct rockchip_crtc_state *old_vcstate = to_rockchip_crtc_state(old_crtc_state);
 	struct drm_display_mode *adjusted_mode = &crtc->state->adjusted_mode;
-	bool hdr_ext_data_change;
 
 	if (vop2_has_feature(vop2, VOP_FEATURE_SPLICE)) {
 		if (adjusted_mode->hdisplay > VOP2_MAX_VP_OUTPUT_WIDTH) {
@@ -10694,10 +10721,9 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
 	else
 		vp->acm_state_changed = false;
 
-	hdr_ext_data_change = !vop_hdr_ext_data_switch(old_crtc_state, new_crtc_state) |
-					new_crtc_state->active_changed;
-	if (hdr_ext_data_change)
-		new_crtc_state->mode_changed = true;
+	if (vp_data->feature & VOP_FEATURE_DOVI)
+		new_crtc_state->mode_changed |=
+			vop2_dovi_mode_changed(old_crtc_state, new_crtc_state);
 
 	return 0;
 }
