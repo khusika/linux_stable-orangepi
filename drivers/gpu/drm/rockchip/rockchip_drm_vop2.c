@@ -4979,6 +4979,13 @@ static void vop2_dovi_post_disable(struct drm_crtc *crtc)
 	vp->dovi_hdr_mode = false;
 	vp->dovi_hdr_en = false;
 	vp->dovi_hdr_in = false;
+
+	/**
+	 * The burr of the vsync signal maybe lead to core1 work abnormally,
+	 * so add aclk reset when exit from dovi mode.
+	 */
+	vop2_clk_reset(vop2->axi_rst);
+
 	drm_info(vop2, "vp%d dovi disabled\n", vp->id);
 }
 
@@ -5653,7 +5660,6 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 		VOP_MODULE_SET(vop2, vp, hdr_lut_update_en, 0);
 	vop2_dovi_pre_disable(crtc);
 	vop2_disable_all_planes_for_crtc(crtc);
-	vop2_dovi_post_disable(crtc);
 
 	if (vop2->dscs[vcstate->dsc_id].enabled &&
 	    vop2->dscs[vcstate->dsc_id].attach_vp_id == vp->id &&
@@ -5742,6 +5748,7 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 
 	vop2_dsp_hold_valid_irq_disable(crtc);
 
+	vop2_dovi_post_disable(crtc);
 	vop2_disable(crtc);
 
 	vop2->active_vp_mask &= ~BIT(vp->id);
