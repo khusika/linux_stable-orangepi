@@ -4869,22 +4869,44 @@ static void vop2_dovi_enable(struct drm_crtc *crtc)
 	struct hdr_extend *hdr_data;
 	int i = 0;
 
-	if (vp->dovi_hdr_en)
-		return;
+	if (!vcstate->hdr_ext_data)
+		goto DISABLE_DOVI;
 
 	hdr_data = (struct hdr_extend *)vcstate->hdr_ext_data->data;
-	if (!hdr_data)
-		return;
+	if (!hdr_data || hdr_data->hdr_type != HDR_DOVI)
+		goto DISABLE_DOVI;
+
 	dovi_data = &hdr_data->dovi_data;
 	for (i = 0; i < vop2_data->dovi->nr_dovi_cores; i++) {
 		dovi_core = &vop2->dovi_cores[i];
 
-		if (vop2_check_dovi_core_enabled(dovi_core->id, dovi_data->valid))
+		if (vop2_check_dovi_core_enabled(dovi_core->id, dovi_data->valid)) {
 			VOP_MODULE_SET(vop2, dovi_core, enable, 1);
+		} else {
+			VOP_MODULE_SET(vop2, dovi_core, enable, 0);
+			VOP_MODULE_SET(vop2, dovi_core, lut_update, 0);
+			if (dovi_core->id == 2)
+				VOP_MODULE_SET(vop2, dovi_core, dly_en, 0);
+		}
 	}
 
 	vp->dovi_hdr_en = true;
-	DRM_DEV_INFO(vop2->dev, "vp%d dovi enabled\n", vp->id);
+	DRM_DEV_DEBUG(vop2->dev, "vp%d dovi enabled\n", vp->id);
+
+	return;
+
+DISABLE_DOVI:
+	if (!vp->dovi_hdr_en)
+		return;
+
+	for (i = 0; i < vop2_data->dovi->nr_dovi_cores; i++) {
+		dovi_core = &vop2->dovi_cores[i];
+
+		VOP_MODULE_SET(vop2, dovi_core, enable, 0);
+		VOP_MODULE_SET(vop2, dovi_core, lut_update, 0);
+		if (dovi_core->id == 2)
+			VOP_MODULE_SET(vop2, dovi_core, dly_en, 0);
+	}
 }
 
 static int vop2_dovi_init(struct drm_crtc *crtc)
@@ -12951,6 +12973,8 @@ static void vop2_cfg_update(struct drm_crtc *crtc,
 	if (vp_data->feature & VOP_FEATURE_OVERSCAN)
 		vop2_post_config(crtc);
 
+	if (vp_data->feature & VOP_FEATURE_DOVI)
+		vop2_dovi_enable(crtc);
 	if (vop2_is_dovi_mode(vp) && vp->enabled_win_mask) {
 		vop2_dovi_mode_config(crtc);
 		vop2_load_dovi_coe_table(crtc);
