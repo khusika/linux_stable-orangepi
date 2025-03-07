@@ -8428,6 +8428,7 @@ static int vop2_crtc_debugfs_init(struct drm_minor *minor, struct drm_crtc *crtc
 	rockchip_drm_debugfs_add_color_bar(crtc, vop2->debugfs);
 	rockchip_drm_debugfs_add_regs_write(crtc, vop2->debugfs);
 	rockchip_drm_debugfs_add_dclk_rate(crtc, vop2->debugfs);
+	rockchip_drm_debugfs_add_dovi_mode(crtc, vop2->debugfs);
 #endif
 	for (i = 0; i < ARRAY_SIZE(vop2_debugfs_files); i++)
 		vop2->debugfs_files[i].data = vop2;
@@ -10639,15 +10640,19 @@ static void vop2_update_post_csc_info(struct vop2_video_port *vp,
  * DOVI will set mode changed at the following case:
  * (1) Enter or Exit dovi output mode[judge by old/new crtc state];
  * (2) Keep dovi output mode, and change from non dovi video to dovi video[judge
- *     by core1 bypass_composer state];
+ *     by core1 bypass_composer state], except dovi_mode changed to non zero value
+ *     by userspace.
  */
-static bool vop2_dovi_mode_changed(struct drm_crtc_state *old_state,
-				   struct drm_crtc_state *new_state)
+static bool vop2_dovi_mode_changed(struct drm_crtc *crtc,
+				   struct drm_atomic_state *state)
 {
-	struct rockchip_crtc_state *new_vcstate = to_rockchip_crtc_state(new_state);
-	struct rockchip_crtc_state *old_vcstate = to_rockchip_crtc_state(old_state);
+	struct drm_crtc_state *new_crtc_state = drm_atomic_get_new_crtc_state(state, crtc);
+	struct drm_crtc_state *old_crtc_state = drm_atomic_get_old_crtc_state(state, crtc);
+	struct rockchip_crtc_state *new_vcstate = to_rockchip_crtc_state(new_crtc_state);
+	struct rockchip_crtc_state *old_vcstate = to_rockchip_crtc_state(old_crtc_state);
 	struct drm_property_blob *new_blob = new_vcstate->hdr_ext_data;
 	struct drm_property_blob *old_blob = old_vcstate->hdr_ext_data;
+	struct rockchip_drm_private *private = crtc->dev->dev_private;
 	struct hdr_extend *old_hdr_data, *new_hdr_data;
 	bool mode_changed = false;
 
@@ -10667,7 +10672,8 @@ static bool vop2_dovi_mode_changed(struct drm_crtc_state *old_state,
 		if (old_hdr_data->hdr_type != new_hdr_data->hdr_type) {
 			mode_changed = true;
 		} else if (old_hdr_data->hdr_type == new_hdr_data->hdr_type &&
-			   old_hdr_data->hdr_type == HDR_DOVI) {
+			   old_hdr_data->hdr_type == HDR_DOVI &&
++			   private->dovi_mode == 0) {
 			old_dovi_reg_data = &old_hdr_data->dovi_data;
 			new_dovi_reg_data = &new_hdr_data->dovi_data;
 
@@ -10723,7 +10729,7 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
 
 	if (vp_data->feature & VOP_FEATURE_DOVI)
 		new_crtc_state->mode_changed |=
-			vop2_dovi_mode_changed(old_crtc_state, new_crtc_state);
+			vop2_dovi_mode_changed(crtc, state);
 
 	return 0;
 }

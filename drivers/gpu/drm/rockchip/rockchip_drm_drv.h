@@ -595,6 +595,10 @@ struct rockchip_drm_private {
 	 */
 	struct mutex ovl_lock;
 	bool need_ovl_lock;
+	/**
+	 * @dovi_mode: dovi mode from userspace for dovi test.
+	 */
+	u8 dovi_mode;
 
 	struct rockchip_drm_vcnt vcnt[ROCKCHIP_MAX_CRTC];
 	struct rockchip_drm_error_event error_event;
