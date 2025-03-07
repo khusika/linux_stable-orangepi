@@ -12254,6 +12254,83 @@ static bool post_sharp_enabled(struct drm_crtc *crtc)
 	return true;
 }
 
+static void vop2_crtc_update_zpos_for_dovi(struct drm_crtc *crtc, struct vop2_zpos *vop2_zpos)
+{
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct vop2 *vop2 = vp->vop2;
+	const struct vop2_data *vop2_data = vop2->data;
+	struct drm_plane *plane;
+	struct vop2_plane_state *vpstate;
+	bool has_base_layer = false;
+	uint8_t nr_layers = 0;
+
+	drm_atomic_crtc_for_each_plane(plane, crtc) {
+		vpstate = to_vop2_plane_state(plane->state);
+		if (vpstate->dovi_input_type == DOVI_BASE_LAYER)
+			has_base_layer = true;
+	}
+
+	/*
+	 * At RK3588 force DOVI mode[only have UI->coer2 and none base layer to core1]
+	 * the UI layer must from layer2 and connect to core2, so insert unused win to
+	 * layer0.
+	 */
+	if (vp->nr_layers == 1 && has_base_layer == false) {
+		struct vop2_zpos vop2_zpos0;
+		int phys_id, freed_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
+		int zpos0_phy_id = vop2_zpos[0].win_phys_id;
+		unsigned long win_mask = vp->win_mask;
+
+		/* find freed layer to core1 */
+		for_each_set_bit(phys_id, &win_mask, ROCKCHIP_MAX_LAYER) {
+			if (phys_id != zpos0_phy_id &&
+			    phys_id != vop2_data->dovi->enhance_layer_phy_id) {
+				freed_phy_id = phys_id;
+				break;
+			}
+		}
+		if (freed_phy_id == ROCKCHIP_VOP2_PHY_ID_INVALID) {
+			DRM_DEV_ERROR(vop2->dev, "Can't find freed phy id for dovi core1\n");
+			return;
+		}
+
+		memcpy(&vop2_zpos0, &vop2_zpos[0], sizeof(struct vop2_zpos));
+		vp->nr_layers++;
+		vop2_zpos[0].zpos = 0;
+		vop2_zpos[0].win_phys_id = freed_phy_id;
+
+		memcpy(&vop2_zpos[1], &vop2_zpos0, sizeof(struct vop2_zpos));
+		vop2_zpos[1].zpos = 1;
+	}
+	nr_layers = vp->nr_layers;
+
+	/*
+	 * At RK3588 dovi mode, the layer0 and layer1 is used for dovi layer,
+	 * layer0 for base layer, layer1 for enhance layer, the enhance layer
+	 * is option, but it's always occupy this layer, and the other layer
+	 * must be assigned from layer2, so copy the other layers to &vop_zpos[2].
+	 */
+	if (vp->nr_layers > 1) {
+		struct vop2_zpos *vop2_zpos_tmp;
+		int i = 0;
+
+		vop2_zpos_tmp = kmalloc_array(nr_layers - 1, sizeof(struct vop2_zpos), GFP_KERNEL);
+		if (!vop2_zpos_tmp)
+			return;
+
+		/* Insert esmart3 as core1 enhance layer to zpos1 */
+		memcpy(vop2_zpos_tmp, &vop2_zpos[1], (nr_layers - 1) * sizeof(struct vop2_zpos));
+		vp->nr_layers++;
+		vop2_zpos[1].zpos = 1;
+		vop2_zpos[1].win_phys_id = vop2_data->dovi->enhance_layer_phy_id;
+		memcpy(&vop2_zpos[2], vop2_zpos_tmp, (nr_layers - 1) * sizeof(struct vop2_zpos));
+		for (i = 0; i < nr_layers - 1; i++)
+			vop2_zpos[2 + i].zpos = 2 + i;
+
+		kfree(vop2_zpos_tmp);
+	}
+}
+
 static void vop2_crtc_atomic_begin(struct drm_crtc *crtc, struct drm_atomic_state *state)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
@@ -12378,33 +12455,9 @@ static void vop2_crtc_atomic_begin(struct drm_crtc *crtc, struct drm_atomic_stat
 		vp->nr_layers = nr_layers;
 
 		sort(vop2_zpos, nr_layers, sizeof(vop2_zpos[0]), vop2_zpos_cmp, NULL);
-		/*
-		 * At RK3588 dovi mode, the layer0 and layer1 is used for dovi layer,
-		 * layer0 for base layer, layer1 for enhance layer, the enhance layer
-		 * is option, but it's always occupy this layer, and the other layer
-		 * must be assigned from layer2, so copy the other layers to &vop_zpos[2].
-		 */
-		if (vop2->version == VOP_VERSION_RK3588 &&
-		    vop2_is_dovi_mode(vp) && vp->nr_layers > 1) {
-			const struct vop2_data *vop2_data = vop2->data;
-			struct vop2_zpos *vop2_zpos_tmp;
-			int i = 0;
 
-			vop2_zpos_tmp = kmalloc_array(nr_layers - 1, sizeof(struct vop2_zpos), GFP_KERNEL);
-			if (!vop2_zpos_tmp)
-				goto dovi_err;
-
-			/* Insert esmart3 as core1 enhance layer to zpos1 */
-			memcpy(vop2_zpos_tmp, &vop2_zpos[1], (nr_layers - 1) * sizeof(struct vop2_zpos));
-			vp->nr_layers++;
-			vop2_zpos[1].zpos = 1;
-			vop2_zpos[1].win_phys_id = vop2_data->dovi->enhance_layer_phy_id;
-			memcpy(&vop2_zpos[2], vop2_zpos_tmp, (nr_layers - 1) * sizeof(struct vop2_zpos));
-			for (i = 0; i < nr_layers - 1; i++)
-				vop2_zpos[2 + i].zpos = 2 + i;
-
-			kfree(vop2_zpos_tmp);
-		}
+		if (vop2->version == VOP_VERSION_RK3588 && vop2_is_dovi_mode(vp))
+			vop2_crtc_update_zpos_for_dovi(crtc, vop2_zpos);
 
 		if (!vp->hdr10_at_splice_mode) {
 			if (is_vop3(vop2)) {
@@ -12481,9 +12534,6 @@ static void vop2_crtc_atomic_begin(struct drm_crtc *crtc, struct drm_atomic_stat
 		}
 	}
 
-dovi_err:
-	if (vcstate->splice_mode)
-		kfree(vop2_zpos_splice);
 out:
 	kfree(vop2_zpos);
 }
