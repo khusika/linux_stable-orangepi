@@ -2263,6 +2263,46 @@
 		status = "disabled";
 	};
 
+	mipi_dphy: mipi-dphy@22110000 {
+		compatible = "rockchip,rv1126b-dsi-dphy", "rockchip,rv1126-dsi-dphy";
+		reg = <0x22110000 0x500>, <0x22120000 0x500>;
+		reg-names = "phy", "host";
+		assigned-clock-rates = <24000000>;
+		clocks = <&xin24m>, <&cru PCLK_DSIPHY>, <&cru PCLK_MIPI_DSI>;
+		clock-names = "ref", "pclk", "pclk_host";
+		#clock-cells = <0>;
+		resets = <&cru SRST_PRESETN_DSIPHY>;
+		reset-names = "apb";
+		#phy-cells = <0>;
+		rockchip,grf = <&grf>;
+		status = "disabled";
+	};
+
+	dsi: dsi@22120000 {
+		compatible = "rockchip,rv1126b-mipi-dsi";
+		reg = <0x22120000 0x500>;
+		interrupts = <GIC_SPI 167 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru PCLK_MIPI_DSI>;
+		clock-names = "pclk";
+		resets = <&cru SRST_PRESETN_MIPI_DSI>;
+		reset-names = "apb";
+		phys = <&mipi_dphy>;
+		phy-names = "dphy";
+		rockchip,grf = <&grf>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		power-domains = <&power RV1126B_PD_VDO>;
+		status = "disabled";
+
+		ports {
+			port {
+				dsi_in_vop: endpoint {
+					remote-endpoint = <&vop_out_dsi>;
+				};
+			};
+		};
+	};
+
 	rkvdec: rkvdec@22140100 {
 		compatible = "rockchip,rkv-decoder-rv1126b", "rockchip,rkv-decoder-v384a";
 		reg = <0x22140100 0x600>, <0x22140000 0x100>;
@@ -2319,6 +2359,11 @@
 			vop_out_rgb: endpoint@0 {
 				reg = <0>;
 				remote-endpoint = <&rgb_in_vop>;
+			};
+
+			vop_out_dsi: endpoint@1 {
+				reg = <1>;
+				remote-endpoint = <&dsi_in_vop>;
 			};
 		};
 	};
