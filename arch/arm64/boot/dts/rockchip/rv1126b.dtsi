@@ -1667,6 +1667,13 @@
 		status = "disabled";
 	};
 
+	dfi: dfi@21620000 {
+		compatible = "rockchip,rv1126b-dfi";
+		reg = <0x21620000 0x10000>;
+		rockchip,pmugrf = <&grf>;
+		status = "disabled";
+	};
+
 	mipi0_csi2_hw: mipi0-csi2-hw@21c00000 {
 		compatible = "rockchip,rv1126b-mipi-csi2-hw";
 		reg = <0x21c00000 0x10000>;
