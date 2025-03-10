@@ -757,6 +757,18 @@
 		};
 	};
 
+	audio_codec_pmu: audio-codec@20890000 {
+		compatible = "rockchip,rv1126b-codec", "rockchip,rk3506-codec";
+		reg = <0x20890000 0x1000>;
+		#sound-dai-cells = <0>;
+		clocks = <&cru PCLK_AUDIO_ADC_PMU>, <&cru MCLK_AUDIO_ADC_PMU>;
+		clock-names = "pclk", "mclk";
+		resets = <&cru SRST_MRESETN_AUDIO_ADC_PMU>;
+		reset-names = "rst";
+		rockchip,grf = <&grf>;
+		status = "disabled";
+	};
+
 	fspi1: spi@208c0000 {
 		compatible = "rockchip,rv1126b-fspi", "rockchip,fspi";
 		reg = <0x208c0000 0x4000>;
@@ -978,6 +990,18 @@
 		rockchip,hw-tshut-temp = <120000>;
 		rockchip,hw-tshut-mode = <0>; /* tshut mode 0:CRU 1:GPIO */
 		rockchip,hw-tshut-polarity = <0>; /* tshut polarity 0:LOW 1:HIGH */
+		status = "disabled";
+	};
+
+	audio_codec: audio-codec@20bf0000 {
+		compatible = "rockchip,rv1126b-codec", "rockchip,rk3506-codec";
+		reg = <0x20bf0000 0x1000>;
+		#sound-dai-cells = <0>;
+		clocks = <&cru PCLK_AUDIO_ADC_BUS>, <&cru MCLK_AUDIO_ADC_BUS>;
+		clock-names = "pclk", "mclk";
+		resets = <&cru SRST_MRESETN_AUDIO_ADC_BUS>;
+		reset-names = "rst";
+		rockchip,grf = <&grf>;
 		status = "disabled";
 	};
 
