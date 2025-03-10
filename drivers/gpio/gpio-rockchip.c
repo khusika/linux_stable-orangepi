@@ -1140,7 +1140,7 @@ static int rockchip_gpio_probe(struct platform_device *pdev)
 
 	ret = rockchip_gpio_parse_irqs(pdev, bank);
 	if (ret < 0)
-		return ret;
+		goto err_clk;
 	rockchip_gpio_init_cpuhp();
 
 	/*
@@ -1213,6 +1213,7 @@ err_unlock:
 	rockchip_gpio_remove_cpuhp();
 
 	mutex_unlock(&bank->deferred_lock);
+err_clk:
 	clk_disable_unprepare(bank->clk);
 	clk_disable_unprepare(bank->db_clk);
 
