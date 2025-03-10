@@ -29,7 +29,7 @@ int rkvpss_ofl_dvbm_get(struct rkvpss_offline_dev *ofl)
 	} else {
 		struct platform_device *p_dvbm = of_find_device_by_node(np_dvbm);
 
-		g_ofl_dvbm = rk_dvbm_get_port(p_dvbm, DVBM_ISP_PORT);
+		g_ofl_dvbm = rk_dvbm_get_port(p_dvbm, DVBM_VPSS_PORT);
 		put_device(&p_dvbm->dev);
 	}
 
@@ -58,7 +58,7 @@ int rkvpss_ofl_dvbm_init(struct dma_buf *dbuf, u32 dma_addr, u32 wrap_line,
 	dvbm_cfg.cbuf_fstd = dvbm_cfg.ybuf_fstd / 2;
 	dvbm_cfg.chan_id = id;
 
-	rk_dvbm_ctrl(g_ofl_dvbm, DVBM_ISP_SET_CFG, &dvbm_cfg);
+	rk_dvbm_ctrl(g_ofl_dvbm, DVBM_VPSS_SET_CFG, &dvbm_cfg);
 	rk_dvbm_link(g_ofl_dvbm, id);
 
 	return 0;
@@ -82,10 +82,10 @@ int rkvpss_ofl_dvbm_event(u32 event, u32 seq)
 
 	switch (event) {
 	case ROCKIT_DVBM_START:
-		cmd = DVBM_ISP_FRM_START;
+		cmd = DVBM_VPSS_FRM_START;
 		break;
 	case ROCKIT_DVBM_END:
-		cmd = DVBM_ISP_FRM_END;
+		cmd = DVBM_VPSS_FRM_END;
 		break;
 	default:
 		return -EINVAL;
