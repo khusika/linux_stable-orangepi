@@ -13962,22 +13962,22 @@ void rkcif_err_print_work(struct work_struct *work)
 	if (err_state & RKCIF_ERR_SIZE) {
 		if (dev->chip_id >= CHIP_RK3588_CIF)
 			v4l2_err(&dev->v4l2_dev,
-				 "ERROR: csi size err, intstat:0x%x, size:0x%x,0x%x,0x%x,0x%x, cnt %llu\n",
+				 "ERROR: size err, intstat:0x%x, size:0x%x,0x%x,0x%x,0x%x, cnt %llu\n",
 				 intstat, err_state_work->size_id0, err_state_work->size_id1,
 				 err_state_work->size_id2, err_state_work->size_id3,
 				 dev->irq_stats.csi_size_err_cnt);
 		else
 			v4l2_err(&dev->v4l2_dev,
-				 "ERROR: csi size err, intstat:0x%x, lastline:0x%x, cnt %llu\n",
+				 "ERROR: size err, intstat:0x%x, lastline:0x%x, cnt %llu\n",
 				 intstat, lastline, dev->irq_stats.csi_size_err_cnt);
 	}
 	if (err_state & RKCIF_ERR_OVERFLOW)
 		v4l2_err(&dev->v4l2_dev,
-			 "ERROR: csi fifo overflow, intstat:0x%x, lastline:0x%x, cnt %llu\n",
+			 "ERROR: fifo overflow, intstat:0x%x, lastline:0x%x, cnt %llu\n",
 			 intstat, lastline, dev->irq_stats.csi_overflow_cnt);
 	if (err_state & RKCIF_ERR_BANDWIDTH_LACK)
 		v4l2_err(&dev->v4l2_dev,
-			 "ERROR: csi bandwidth lack, intstat:0x%x, lastline:0x%x, cnt %llu\n",
+			 "ERROR: bandwidth lack, intstat:0x%x, lastline:0x%x, cnt %llu\n",
 			 intstat, lastline, dev->irq_stats.csi_bwidth_lack_cnt);
 	if (err_state & RKCIF_ERR_ID0_MULTI_FS)
 		v4l2_err(&dev->v4l2_dev,
