@@ -365,6 +365,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v10.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rk3588s-tablet-v11.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10.dtb
+dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10-rgb-Q7050ITH2641AA1T.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb3-v10.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb4-v10.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-iotest-v10.dtb
