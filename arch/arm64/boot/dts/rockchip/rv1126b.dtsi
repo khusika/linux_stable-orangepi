@@ -400,6 +400,42 @@
 		};
 	};
 
+	dmc: dmc {
+		compatible = "rockchip,rv1126b-dmc";
+		interrupts = <GIC_SPI 121 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "complete";
+		devfreq-events = <&dfi>;
+		clocks = <&cru SCLK_DDR>;
+		clock-names = "dmc_clk";
+		operating-points-v2 = <&dmc_opp_table>;
+		upthreshold = <40>;
+		downdifferential = <20>;
+		system-status-level = <
+			/*system status		freq level*/
+			SYS_STATUS_NORMAL	DMC_FREQ_LEVEL_MID_HIGH
+			SYS_STATUS_REBOOT	DMC_FREQ_LEVEL_HIGH
+			SYS_STATUS_SUSPEND	DMC_FREQ_LEVEL_LOW
+			SYS_STATUS_VIDEO_4K	DMC_FREQ_LEVEL_MID_HIGH
+			SYS_STATUS_VIDEO_4K_10B	DMC_FREQ_LEVEL_MID_HIGH
+			SYS_STATUS_BOOST	DMC_FREQ_LEVEL_HIGH
+			SYS_STATUS_ISP		DMC_FREQ_LEVEL_HIGH
+			SYS_STATUS_PERFORMANCE	DMC_FREQ_LEVEL_HIGH
+			SYS_STATUS_DUALVIEW	DMC_FREQ_LEVEL_HIGH
+		>;
+		auto-min-freq = <324000>;
+		auto-freq-en = <1>;
+		status = "disabled";
+	};
+
+	dmc_opp_table: dmc-opp-table {
+		compatible = "operating-points-v2";
+
+		opp-1560000000 {
+			opp-hz = /bits/ 64 <1560000000>;
+			opp-microvolt = <900000 900000 950000>;
+		};
+	};
+
 	fiq_debugger: fiq-debugger {
 		compatible = "rockchip,fiq-debugger";
 		rockchip,serial-id = <0>;
