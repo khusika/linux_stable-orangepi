@@ -8834,13 +8834,26 @@ static bool vop2_crtc_mode_fixup(struct drm_crtc *crtc,
 				 vp->id, old_hdisplay, adj_mode->crtc_hdisplay);
 		}
 	}
-	/*
-	 * For RK3576 YUV420 output, hden signal introduce one cycle delay,
-	 * so we need to adjust hfp and hbp to compatible with this design.
-	 */
-	if (vop2->version == VOP_VERSION_RK3576 && vcstate->output_mode == ROCKCHIP_OUT_MODE_YUV420) {
-		adj_mode->crtc_hsync_start += 2;
-		adj_mode->crtc_hsync_end += 2;
+
+	if (vop2->version == VOP_VERSION_RK3576) {
+		/*
+		 * For RK3576 YUV420 output, hden signal introduce one cycle delay,
+		 * so we need to adjust hfp and hbp to compatible with this design.
+		 */
+		if (vcstate->output_mode == ROCKCHIP_OUT_MODE_YUV420) {
+			adj_mode->crtc_hsync_start += 2;
+			adj_mode->crtc_hsync_end += 2;
+		}
+		/*
+		 * For RK3576 DP output, vp send 2 pixels 1 cycle. So the hactive,
+		 * hfp, hsync, hbp should be 2-pixel aligned.
+		 */
+		if (output_if_is_dp(vcstate->output_if)) {
+			adj_mode->crtc_hdisplay += adj_mode->crtc_hdisplay % 2;
+			adj_mode->crtc_hsync_start += adj_mode->crtc_hsync_start % 2;
+			adj_mode->crtc_hsync_end += adj_mode->crtc_hsync_end % 2;
+			adj_mode->crtc_htotal += adj_mode->crtc_htotal % 2;
+		}
 	}
 
 	if (mode->flags & DRM_MODE_FLAG_DBLCLK || vcstate->output_if & VOP_OUTPUT_IF_BT656)
