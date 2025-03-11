@@ -1572,7 +1572,7 @@ static void rkvenc2_bs_overflow_handle(struct mpp_dev *mpp)
 		if (bs_wr >= bs_top)
 			bs_wr = bs_bot;
 		/* update write addr for enc continue */
-		mpp_write(mpp, RKVENC2_REG_ADR_BSBS, bs_wr);
+		mpp_write(mpp, RKVENC580_REG_ADR_BSBS, bs_wr);
 	} else {
 		bs_rd = mpp_read(mpp, RKVENC2_REG_ADR_BSBR);
 		bs_wr = mpp_read(mpp, RKVENC2_REG_ST_BSB);
