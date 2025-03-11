@@ -698,7 +698,8 @@ enum vop_hdr_format {
 };
 
 struct post_csc_convert_mode {
-	enum drm_color_encoding color_encoding;
+	enum drm_color_encoding intput_color_encoding;
+	enum drm_color_encoding output_color_encoding;
 	bool is_input_yuv;
 	bool is_output_yuv;
 	bool is_input_full_range;
