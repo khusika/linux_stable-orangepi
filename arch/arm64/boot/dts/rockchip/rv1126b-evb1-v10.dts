@@ -12,6 +12,10 @@
 	compatible = "rockchip,rv1126b-evb1-v10", "rockchip,rv1126b";
 };
 
+&backlight {
+	pwms = <&pwm2_8ch_4 0 25000 0>;
+};
+
 &i2c0 {
 	status = "okay";
 
@@ -131,4 +135,9 @@
 			rockchip,pins = <0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
+};
+
+&pwm2_8ch_4 {
+	pinctrl-0 = <&pwm2m1_ch4_pins>;
+	status = "okay";
 };
