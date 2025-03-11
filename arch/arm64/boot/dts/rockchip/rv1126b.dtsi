@@ -4,6 +4,7 @@
  */
 
 #include <dt-bindings/clock/rockchip,rv1126b-cru.h>
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/phy/phy.h>
