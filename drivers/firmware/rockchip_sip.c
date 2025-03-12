@@ -371,6 +371,15 @@ struct arm_smccc_res sip_smc_gpio_config(u32 sub_func_id, u32 arg1, u32 arg2,
 }
 EXPORT_SYMBOL_GPL(sip_smc_gpio_config);
 
+int sip_smc_cpu_pm_config(u32 func, u32 id, u32 cfg)
+{
+	struct arm_smccc_res res;
+
+	res = __invoke_sip_fn_smc(SIP_CPU_PM_CFG, func, id, cfg);
+	return res.a0;
+}
+EXPORT_SYMBOL_GPL(sip_smc_cpu_pm_config);
+
 /************************** fiq debugger **************************************/
 /*
  * AArch32 is not allowed to call SMC64(ATF framework does not support), so we
