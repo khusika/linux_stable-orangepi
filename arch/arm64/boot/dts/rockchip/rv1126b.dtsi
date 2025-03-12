@@ -618,6 +618,480 @@
 		};
 	};
 
+	/omit-if-no-ref/
+	qos_cpu: qos@20310000 {
+		compatible = "syscon";
+		reg = <0x20310000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_cpu: shaping@20310088 {
+		compatible = "syscon";
+		reg = <0x20310088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_emmc: qos@20320000 {
+		compatible = "syscon";
+		reg = <0x20320000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_emmc: shaping@20320088 {
+		compatible = "syscon";
+		reg = <0x20320088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_fspi0: qos@20320100 {
+		compatible = "syscon";
+		reg = <0x20320100 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_fspi0: shaping@20320188 {
+		compatible = "syscon";
+		reg = <0x20320188 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_usb2host: qos@20320200 {
+		compatible = "syscon";
+		reg = <0x20320200 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_usb2host: shaping@20320288 {
+		compatible = "syscon";
+		reg = <0x20320288 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_usb3otg: qos@20320300 {
+		compatible = "syscon";
+		reg = <0x20320300 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_usb3otg: shaping@20320388 {
+		compatible = "syscon";
+		reg = <0x20320388 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_gmac: qos@20330000 {
+		compatible = "syscon";
+		reg = <0x20330000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_gmac: shaping@20330088 {
+		compatible = "syscon";
+		reg = <0x20330088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_isp: qos@20330100 {
+		compatible = "syscon";
+		reg = <0x20330100 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_isp: shaping@20330188 {
+		compatible = "syscon";
+		reg = <0x20330188 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rkcan0: qos@20330200 {
+		compatible = "syscon";
+		reg = <0x20330200 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rkcan0: shaping@20330288 {
+		compatible = "syscon";
+		reg = <0x20330288 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rkcan1: qos@20330300 {
+		compatible = "syscon";
+		reg = <0x20330300 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rkcan1: shaping@20330388 {
+		compatible = "syscon";
+		reg = <0x20330388 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_sdmmc0: qos@20330400 {
+		compatible = "syscon";
+		reg = <0x20330400 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_sdmmc0: shaping@20330488 {
+		compatible = "syscon";
+		reg = <0x20330488 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_vicap: qos@20330500 {
+		compatible = "syscon";
+		reg = <0x20330500 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_vicap: shaping@20330588 {
+		compatible = "syscon";
+		reg = <0x20330588 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_vpsl: qos@20330600 {
+		compatible = "syscon";
+		reg = <0x20330600 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_vpsl: shaping@20330688 {
+		compatible = "syscon";
+		reg = <0x20330688 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_vpss: qos@20330700 {
+		compatible = "syscon";
+		reg = <0x20330700 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_vpss: shaping@20330788 {
+		compatible = "syscon";
+		reg = <0x20330788 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_saradc1: qos@20330800 {
+		compatible = "syscon";
+		reg = <0x20330800 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_saradc1: shaping@20330888 {
+		compatible = "syscon";
+		reg = <0x20330888 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_saradc2: qos@20330900 {
+		compatible = "syscon";
+		reg = <0x20330900 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_saradc2: shaping@20330988 {
+		compatible = "syscon";
+		reg = <0x20330988 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_npu: qos@20340000 {
+		compatible = "syscon";
+		reg = <0x20340000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_npu: shaping@20340088 {
+		compatible = "syscon";
+		reg = <0x20340088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rkvenc: qos@20350000 {
+		compatible = "syscon";
+		reg = <0x20350000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rkvenc: shaping@20350088 {
+		compatible = "syscon";
+		reg = <0x20350088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_saradc0: qos@20350100 {
+		compatible = "syscon";
+		reg = <0x20350100 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_saradc0: shaping@20350188 {
+		compatible = "syscon";
+		reg = <0x20350188 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_sdmmc1: qos@20350200 {
+		compatible = "syscon";
+		reg = <0x20350200 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_sdmmc1: shaping@20350288 {
+		compatible = "syscon";
+		reg = <0x20350288 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_lpmcu: qos@20360000 {
+		compatible = "syscon";
+		reg = <0x20360000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_lpmcu: shaping@20360088 {
+		compatible = "syscon";
+		reg = <0x20360088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_mcu: qos@20370100 {
+		compatible = "syscon";
+		reg = <0x20370100 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_mcu: shaping@20370188 {
+		compatible = "syscon";
+		reg = <0x20370188 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rga: qos@20370200 {
+		compatible = "syscon";
+		reg = <0x20370200 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rga: shaping@20370288 {
+		compatible = "syscon";
+		reg = <0x20370288 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rkce: qos@20370400 {
+		compatible = "syscon";
+		reg = <0x20370400 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rkce: shaping@20370488 {
+		compatible = "syscon";
+		reg = <0x20370488 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rkdma: qos@20370500 {
+		compatible = "syscon";
+		reg = <0x20370500 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rkdma: shaping@20370588 {
+		compatible = "syscon";
+		reg = <0x20370588 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_decom: qos@20380000 {
+		compatible = "syscon";
+		reg = <0x20380000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_decom: shaping@20380088 {
+		compatible = "syscon";
+		reg = <0x20380088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_ooc: qos@20380100 {
+		compatible = "syscon";
+		reg = <0x20380100 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_ooc: shaping@20380188 {
+		compatible = "syscon";
+		reg = <0x20380188 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rkjpeg: qos@20380200 {
+		compatible = "syscon";
+		reg = <0x20380200 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rkjpeg: shaping@20380288 {
+		compatible = "syscon";
+		reg = <0x20380288 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_rkvdec: qos@20380300 {
+		compatible = "syscon";
+		reg = <0x20380300 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_rkvdec: shaping@20380388 {
+		compatible = "syscon";
+		reg = <0x20380388 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_vop: qos@20380400 {
+		compatible = "syscon";
+		reg = <0x20380400 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_vop: shaping@20380488 {
+		compatible = "syscon";
+		reg = <0x20380488 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_avsp_ro: qos@20390000 {
+		compatible = "syscon";
+		reg = <0x20390000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_avsp_ro: shaping@20390088 {
+		compatible = "syscon";
+		reg = <0x20390088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_avsp_wo: qos@20390100 {
+		compatible = "syscon";
+		reg = <0x20390100 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_avsp_wo: shaping@20390188 {
+		compatible = "syscon";
+		reg = <0x20390188 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_fec_ro: qos@20390200 {
+		compatible = "syscon";
+		reg = <0x20390200 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_fec_ro: shaping@20390288 {
+		compatible = "syscon";
+		reg = <0x20390288 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_fec_wo: qos@20390300 {
+		compatible = "syscon";
+		reg = <0x20390300 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_fec_wo: shaping@20390388 {
+		compatible = "syscon";
+		reg = <0x20390388 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_aad: qos@203a0000 {
+		compatible = "syscon";
+		reg = <0x203a0000 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_aad: shaping@203a0088 {
+		compatible = "syscon";
+		reg = <0x203a0088 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_afe: qos@203a0100 {
+		compatible = "syscon";
+		reg = <0x203a0100 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_afe: shaping@203a0188 {
+		compatible = "syscon";
+		reg = <0x203a0188 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_atdd: qos@203a0200 {
+		compatible = "syscon";
+		reg = <0x203a0200 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_atdd: shaping@203a0288 {
+		compatible = "syscon";
+		reg = <0x203a0288 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_fspi1: qos@203a0300 {
+		compatible = "syscon";
+		reg = <0x203a0300 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_fspi1: shaping@203a0388 {
+		compatible = "syscon";
+		reg = <0x203a0388 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_lpdma: qos@203a0400 {
+		compatible = "syscon";
+		reg = <0x203a0400 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_lpdma: shaping@203a0488 {
+		compatible = "syscon";
+		reg = <0x203a0488 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_spi2ahb: qos@203a0500 {
+		compatible = "syscon";
+		reg = <0x203a0500 0x20>;
+	};
+
+	/omit-if-no-ref/
+	shaping_spi2ahb: shaping@203a0588 {
+		compatible = "syscon";
+		reg = <0x203a0588 0x4>;
+	};
+
+	/omit-if-no-ref/
+	qos_aisp: qos@203b0000 {
+		compatible = "syscon";
+		reg = <0x203b0000 0x20>;
+	};
+
 	lpmcu_mbox0: mailbox@20500000 {
 		compatible = "rockchip,rv1126b-mailbox", "rockchip,rk3576-mailbox";
 		reg = <0x20500000 0x20>;
@@ -747,13 +1221,24 @@
 			/* These power domains are grouped by VD_NPU */
 			power-domain@RV1126B_PD_NPU {
 				reg = <RV1126B_PD_NPU>;
+				pm_qos = <&qos_npu>;
+				pm_shaping = <&shaping_npu>;
 			};
 			/* These power domains are grouped by VD_LOGIC */
 			power-domain@RV1126B_PD_VDO {
 				reg = <RV1126B_PD_VDO>;
+				pm_qos = <&qos_vop>,
+					 <&qos_rkvdec>,
+					 <&qos_rkjpeg>,
+					 <&qos_decom>;
+				pm_shaping = <&shaping_vop>,
+					     <&shaping_rkvdec>,
+					     <&shaping_rkjpeg>,
+					     <&shaping_decom>;
 			};
 			power-domain@RV1126B_PD_AISP {
 				reg = <RV1126B_PD_AISP>;
+				pm_qos = <&qos_aisp>;
 			};
 		};
 	};
