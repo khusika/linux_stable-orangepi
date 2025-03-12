@@ -2466,8 +2466,8 @@ dw_hdmi_rockchip_select_output(struct drm_connector_state *conn_state,
 		*enc_out_encoding = V4L2_YCBCR_ENC_BT2020;
 		yuv422_out = true;
 	/* bt709 hdr output */
-	} else if ((hdmi->colorimetry <= DRM_MODE_COLORIMETRY_BT2020_CYCC) &&
-		   (hdmi->colorimetry >= DRM_MODE_COLORIMETRY_BT2020_YCC) &&
+	} else if (((hdmi->colorimetry <= DRM_MODE_COLORIMETRY_BT2020_CYCC) ||
+		    (hdmi->colorimetry >= DRM_MODE_COLORIMETRY_BT2020_YCC)) &&
 		   (conn_state->connector->hdr_sink_metadata.hdmi_type1.eotf & BIT(*eotf) &&
 		    *eotf > HDMI_EOTF_TRADITIONAL_GAMMA_SDR)) {
 		*enc_out_encoding = V4L2_YCBCR_ENC_709;
