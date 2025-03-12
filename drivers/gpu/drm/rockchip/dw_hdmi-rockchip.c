@@ -3248,6 +3248,9 @@ static void dw_hdmi_rockchip_crtc_post_enable(void *data, struct drm_crtc *crtc)
 	struct rockchip_hdmi *hdmi = (struct rockchip_hdmi *)data;
 	int output_if;
 
+	if (!crtc)
+		return;
+
 	switch (hdmi->id) {
 	case 0:
 		output_if = VOP_OUTPUT_IF_HDMI0;
@@ -3267,6 +3270,9 @@ static void dw_hdmi_rockchip_crtc_pre_disable(void *data, struct drm_crtc *crtc)
 {
 	struct rockchip_hdmi *hdmi = (struct rockchip_hdmi *)data;
 	int output_if;
+
+	if (!crtc)
+		return;
 
 	switch (hdmi->id) {
 	case 0:
