@@ -2226,6 +2226,29 @@
 		status = "disabled";
 	};
 
+	rkavsp: rkavsp@21f90000 {
+		compatible = "rockchip,rv1126b-rkavsp";
+		reg = <0x21f90000 0xf00>;
+		interrupts = <GIC_SPI 122 IRQ_TYPE_LEVEL_HIGH>, <GIC_SPI 123 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "dcp_irq", "rcs_irq";
+		clocks = <&cru ACLK_AVSP>, <&cru HCLK_AVSP>;
+		clock-names = "aclk_avsp", "hclk_avsp";
+		iommus = <&rkavsp_mmu>;
+		status = "disabled";
+	};
+
+	rkavsp_mmu: iommu@21f90f00 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x21f90f00 0x100>;
+		interrupts = <GIC_SPI 124 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "avsp_mmu";
+		clocks = <&cru ACLK_AVSP>, <&cru HCLK_AVSP>;
+		clock-names = "aclk", "iface";
+		#iommu-cells = <0>;
+		rockchip,disable-mmu-reset;
+		status = "disabled";
+	};
+
 	rkaiisp: rkaiisp@21fa0000 {
 		compatible = "rockchip,rv1126b-rkaiisp";
 		reg = <0x21fa0000 0x3f00>;
