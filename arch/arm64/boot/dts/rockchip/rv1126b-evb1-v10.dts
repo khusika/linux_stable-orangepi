@@ -10,10 +10,46 @@
 / {
 	model = "Rockchip RV1126B EVB1 V10 Board";
 	compatible = "rockchip,rv1126b-evb1-v10", "rockchip,rv1126b";
+
+	vcc_sd: vcc-sd {
+		compatible = "regulator-fixed";
+		gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
+		regulator-name = "vcc_sd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-low;
+		vin-supply = <&vcc12v_dcin>;
+	};
+
+	vccio_sd: vccio-sd {
+		compatible = "regulator-gpio";
+		regulator-boot-on;
+		regulator-name = "vccio_sd";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdmmc_volt>;
+		gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_sys>;
+		states = <1800000 0x0
+			  3300000 0x1>;
+	};
+
 };
 
 &backlight {
 	pwms = <&pwm2_8ch_4 0 25000 0>;
+};
+
+&emmc {
+	bus-width = <8>;
+	cap-mmc-highspeed;
+	non-removable;
+	mmc-hs200-1_8v;
+	rockchip,default-sample-phase = <90>;
+	no-sdio;
+	no-sd;
+	status = "okay";
 };
 
 &i2c0 {
@@ -135,9 +171,30 @@
 			rockchip,pins = <0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
+
+	sdmmc {
+		/omit-if-no-ref/
+		sdmmc_volt: sdmmc-volt {
+			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
 
 &pwm2_8ch_4 {
 	pinctrl-0 = <&pwm2m1_ch4_pins>;
+	status = "okay";
+};
+
+&sdmmc0 {
+	max-frequency = <200000000>;
+	no-sdio;
+	no-mmc;
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+	disable-wp;
+	sd-uhs-sdr104;
+	vmmc-supply = <&vcc_sd>;
+	vqmmc-supply = <&vccio_sd>;
 	status = "okay";
 };
