@@ -91,3 +91,6 @@
 	status = "okay";
 };
 
+&vop {
+	status = "okay";
+};
