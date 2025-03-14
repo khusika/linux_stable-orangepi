@@ -636,6 +636,7 @@ static int rkcif_output_fmt_check(struct rkcif_stream *stream,
 	struct csi_channel_info *channel = &stream->cifdev->channels[stream->id];
 	int ret = -EINVAL;
 
+	stream->rounding_bit = 0;
 	switch (input_fmt->mbus_code) {
 	case MEDIA_BUS_FMT_YUYV8_2X8:
 	case MEDIA_BUS_FMT_YVYU8_2X8:
@@ -8135,29 +8136,27 @@ static int rkcif_stream_start_rv1126b(struct rkcif_stream *stream, unsigned int 
 	}
 
 	dev->workmode = RKCIF_WORKMODE_PINGPONG;
-	if (atomic_read(&dev->pipe.stream_cnt) == 0) {
-		href_pol = (mbus_flags & V4L2_MBUS_HSYNC_ACTIVE_HIGH) ?
-			HSY_HIGH_ACTIVE : HSY_LOW_ACTIVE;
-		vsync_pol = (mbus_flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH) ?
-			VSY_HIGH_ACTIVE : VSY_LOW_ACTIVE;
-		if ((inputmode & INPUT_BT1120_YUV422) == INPUT_BT1120_YUV422)
-			if (CIF_FETCH_IS_Y_FIRST(stream->cif_fmt_in->dvp_fmt_val))
-				yc_swap = BT1120_YC_SWAP_RV1126B;
-		inputmode = rkcif_determine_input_mode_rv1126b(stream);
-		val = ENABLE_CAPTURE
-			| yc_swap
-			| inputmode
-			| bt1120_edge_mode
-			| (href_pol << 6)
-			| (vsync_pol << 6)
-			| multi_id_en
-			| multi_id_sel
-			| multi_id_mode
-			| DVP_SW_WATER_LINE_25_RV1126B;
-		if (stream->sw_dbg_en)
-			val |= BIT(31);
-		rkcif_write_register(dev, CIF_REG_DVP_CTRL, val);
-	}
+	href_pol = (mbus_flags & V4L2_MBUS_HSYNC_ACTIVE_HIGH) ?
+		HSY_HIGH_ACTIVE : HSY_LOW_ACTIVE;
+	vsync_pol = (mbus_flags & V4L2_MBUS_VSYNC_ACTIVE_HIGH) ?
+		VSY_HIGH_ACTIVE : VSY_LOW_ACTIVE;
+	if ((inputmode & INPUT_BT1120_YUV422) == INPUT_BT1120_YUV422)
+		if (CIF_FETCH_IS_Y_FIRST(stream->cif_fmt_in->dvp_fmt_val))
+			yc_swap = BT1120_YC_SWAP_RV1126B;
+	inputmode = rkcif_determine_input_mode_rv1126b(stream);
+	val = ENABLE_CAPTURE
+		| yc_swap
+		| inputmode
+		| bt1120_edge_mode
+		| (href_pol << 6)
+		| (vsync_pol << 6)
+		| multi_id_en
+		| multi_id_sel
+		| multi_id_mode
+		| DVP_SW_WATER_LINE_25_RV1126B;
+	if (stream->sw_dbg_en)
+		val |= BIT(31);
+	rkcif_write_register(dev, CIF_REG_DVP_CTRL, val);
 
 	channel->csi_fmt_val = stream->cif_fmt_in->csi_fmt_val;
 	parse_type = rkcif_get_parse_type_rk3576(stream->cif_fmt_in, channel);
@@ -15189,8 +15188,10 @@ void rkcif_irq_pingpong_v1(struct rkcif_device *cif_dev)
 			rkcif_write_register(cif_dev, CIF_REG_DVP_INTSTAT, intstat);
 		else
 			return;
-		lastline = rkcif_read_register(cif_dev, CIF_REG_DVP_LINE_CNT);
-		cif_dev->err_state_work.lastline = lastline;
+		if (cif_dev->chip_id < CHIP_RV1126B_CIF) {
+			lastline = rkcif_read_register(cif_dev, CIF_REG_DVP_LINE_CNT);
+			cif_dev->err_state_work.lastline = lastline;
+		}
 		cif_dev->err_state_work.intstat = intstat;
 		stream = &cif_dev->stream[RKCIF_STREAM_CIF];
 
@@ -15200,6 +15201,16 @@ void rkcif_irq_pingpong_v1(struct rkcif_device *cif_dev)
 			if (cif_dev->chip_id >= CHIP_RV1103B_CIF)
 				rkcif_write_register_and(cif_dev, CIF_REG_DVP_CTRL, ~0x000f0000);
 			cif_dev->err_state |= RKCIF_ERR_SIZE;
+			if (cif_dev->chip_id >= CHIP_RV1126B_CIF) {
+				cif_dev->err_state_work.size_id0 = rkcif_read_register(cif_dev,
+					CIF_REG_DVP_FRAME_NUM_ID0);
+				cif_dev->err_state_work.size_id1 = rkcif_read_register(cif_dev,
+					CIF_REG_DVP_FRAME_NUM_ID1);
+				cif_dev->err_state_work.size_id2 = rkcif_read_register(cif_dev,
+					CIF_REG_DVP_FRAME_NUM_ID2);
+				cif_dev->err_state_work.size_id3 = rkcif_read_register(cif_dev,
+					CIF_REG_DVP_FRAME_NUM_ID3);
+			}
 		}
 
 		if (intstat & DVP_FIFO_OVERFLOW) {
@@ -15214,6 +15225,7 @@ void rkcif_irq_pingpong_v1(struct rkcif_device *cif_dev)
 
 		if (intstat & INTSTAT_ERR_RK3588) {
 			cif_dev->irq_stats.all_err_cnt++;
+			return;
 		}
 
 		for (i = 0; i < RKCIF_MAX_STREAM_DVP; i++) {

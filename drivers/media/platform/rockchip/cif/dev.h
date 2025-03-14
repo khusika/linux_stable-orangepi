@@ -37,6 +37,7 @@
 #define OF_CIF_MONITOR_PARA	"rockchip,cif-monitor"
 #define OF_CIF_WAIT_LINE	"wait-line"
 #define OF_CIF_FASTBOOT_RESERVED_BUFS	"fastboot-reserved-bufs"
+#define OF_CIF_PINS_GROUP	"cif-pins-group"
 
 #define CIF_MONITOR_PARA_NUM	(5)
 
@@ -1053,6 +1054,7 @@ struct rkcif_device {
 	u32				pre_buf_num;
 	u32				pre_buf_addr[MAX_PRE_BUF_NUM];
 	u64				pre_buf_timestamp[MAX_PRE_BUF_NUM];
+	u32				dvp_pin_group;
 };
 
 extern struct platform_driver rkcif_plat_drv;

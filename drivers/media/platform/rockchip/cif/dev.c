@@ -1259,8 +1259,12 @@ void rkcif_write_grf_reg(struct rkcif_device *dev,
 
 	if (index < CIF_REG_INDEX_MAX) {
 		if (index > CIF_REG_DVP_CTRL) {
-			if (!IS_ERR(cif_hw->grf))
+			if (!IS_ERR(cif_hw->grf)) {
 				regmap_write(cif_hw->grf, reg->offset, val);
+				v4l2_dbg(4, rkcif_debug, &dev->v4l2_dev,
+					 "write grf reg[0x%x]:0x%x!!!\n",
+					 reg->offset, val);
+			}
 		} else {
 			v4l2_dbg(1, rkcif_debug, &dev->v4l2_dev,
 				 "write reg[%d]:0x%x failed, maybe useless!!!\n",
@@ -1326,6 +1330,15 @@ void rkcif_enable_dvp_clk_dual_edge(struct rkcif_device *dev, bool on)
 			else
 				val = RK3568_CIF_PCLK_SINGLE_EDGE;
 			rkcif_write_grf_reg(dev, CIF_REG_GRF_CIFIO_CON, val);
+		} else if (dev->chip_id == CHIP_RV1126B_CIF) {
+			if (on)
+				val = RK3568_CIF_PCLK_DUAL_EDGE;
+			else
+				val = RK3568_CIF_PCLK_SINGLE_EDGE;
+			if (dev->dvp_pin_group == 0)
+				rkcif_write_grf_reg(dev, CIF_REG_GRF_CIFIO_CON, val);
+			else
+				rkcif_write_grf_reg(dev, CIF_REG_GRF_CIFIO_CON1, val);
 		}
 	}
 
@@ -1374,6 +1387,16 @@ void rkcif_config_dvp_clk_sampling_edge(struct rkcif_device *dev,
 				val = RK3576_CIF_PCLK_SAMPLING_EDGE_RISING;
 			else
 				val = RK3576_CIF_PCLK_SAMPLING_EDGE_FALLING;
+		} else if (dev->chip_id == CHIP_RV1126B_CIF) {
+			if (edge == RKCIF_CLK_RISING)
+				val = RV1126B_CIF_PCLK_SAMPLING_EDGE_RISING;
+			else
+				val = RV1126B_CIF_PCLK_SAMPLING_EDGE_FALLING;
+			if (dev->dvp_pin_group == 0)
+				rkcif_write_grf_reg(dev, CIF_REG_GRF_CIFIO_CON, val);
+			else
+				rkcif_write_grf_reg(dev, CIF_REG_GRF_CIFIO_CON1, val);
+			return;
 		}
 		rkcif_write_grf_reg(dev, CIF_REG_GRF_CIFIO_CON, val);
 	}
@@ -3045,6 +3068,24 @@ static const struct of_device_id rkcif_plat_of_match[] = {
 	{},
 };
 
+static void rkcif_parse_pins_group(struct rkcif_device *cif_dev)
+{
+	struct device_node *np = cif_dev->dev->of_node;
+	int ret = 0;
+
+	ret = of_property_read_u32(np,
+			     OF_CIF_PINS_GROUP,
+			     &cif_dev->dvp_pin_group);
+	if (ret != 0)
+		cif_dev->dvp_pin_group = 0;
+	if (cif_dev->chip_id == CHIP_RV1126B_CIF &&
+	    cif_dev->dvp_pin_group > 1) {
+		dev_err(cif_dev->dev, "rkcif get pins group failed %d\n", cif_dev->dvp_pin_group);
+		return;
+	}
+	dev_info(cif_dev->dev, "rkcif pins used group %d\n", cif_dev->dvp_pin_group);
+}
+
 static void rkcif_parse_dts(struct rkcif_device *cif_dev)
 {
 	int ret = 0;
@@ -3066,6 +3107,7 @@ static void rkcif_parse_dts(struct rkcif_device *cif_dev)
 		cif_dev->is_camera_over_bridge = true;
 	else
 		cif_dev->is_camera_over_bridge = false;
+	rkcif_parse_pins_group(cif_dev);
 }
 
 static int rkcif_get_reserved_mem(struct rkcif_device *cif_dev)
