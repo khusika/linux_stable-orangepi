@@ -21,6 +21,20 @@
 		vin-supply = <&vcc12v_dcin>;
 	};
 
+	vcc5v0_host: vcc5v0-host {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_host";
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&gpio0 RK_PD1 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_dcin>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc5v0_host_en>;
+	};
+
 	vccsys_stb: vccsys-stb {
 		compatible = "regulator-fixed";
 		regulator-name = "vccsys_stb";
@@ -160,6 +174,14 @@
 	pwms = <&pwm2_8ch_7 0 25000 0>;
 };
 
+&pinctrl {
+	usb {
+		vcc5v0_host_en: vcc5v0-host-en {
+			rockchip,pins = <0 RK_PD1 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+};
+
 &pwm0_8ch_0 {
 	status = "okay";
 };
@@ -174,4 +196,18 @@
 
 &pwm2_8ch_7 {
 	status = "okay";
+};
+
+&usb2phy_host {
+	phy-supply = <&vcc5v0_host>;
+};
+
+&usb_drd_dwc3 {
+	dr_mode = "otg";
+	extcon = <&usb2phy>;
+	maximum-speed = "high-speed";
+	phys = <&usb2phy_otg>;
+	phy-names = "usb2-phy";
+	snps,dis_u2_susphy_quirk;
+	snps,usb2-lpm-disable;
 };
