@@ -1557,30 +1557,42 @@ static const struct rockchip_combphy_cfg rv1126b_combphy_cfgs = {
 };
 
 static const struct of_device_id rockchip_combphy_of_match[] = {
+#ifdef CONFIG_CPU_RK3528
 	{
 		.compatible = "rockchip,rk3528-naneng-combphy",
 		.data = &rk3528_combphy_cfgs,
 	},
+#endif
+#ifdef CONFIG_CPU_RK3562
 	{
 		.compatible = "rockchip,rk3562-naneng-combphy",
 		.data = &rk3562_combphy_cfgs,
 	},
+#endif
+#ifdef CONFIG_CPU_RK3568
 	{
 		.compatible = "rockchip,rk3568-naneng-combphy",
 		.data = &rk3568_combphy_cfgs,
 	},
+#endif
+#ifdef CONFIG_CPU_RK3576
 	{
 		.compatible = "rockchip,rk3576-naneng-combphy",
 		.data = &rk3576_combphy_cfgs,
 	},
+#endif
+#ifdef CONFIG_CPU_RK3588
 	{
 		.compatible = "rockchip,rk3588-naneng-combphy",
 		.data = &rk3588_combphy_cfgs,
 	},
+#endif
+#ifdef CONFIG_CPU_RV1126B
 	{
 		.compatible = "rockchip,rv1126b-usb3-phy",
 		.data = &rv1126b_combphy_cfgs,
 	},
+#endif
 	{ },
 };
 MODULE_DEVICE_TABLE(of, rockchip_combphy_of_match);
