@@ -2646,10 +2646,13 @@ dw_hdmi_connector_detect(struct drm_connector *connector, bool force)
 	}
 
 out:
-	if (result == connector_status_connected)
+	if (result == connector_status_connected) {
 		extcon_set_state_sync(hdmi->extcon, EXTCON_DISP_HDMI, true);
-	else
+		handle_plugged_change(hdmi, true);
+	} else {
 		extcon_set_state_sync(hdmi->extcon, EXTCON_DISP_HDMI, false);
+		handle_plugged_change(hdmi, false);
+	}
 
 	return result;
 }
@@ -3577,7 +3580,6 @@ static void dw_hdmi_qp_bridge_atomic_disable(struct drm_bridge *bridge,
 
 	dw_hdmi_qp_hdcp_disable(hdmi, conn_state);
 
-	handle_plugged_change(hdmi, false);
 	if (hdmi->plat_data->crtc_pre_disable)
 		hdmi->plat_data->crtc_pre_disable(data, bridge->encoder->crtc);
 	mutex_lock(&hdmi->mutex);
@@ -3660,8 +3662,6 @@ static void dw_hdmi_qp_bridge_atomic_enable(struct drm_bridge *bridge,
 	dw_hdmi_qp_init_audio_infoframe(hdmi);
 	dw_hdmi_qp_audio_enable(hdmi);
 	hdmi_clk_regenerator_update_pixel_clock(hdmi);
-
-	handle_plugged_change(hdmi, true);
 
 	if (hdmi->panel)
 		drm_panel_enable(hdmi->panel);
