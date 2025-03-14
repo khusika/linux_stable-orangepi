@@ -11,6 +11,32 @@
 	model = "Rockchip RV1126B EVB1 V10 Board";
 	compatible = "rockchip,rv1126b-evb1-v10", "rockchip,rv1126b";
 
+	vbus5v0_typec: vbus5v0-typec {
+		compatible = "regulator-fixed";
+		regulator-name = "vbus5v0_typec";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&gpio5 RK_PD6 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_sys>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&typec5v_pwren>;
+	};
+
+	vcc5v0_host: vcc5v0-host {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_host";
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		enable-active-high;
+		gpio = <&gpio5 RK_PA7 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_sys>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&vcc5v0_host_en>;
+	};
+
 	vcc_sd: vcc-sd {
 		compatible = "regulator-fixed";
 		gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
@@ -178,6 +204,16 @@
 			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
+
+	usb {
+		typec5v_pwren: typec5v-pwren {
+			rockchip,pins = <5 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+
+		vcc5v0_host_en: vcc5v0-host-en {
+			rockchip,pins = <5 RK_PA7 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
 };
 
 &pwm2_8ch_4 {
@@ -197,4 +233,17 @@
 	vmmc-supply = <&vcc_sd>;
 	vqmmc-supply = <&vccio_sd>;
 	status = "okay";
+};
+
+&usb2phy_host {
+	phy-supply = <&vcc5v0_host>;
+};
+
+&usb2phy_otg {
+	vbus-supply = <&vbus5v0_typec>;
+};
+
+&usb_drd_dwc3 {
+	dr_mode = "otg";
+	extcon = <&usb2phy>;
 };
