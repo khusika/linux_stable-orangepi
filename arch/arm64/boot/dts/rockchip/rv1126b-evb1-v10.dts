@@ -85,6 +85,14 @@
 		pinctrl-0 = <&vcc5v0_host_en>;
 	};
 
+	vcc_mipi: vcc-mipi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_mipi";
+		gpio = <&gpio7 RK_PA2 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
 	vcc_sd: vcc-sd {
 		compatible = "regulator-fixed";
 		gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
@@ -145,6 +153,22 @@
 
 &backlight {
 	pwms = <&pwm2_8ch_4 0 25000 0>;
+};
+
+&display_subsystem {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+};
+
+&dsi_in_vop {
+	status = "okay";
+};
+
+&dsi_panel {
+	power-supply = <&vcc_mipi>;
 };
 
 &emmc {
@@ -271,6 +295,10 @@
 	};
 };
 
+&mipi_dphy {
+	status = "okay";
+};
+
 &pinctrl {
 	pmic {
 		pmic_int: pmic-int {
@@ -316,6 +344,10 @@
 
 &pwm2_8ch_4 {
 	pinctrl-0 = <&pwm2m1_ch4_pins>;
+	status = "okay";
+};
+
+&route_dsi {
 	status = "okay";
 };
 
