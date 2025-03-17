@@ -95,6 +95,7 @@ long vpss_rockit_action(int *file_id, unsigned int cmd, void *arg)
 	case RKVPSS_CMD_CHECKPARAMS:
 	case RKVPSS_CMD_WRAP_DVBM_INIT:
 	case RKVPSS_CMD_WRAP_DVBM_DEINIT:
+	case RKVPSS_CMD_GET_WRAP_SEQ:
 		if (!rkvpss_ofl_check_file_id(global_ofl, *file_id)) {
 			v4l2_err(&global_ofl->v4l2_dev, "file_id error\n");
 			ret = -EINVAL;

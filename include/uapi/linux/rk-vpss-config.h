@@ -101,6 +101,9 @@
 #define RKVPSS_CMD_WRAP_DVBM_DEINIT \
 	_IOW('V', BASE_VIDIOC_PRIVATE + 104, int *)
 
+#define RKVPSS_CMD_GET_WRAP_SEQ \
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 105, int *)
+
 /********************************************************************/
 
 /* struct rkvpss_mirror_flip

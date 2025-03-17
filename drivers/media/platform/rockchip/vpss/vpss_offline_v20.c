@@ -1776,6 +1776,8 @@ static int rkvpss_ofl_run(struct rkvpss_offline_dev *ofl,
 	if (!ret) {
 		v4l2_err(&ofl->v4l2_dev, "working timeout\n");
 		ret = -EAGAIN;
+		if (cfg->input.dmabuf)
+			rkvpss_soft_reset(ofl->hw);
 	} else {
 		ret = 0;
 	}
@@ -2397,6 +2399,28 @@ static void rkvpss_ofl_wrap_dvbm_deinit(struct rkvpss_offline_dev *ofl, int *id)
 	rkvpss_ofl_dvbm_deinit(ofl, *id);
 }
 
+static void rkvpss_ofl_get_wrap_seq(struct rkvpss_offline_dev *ofl, int *seq)
+{
+	struct rkvpss_hw_dev *hw = ofl->hw;
+	u32 mask, val;
+
+	v4l2_dbg(4, rkvpss_debug, &ofl->v4l2_dev, "dev_id:%d\n", *seq);
+
+	mask = RKVPSS_VPSS2ENC_SEL | RKVPSS2X_SENSOR_ID(7);
+	val = RKVPSS_VPSS2ENC_SEL | RKVPSS2X_SENSOR_ID(*seq);
+	rkvpss_hw_set_bits(hw, RKVPSS_VPSS_CTRL, mask, val);
+
+	if (hw->is_first) {
+		hw->is_first = false;
+		rkvpss_hw_write(hw, RKVPSS2X_VPSS2ENC_DEBUG, 0x1);
+		v4l2_dbg(4, rkvpss_debug, &ofl->v4l2_dev, "wrap is first\n");
+	}
+
+	*seq = RKVPSS2X_RO_VPSS2ENC_FRM_CNT(rkvpss_hw_read(ofl->hw, RKVPSS2X_VPSS2ENC_DEBUG));
+
+	v4l2_dbg(4, rkvpss_debug, &ofl->v4l2_dev, "hw frmame coount:%d\n", *seq);
+}
+
 long rkvpss_ofl_action(struct rkvpss_offline_dev *ofl,
 		       int file_id, unsigned int cmd,  void *arg)
 {
@@ -2431,6 +2455,9 @@ long rkvpss_ofl_action(struct rkvpss_offline_dev *ofl,
 		break;
 	case RKVPSS_CMD_WRAP_DVBM_DEINIT:
 		rkvpss_ofl_wrap_dvbm_deinit(ofl, arg);
+		break;
+	case RKVPSS_CMD_GET_WRAP_SEQ:
+		rkvpss_ofl_get_wrap_seq(ofl, arg);
 		break;
 	default:
 		ret = -EFAULT;

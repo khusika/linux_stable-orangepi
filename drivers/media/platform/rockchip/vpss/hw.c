@@ -936,6 +936,7 @@ static int rkvpss_hw_probe(struct platform_device *pdev)
 	hw_dev->is_shutdown = false;
 	hw_dev->is_mmu = is_iommu_enable(dev);
 	hw_dev->is_suspend = false;
+	hw_dev->is_first = false;
 	ret = of_reserved_mem_device_init(dev);
 	if (ret) {
 		is_mem_reserved = false;
@@ -1027,6 +1028,7 @@ static int __maybe_unused rkvpss_hw_runtime_resume(struct device *dev)
 			memset(buf, 0, RKVPSS_SW_REG_SIZE_MAX);
 			memcpy_fromio(buf, base, RKVPSS_SW_REG_SIZE);
 		}
+		hw_dev->is_first = true;
 	} else {
 		rkvpss_hw_reg_restore(hw_dev);
 		hw_dev->is_suspend = false;

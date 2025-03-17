@@ -68,6 +68,7 @@ struct rkvpss_hw_dev {
 	bool is_dma_contig;
 	bool is_shutdown;
 	bool is_suspend;
+	bool is_first;
 };
 
 #ifdef CONFIG_VIDEO_ROCKCHIP_VPSS_V10
