@@ -37,6 +37,17 @@
 		pinctrl-0 = <&vcc5v0_host_en>;
 	};
 
+	vcc5v0_sys: vcc5v0-sys {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_sys";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		vin-supply = <&vcc12v_dcin>;
+		status = "okay";
+	};
+
 	vcc_sd: vcc-sd {
 		compatible = "regulator-fixed";
 		gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
@@ -61,6 +72,19 @@
 			  3300000 0x1>;
 	};
 
+	vdd_npu: vdd-npu {
+		compatible = "pwm-regulator";
+		pwms = <&pwm0_8ch_0 0 25000 1>;
+		regulator-name = "vdd_npu";
+		regulator-init-microvolt = <950000>;
+		regulator-min-microvolt = <750000>;
+		regulator-max-microvolt = <1100000>;
+		regulator-always-on;
+		regulator-boot-on;
+		enable-gpios = <&gpio0 RK_PA3 GPIO_ACTIVE_HIGH>;
+		pwm-supply = <&vcc5v0_sys>;
+		status = "okay";
+	};
 };
 
 &backlight {
@@ -141,10 +165,10 @@
 				};
 			};
 
-			vcc5v0_sys: DCDC_REG4 {
-				regulator-name = "vcc5v0_sys";
-				regulator-min-microvolt = <5000000>;
-				regulator-max-microvolt = <5000000>;
+			vdd_logic: DCDC_REG4 {
+				regulator-name = "vdd_logic";
+				regulator-min-microvolt = <500000>;
+				regulator-max-microvolt = <1500000>;
 				regulator-initial-mode = <0x1>;
 				regulator-boot-on;
 				regulator-always-on;
