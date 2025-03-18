@@ -73,7 +73,7 @@ static bool is_support_iommu = true;
 #endif
 static bool iommu_reserve_map;
 
-static struct drm_driver rockchip_drm_driver;
+static const struct drm_driver rockchip_drm_driver;
 
 static unsigned int drm_debug;
 module_param_named(debug, drm_debug, int, 0600);
@@ -2250,7 +2250,7 @@ struct dma_buf *rockchip_drm_gem_prime_export(struct drm_gem_object *obj,
 
 DEFINE_DRM_GEM_FOPS(rockchip_drm_driver_fops);
 
-static struct drm_driver rockchip_drm_driver = {
+static const struct drm_driver rockchip_drm_driver = {
 	.driver_features	= DRIVER_MODESET | DRIVER_GEM | DRIVER_ATOMIC | DRIVER_RENDER,
 	.postclose		= rockchip_drm_postclose,
 	.lastclose		= rockchip_drm_lastclose,
