@@ -15336,6 +15336,7 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 	u32 full_plane_mask = 0, plane_mask = 0;
 	u32 phys_id;
 	u32 nr_planes;
+	int primary_plane_id;
 	int i, j;
 
 	/*
@@ -15346,7 +15347,20 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 	for (i = 0; i < vop2_data->nr_vps; i++) {
 		vp = &vop2->vps[i];
 		plane_mask = vp->plane_mask;
+		primary_plane_id = vp->primary_plane_phy_id;
 		nr_planes = hweight32(plane_mask);
+
+		/*
+		 * If the plane mask and primary plane both are assigned in DTS, the
+		 * primary plane should be included in the plane mask of VPx.
+		 */
+		if (plane_mask && primary_plane_id != ROCKCHIP_VOP2_PHY_ID_INVALID &&
+		    !(BIT(primary_plane_id) & plane_mask)) {
+			DRM_WARN("Invalid primary plane %s[0x%lx] for VP%d[plane mask: 0x%08x]\n",
+				 vop2_plane_phys_id_to_string(primary_plane_id),
+				 BIT(primary_plane_id), i, plane_mask);
+			return false;
+		}
 
 		/*
 		 * Every plane assigned to the specific VP should follow the constraints
