@@ -62,6 +62,54 @@
 		#size-cells = <1>;
 		ranges;
 
+		sai0_mclkin: sai0-mclkin {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "mclk_sai0_from_io";
+			status = "disabled";
+		};
+
+		sai1_mclkin: sai1-mclkin {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "mclk_sai1_from_io";
+			status = "disabled";
+		};
+
+		sai2_mclkin: sai2-mclkin {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "mclk_sai2_from_io";
+			status = "disabled";
+		};
+
+		sai0_sclkin: sai0-sclkin {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "sclk_sai0_from_io";
+			status = "disabled";
+		};
+
+		sai1_sclkin: sai1-sclkin {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "sclk_sai1_from_io";
+			status = "disabled";
+		};
+
+		sai2_sclkin: sai2-sclkin {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "sclk_sai2_from_io";
+			status = "disabled";
+		};
+
 		xin32k: xin32k {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
@@ -81,6 +129,39 @@
 			#clock-cells = <0>;
 			clock-frequency = <96000000>;
 			clock-output-names = "clk_rcosc";
+		};
+
+		sai0_mclkout: sai0-mclkout@20100048 {
+			compatible = "rockchip,clk-out";
+			reg = <0x20100048 0x4>;
+			clocks = <&cru MCLK_SAI0_OUT2IO>;
+			#clock-cells = <0>;
+			clock-output-names = "mclk_sai0_to_io";
+			rockchip,bit-shift = <0>;
+			rockchip,bit-set-to-disable;
+			status = "disabled";
+		};
+
+		sai1_mclkout: sai1-mclkout@20100048 {
+			compatible = "rockchip,clk-out";
+			reg = <0x20100048 0x4>;
+			clocks = <&cru MCLK_SAI1_OUT2IO>;
+			#clock-cells = <0>;
+			clock-output-names = "mclk_sai1_to_io";
+			rockchip,bit-shift = <1>;
+			rockchip,bit-set-to-disable;
+			status = "disabled";
+		};
+
+		sai2_mclkout: sai2-mclkout@20100048 {
+			compatible = "rockchip,clk-out";
+			reg = <0x20100048 0x4>;
+			clocks = <&cru MCLK_SAI2_OUT2IO>;
+			#clock-cells = <0>;
+			clock-output-names = "mclk_sai2_to_io";
+			rockchip,bit-shift = <2>;
+			rockchip,bit-set-to-disable;
+			status = "disabled";
 		};
 	};
 
