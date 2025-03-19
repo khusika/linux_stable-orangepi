@@ -3408,8 +3408,9 @@ static struct drm_info_list vop_debugfs_files[] = {
 	{ "gamma_lut", vop_gamma_show, 0, NULL },
 };
 
-static int vop_crtc_debugfs_init(struct drm_minor *minor, struct drm_crtc *crtc)
+static int vop_crtc_late_register(struct drm_crtc *crtc)
 {
+	struct drm_minor *minor = crtc->dev->primary;
 	struct vop *vop = to_vop(crtc);
 	int ret, i;
 
@@ -3443,6 +3444,13 @@ remove:
 	debugfs_remove(vop->debugfs);
 	vop->debugfs = NULL;
 	return ret;
+}
+
+static void vop_crtc_early_unregister(struct drm_crtc *crtc)
+{
+	struct vop *vop = to_vop(crtc);
+
+	debugfs_remove_recursive(vop->debugfs);
 }
 
 static enum drm_mode_status
@@ -3889,7 +3897,6 @@ static unsigned long vop_crtc_get_dclk_rate(struct drm_crtc *crtc)
 static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.loader_protect = vop_crtc_loader_protect,
 	.cancel_pending_vblank = vop_crtc_cancel_pending_vblank,
-	.debugfs_init = vop_crtc_debugfs_init,
 	.debugfs_dump = vop_crtc_debugfs_dump,
 	.active_regs_dump = vop_crtc_regs_dump,
 	.regs_dump = vop_crtc_regs_dump,
@@ -5260,6 +5267,8 @@ static const struct drm_crtc_funcs vop_crtc_funcs = {
 	.disable_vblank = vop_crtc_disable_vblank,
 	.set_crc_source = vop_crtc_set_crc_source,
 	.verify_crc_source = vop_crtc_verify_crc_source,
+	.late_register = vop_crtc_late_register,
+	.early_unregister = vop_crtc_early_unregister,
 };
 
 static void vop_fb_unref_worker(struct drm_flip_work *work, void *val)
