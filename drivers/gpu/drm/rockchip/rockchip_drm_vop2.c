@@ -15453,6 +15453,7 @@ static void vop2_plane_mask_assign(struct vop2 *vop2, struct device_node *vop_ou
 	struct device_node *child;
 	int active_vp_num = 0;
 	int vp_id;
+	int splice_vp_id = -1;
 	int i = 0;
 
 	/*
@@ -15480,12 +15481,37 @@ static void vop2_plane_mask_assign(struct vop2 *vop2, struct device_node *vop_ou
 	plane_mask = vop2_data->plane_mask;
 	plane_mask += (active_vp_num - 1) * ROCKCHIP_MAX_CRTC;
 
+	i = 0;
 	for_each_child_of_node(vop_out_node, child) {
 		of_property_read_u32(child, "reg", &vp_id);
+
+		if (vp_id == splice_vp_id)
+			continue;
+
 		if (vop2_get_vp_of_status(child)) {
 			vop2->vps[vp_id].plane_mask = vop2_vp_plane_mask_to_bitmap(&plane_mask[i]);
 			vop2->vps[vp_id].primary_plane_phy_id = plane_mask[i].primary_plane_id;
 			i++;
+
+			/*
+			 * For rk3588, the main window should attach to the VP0 while
+			 * the splice window should attach to the VP1 when the display
+			 * mode is over 4k.
+			 * If only one VP is enabled and the plane mask is not assigned
+			 * in DTS, all main windows will be assigned to the enabled VPx,
+			 * and all splice windows will be assigned to the VPx+1, in order
+			 * to ensure that the splice mode work well.
+			 */
+			if (vop2->version == VOP_VERSION_RK3588) {
+				if (active_vp_num == 1) {
+					splice_vp_id = (vp_id + 1) % vop2->data->nr_vps;
+					vop2->vps[splice_vp_id].plane_mask =
+							vop2_vp_plane_mask_to_bitmap(&plane_mask[i]);
+					vop2->vps[splice_vp_id].primary_plane_phy_id =
+							plane_mask[i].primary_plane_id;
+					continue;
+				}
+			}
 		} else {
 			vop2->vps[vp_id].plane_mask = 0;
 			vop2->vps[vp_id].primary_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
