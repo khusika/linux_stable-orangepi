@@ -8417,8 +8417,9 @@ static struct drm_info_list vop2_debugfs_files[] = {
 	{ "cubic_lut", vop2_cubic_lut_show, 0, NULL },
 };
 
-static int vop2_crtc_debugfs_init(struct drm_minor *minor, struct drm_crtc *crtc)
+static int vop2_crtc_late_register(struct drm_crtc *crtc)
 {
+	struct drm_minor *minor = crtc->dev->primary;
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
 	int ret, i;
@@ -8454,6 +8455,13 @@ remove:
 	debugfs_remove(vp->debugfs);
 	vp->debugfs = NULL;
 	return ret;
+}
+
+static void vop2_crtc_early_unregister(struct drm_crtc *crtc)
+{
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+
+	debugfs_remove_recursive(vp->debugfs);
 }
 
 static enum drm_mode_status
@@ -8793,7 +8801,6 @@ static const struct rockchip_crtc_funcs private_crtc_funcs = {
 	.cancel_pending_vblank = vop2_crtc_cancel_pending_vblank,
 	.sysfs_init = vop2_crtc_sysfs_init,
 	.sysfs_fini = vop2_crtc_sysfs_fini,
-	.debugfs_init = vop2_crtc_debugfs_init,
 	.debugfs_dump = vop2_crtc_debugfs_dump,
 	.regs_dump = vop2_crtc_regs_dump,
 	.active_regs_dump = vop2_crtc_active_regs_dump,
@@ -13756,6 +13763,8 @@ static const struct drm_crtc_funcs vop2_crtc_funcs = {
 	.set_crc_source = vop2_crtc_set_crc_source,
 	.verify_crc_source = vop2_crtc_verify_crc_source,
 	.get_crc_sources = vop2_crtc_get_crc_sources,
+	.late_register = vop2_crtc_late_register,
+	.early_unregister = vop2_crtc_early_unregister,
 };
 
 static void vop2_fb_unref_worker(struct drm_flip_work *work, void *val)
