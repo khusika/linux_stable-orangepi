@@ -8429,6 +8429,7 @@ static int rkcif_fh_release(struct file *filp)
 	struct rkcif_device *cifdev = stream->cifdev;
 	int ret = 0;
 	int on = 0;
+	int i = 0;
 
 	ret = vb2_fop_release(filp);
 	if (!ret) {
@@ -8440,7 +8441,19 @@ static int rkcif_fh_release(struct file *filp)
 	}
 
 	pm_runtime_put_sync(cifdev->dev);
-	ret = rkcif_sensor_set_power(stream, on);
+	if (cifdev->sditf_cnt > 1) {
+		for (i = 0; i < cifdev->sditf_cnt; i++) {
+			if (cifdev->sditf[i]->sensor_sd)
+				ret |= v4l2_subdev_call(cifdev->sditf[i]->sensor_sd,
+							core,
+							s_power,
+							0);
+		}
+		if (ret < 0)
+			v4l2_err(vdev, "set sensor power on fail, ret %d\n",
+				 ret);
+	}
+
 	return ret;
 }
 
