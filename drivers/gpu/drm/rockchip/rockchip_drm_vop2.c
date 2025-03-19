@@ -584,6 +584,8 @@ struct vop2_video_port {
 	struct clk *dclk;
 	struct clk *dclk_switch;
 	struct clk *dclk_parent;
+	struct dentry *debugfs;
+	struct drm_info_list *debugfs_files;
 	uint8_t id;
 	bool layer_sel_update;
 	bool xmirror_en;
@@ -897,8 +899,6 @@ struct vop2 {
 	struct vop2_dsc dscs[ROCKCHIP_MAX_CRTC];
 	struct vop2_video_port vps[ROCKCHIP_MAX_CRTC];
 	struct vop2_wb wb;
-	struct dentry *debugfs;
-	struct drm_info_list *debugfs_files;
 	struct drm_prop_enum_list *plane_name_list;
 	bool is_iommu_enabled;
 	bool is_iommu_needed;
@@ -8425,34 +8425,34 @@ static int vop2_crtc_debugfs_init(struct drm_minor *minor, struct drm_crtc *crtc
 	char name[12];
 
 	snprintf(name, sizeof(name), "video_port%d", vp->id);
-	vop2->debugfs = debugfs_create_dir(name, minor->debugfs_root);
-	if (!vop2->debugfs)
+	vp->debugfs = debugfs_create_dir(name, minor->debugfs_root);
+	if (!vp->debugfs)
 		return -ENOMEM;
 
-	vop2->debugfs_files = kmemdup(vop2_debugfs_files, sizeof(vop2_debugfs_files),
+	vp->debugfs_files = kmemdup(vop2_debugfs_files, sizeof(vop2_debugfs_files),
 				      GFP_KERNEL);
-	if (!vop2->debugfs_files) {
+	if (!vp->debugfs_files) {
 		ret = -ENOMEM;
 		goto remove;
 	}
 #if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
-	rockchip_drm_add_dump_buffer(crtc, vop2->debugfs);
-	rockchip_drm_debugfs_add_color_bar(crtc, vop2->debugfs);
-	rockchip_drm_debugfs_add_regs_write(crtc, vop2->debugfs);
-	rockchip_drm_debugfs_add_dclk_rate(crtc, vop2->debugfs);
-	rockchip_drm_debugfs_add_dovi_mode(crtc, vop2->debugfs);
+	rockchip_drm_add_dump_buffer(crtc, vp->debugfs);
+	rockchip_drm_debugfs_add_color_bar(crtc, vp->debugfs);
+	rockchip_drm_debugfs_add_regs_write(crtc, vp->debugfs);
+	rockchip_drm_debugfs_add_dclk_rate(crtc, vp->debugfs);
+	rockchip_drm_debugfs_add_dovi_mode(crtc, vp->debugfs);
 #endif
 	for (i = 0; i < ARRAY_SIZE(vop2_debugfs_files); i++)
-		vop2->debugfs_files[i].data = vop2;
+		vp->debugfs_files[i].data = vop2;
 
-	drm_debugfs_create_files(vop2->debugfs_files,
+	drm_debugfs_create_files(vp->debugfs_files,
 				 ARRAY_SIZE(vop2_debugfs_files),
-				 vop2->debugfs,
+				 vp->debugfs,
 				 minor);
 	return 0;
 remove:
-	debugfs_remove(vop2->debugfs);
-	vop2->debugfs = NULL;
+	debugfs_remove(vp->debugfs);
+	vp->debugfs = NULL;
 	return ret;
 }
 
