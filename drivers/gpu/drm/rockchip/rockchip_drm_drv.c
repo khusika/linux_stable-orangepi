@@ -1446,21 +1446,9 @@ static struct drm_info_list rockchip_debugfs_files[] = {
 
 static void rockchip_drm_debugfs_init(struct drm_minor *minor)
 {
-	struct drm_device *dev = minor->dev;
-	struct rockchip_drm_private *priv = dev->dev_private;
-	struct drm_crtc *crtc;
-
 	drm_debugfs_create_files(rockchip_debugfs_files,
 				 ARRAY_SIZE(rockchip_debugfs_files),
 				 minor->debugfs_root, minor);
-
-	drm_for_each_crtc(crtc, dev) {
-		int pipe = drm_crtc_index(crtc);
-
-		if (priv->crtc_funcs[pipe] &&
-		    priv->crtc_funcs[pipe]->debugfs_init)
-			priv->crtc_funcs[pipe]->debugfs_init(minor, crtc);
-	}
 }
 #endif
 

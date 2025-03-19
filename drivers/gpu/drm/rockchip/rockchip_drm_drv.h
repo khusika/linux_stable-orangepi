@@ -498,7 +498,6 @@ struct next_hdr_sink_data {
  * @disable_vblank: disable crtc vblank irq.
  * @bandwidth: report present crtc bandwidth consume.
  * @cancel_pending_vblank: cancel pending vblank.
- * @debugfs_init: init crtc debugfs.
  * @debugfs_dump: debugfs to dump crtc and plane state.
  * @regs_dump: dump vop current register config.
  * @mode_valid: verify that the current mode is supported.
@@ -518,7 +517,6 @@ struct rockchip_crtc_funcs {
 				      struct drm_file *file_priv);
 	int (*sysfs_init)(struct device *dev, struct drm_crtc *crtc);
 	int (*sysfs_fini)(struct device *dev, struct drm_crtc *crtc);
-	int (*debugfs_init)(struct drm_minor *minor, struct drm_crtc *crtc);
 	int (*debugfs_dump)(struct drm_crtc *crtc, struct seq_file *s);
 	void (*regs_dump)(struct drm_crtc *crtc, struct seq_file *s);
 	void (*active_regs_dump)(struct drm_crtc *crtc, struct seq_file *s);
