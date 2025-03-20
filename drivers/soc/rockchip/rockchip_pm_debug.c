@@ -45,10 +45,10 @@ static const struct rk_gpio_table rk3506_gpio_table[] = {
 };
 
 static const struct rk_gpio_chip rk3506_table[] = {
-	RK_IOC_CFG("gpio0_ioc", 0xff950000, 0x510, 0, rk3506_gpio_table),
-	RK_IOC_CFG("gpio1_ioc", 0xff660000, 0x510, 1, rk3506_gpio_table),
-	RK_IOC_CFG("gpio2_ioc", 0xff4d8000, 0x510, 2, rk3506_gpio_table),
-	RK_IOC_CFG("gpio3_ioc", 0xff4d8000, 0x510, 3, rk3506_gpio_table),
+	RK_IOC_CFG("gpio0_ioc", 0xff950000, 0x700, 0, rk3506_gpio_table),
+	RK_IOC_CFG("gpio1_ioc", 0xff660000, 0x700, 1, rk3506_gpio_table),
+	RK_IOC_CFG("gpio2_ioc", 0xff4d8000, 0x700, 2, rk3506_gpio_table),
+	RK_IOC_CFG("gpio3_ioc", 0xff4d8000, 0x700, 3, rk3506_gpio_table),
 	{ .name = "gpio4_ioc", .reg_base = 0xff4d8840, .len = 0x10},
 	{ .name = "rm_io", .reg_base = 0xff910080, .len = 0x80},
 	{ .name = "gpio0", .reg_base = 0xff940000, .len = 0x80},
