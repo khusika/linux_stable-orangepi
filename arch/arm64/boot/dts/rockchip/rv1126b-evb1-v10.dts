@@ -11,29 +11,6 @@
 	model = "Rockchip RV1126B EVB1 V10 Board";
 	compatible = "rockchip,rv1126b-evb1-v10", "rockchip,rv1126b";
 
-	bt_sco: bt-sco {
-		status = "okay";
-		compatible = "delta,dfbmcs320";
-		#sound-dai-cells = <1>;
-	};
-
-	bt_sound: bt-sound {
-		status = "okay";
-		compatible = "simple-audio-card";
-		simple-audio-card,format = "dsp_a";
-		simple-audio-card,bitclock-inversion;
-		simple-audio-card,mclk-fs = <256>;
-		simple-audio-card,name = "rockchip,bt";
-
-		simple-audio-card,cpu {
-			sound-dai = <&sai2>;
-		};
-
-		simple-audio-card,codec {
-			sound-dai = <&bt_sco 1>;
-		};
-	};
-
 	sdio_pwrseq: sdio-pwrseq {
 		compatible = "mmc-pwrseq-simple";
 		pinctrl-names = "default";
@@ -348,11 +325,6 @@
 };
 
 &route_dsi {
-	status = "okay";
-};
-
-&sai2 {
-	rockchip,bclk-fs = <16>;
 	status = "okay";
 };
 
