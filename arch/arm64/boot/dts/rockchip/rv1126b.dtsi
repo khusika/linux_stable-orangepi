@@ -1392,6 +1392,14 @@
 		reset-names = "m", "h";
 		#sound-dai-cells = <0>;
 		sound-name-prefix = "SAI0";
+		pinctrl-names = "default";
+		pinctrl-0 = <&sai0m0_lrck_pins
+			     &sai0m0_sclk_pins
+			     &sai0m0_sdi0_pins
+			     &sai0m0_sdi1_pins
+			     &sai0m0_sdi2_pins
+			     &sai0m0_sdi3_pins
+			     &sai0m0_sdo0_pins>;
 		status = "disabled";
 	};
 
@@ -1407,6 +1415,11 @@
 		reset-names = "m", "h";
 		#sound-dai-cells = <0>;
 		sound-name-prefix = "SAI1";
+		pinctrl-names = "default";
+		pinctrl-0 = <&sai1m0_lrck_pins
+			     &sai1m0_sclk_pins
+			     &sai1m0_sdi_pins
+			     &sai1m0_sdo_pins>;
 		status = "disabled";
 	};
 
@@ -1422,6 +1435,13 @@
 		reset-names = "m", "h";
 		#sound-dai-cells = <0>;
 		sound-name-prefix = "SAI2";
+		pinctrl-names = "default";
+		pinctrl-0 = <&sai2m0_lrck_pins
+			     &sai2m0_sclk_pins
+			     &sai2m0_sdi0_pins
+			     &sai2m0_sdi1_pins
+			     &sai2m0_sdi2_pins
+			     &sai2m0_sdo_pins>;
 		status = "disabled";
 	};
 
