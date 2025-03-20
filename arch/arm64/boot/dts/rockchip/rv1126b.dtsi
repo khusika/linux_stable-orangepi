@@ -174,21 +174,54 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0>;
+			clocks = <&cru ARMCLK>;
+			operating-points-v2 = <&cpu_opp_table>;
 		};
 		cpu1: cpu@1 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x1>;
+			clocks = <&cru ARMCLK>;
+			operating-points-v2 = <&cpu_opp_table>;
 		};
 		cpu2: cpu@2 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x2>;
+			clocks = <&cru ARMCLK>;
+			operating-points-v2 = <&cpu_opp_table>;
 		};
 		cpu3: cpu@3 {
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x3>;
+			clocks = <&cru ARMCLK>;
+			operating-points-v2 = <&cpu_opp_table>;
+		};
+	};
+
+	cpu_opp_table: cpu0-opp-table {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		nvmem-cells = <&cpu_leakage>;
+		nvmem-cell-names = "leakage";
+
+		opp-396000000 {
+			opp-hz = /bits/ 64 <396000000>;
+			opp-microvolt = <900000 900000 1100000>;
+			clock-latency-ns = <40000>;
+			opp-suspend;
+		};
+		opp-594000000 {
+			opp-hz = /bits/ 64 <594000000>;
+			opp-microvolt = <900000 900000 1100000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1188000000 {
+			opp-hz = /bits/ 64 <1188000000>;
+			opp-microvolt = <1000000 1000000 1100000>;
+			clock-latency-ns = <40000>;
 		};
 	};
 
@@ -2951,11 +2984,28 @@
 		clock-names = "aclk", "hclk";
 		assigned-clocks = <&cru ACLK_RKNN>;
 		assigned-clock-rates = <800000000>;
+		operating-points-v2 = <&npu_opp_table>;
 		resets = <&cru SRST_ARESETN_RKNN>, <&cru SRST_HRESETN_RKNN>;
 		reset-names = "srst_a", "srst_h";
 		power-domains = <&power RV1126B_PD_NPU>;
 		iommus = <&rknpu_mmu>;
 		status = "disabled";
+	};
+
+	npu_opp_table: npu-opp-table {
+		compatible = "operating-points-v2";
+
+		nvmem-cells = <&npu_leakage>;
+		nvmem-cell-names = "leakage";
+
+		opp-396000000 {
+			opp-hz = /bits/ 64 <396000000>;
+			opp-microvolt = <900000 900000 1000000>;
+		};
+		opp-594000000 {
+			opp-hz = /bits/ 64 <594000000>;
+			opp-microvolt = <900000 900000 1000000>;
+		};
 	};
 
 	rknpu_mmu: iommu@22002000 {
