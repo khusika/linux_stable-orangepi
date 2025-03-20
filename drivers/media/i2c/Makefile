@@ -256,6 +256,7 @@ obj-$(CONFIG_VIDEO_SC500AI) += sc500ai.o
 obj-$(CONFIG_VIDEO_SC501AI) += sc501ai.o
 obj-$(CONFIG_VIDEO_SC530AI) += sc530ai.o
 obj-$(CONFIG_VIDEO_SC5336) += sc5336.o
+obj-$(CONFIG_VIDEO_SC635HAI) += sc635hai.o
 obj-$(CONFIG_VIDEO_SC830AI) += sc830ai.o
 obj-$(CONFIG_VIDEO_SC831AI) += sc831ai.o
 obj-$(CONFIG_VIDEO_SC850SL) += sc850sl.o
