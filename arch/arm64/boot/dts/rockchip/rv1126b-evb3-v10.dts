@@ -141,6 +141,14 @@
 	};
 };
 
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
+};
+
 &pwm1_4ch_0 {
 	status = "okay";
 };
