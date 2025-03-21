@@ -41,6 +41,10 @@
 	};
 };
 
+&cpu0 {
+	cpu-supply = <&vdd_arm>;
+};
+
 &i2c0 {
 	status = "okay";
 
@@ -283,6 +287,10 @@
 			};
 		};
 	};
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
 };
 
 &pinctrl {
