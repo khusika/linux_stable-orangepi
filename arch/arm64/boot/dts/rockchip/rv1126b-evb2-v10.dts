@@ -6,6 +6,7 @@
 /dts-v1/;
 #include "rv1126b.dtsi"
 #include "rv1126b-evb.dtsi"
+#include "rv1126b-evb-cam-csi0.dtsi"
 
 / {
 	model = "Rockchip RV1126B EVB2 V10 Board";
@@ -181,6 +182,10 @@
 	cpu-supply = <&vdd_cpu>;
 };
 
+&imx415 {
+	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+};
+
 &rknpu {
 	rknpu-supply = <&vdd_npu>;
 };
@@ -207,6 +212,14 @@
 
 &pwm2_8ch_7 {
 	status = "okay";
+};
+
+&sc450ai {
+	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_LOW>;
+};
+
+&sc850sl {
+	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_LOW>;
 };
 
 &usb2phy_host {
