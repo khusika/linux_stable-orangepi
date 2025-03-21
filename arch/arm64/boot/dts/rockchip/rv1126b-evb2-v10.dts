@@ -137,6 +137,7 @@
 		compatible = "pwm-regulator";
 		pwms = <&pwm0_8ch_2 0 25000 1>;
 		regulator-name = "vdd_log";
+		regulator-init-microvolt = <905000>;
 		regulator-min-microvolt = <810000>;
 		regulator-max-microvolt = <1006000>;
 		regulator-always-on;
@@ -149,6 +150,7 @@
 		compatible = "pwm-regulator";
 		pwms = <&pwm0_8ch_0 0 25000 1>;
 		regulator-name = "vdd_cpu";
+		regulator-init-microvolt = <950000>;
 		regulator-min-microvolt = <750000>;
 		regulator-max-microvolt = <1100000>;
 		regulator-always-on;
@@ -161,6 +163,7 @@
 		compatible = "pwm-regulator";
 		pwms = <&pwm0_8ch_1 0 25000 1>;
 		regulator-name = "vdd_npu";
+		regulator-init-microvolt = <950000>;
 		regulator-min-microvolt = <750000>;
 		regulator-max-microvolt = <1100000>;
 		regulator-always-on;

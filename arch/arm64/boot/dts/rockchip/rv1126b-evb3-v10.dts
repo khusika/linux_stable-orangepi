@@ -10,5 +10,145 @@
 / {
 	model = "Rockchip RV1126B EVB3 V10 Board";
 	compatible = "rockchip,rv1126b-evb3-v10", "rockchip,rv1126b";
+
+	vcc5v0_dcin: vcc5v0-dcin {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc5v0_dcin";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		vin-supply = <&vcc12v_dcin>;
+	};
+
+	vccsys_stb: vccsys-stb {
+		compatible = "regulator-fixed";
+		regulator-name = "vccsys_stb";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		vin-supply = <&vcc5v0_dcin>;
+	};
+
+	vcc3v3_stb: vcc3v3-stb {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_stb";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vccsys_stb>;
+	};
+
+	vcc1v8_pmu: vdd1_1v8_ddr: vcc1v8_pmu {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_stb";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vccsys_stb>;
+	};
+
+	vcc_ddr: vcc_ddr {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_ddr";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1200000>;
+		regulator-max-microvolt = <1200000>;
+		vin-supply = <&vccsys_stb>;
+	};
+
+	vcc3v3_pmu: vcc3v3-pmu {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc3v3_pmu";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vccsys_stb>;
+	};
+
+	vcc0v9_pmu: vcc0v9-pmu {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc0v9_pmu";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <900000>;
+		regulator-max-microvolt = <900000>;
+		vin-supply = <&vcc1v8_pmu>;
+	};
+
+	vcc_1v8: vcc-1v8 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_1v8";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <1800000>;
+		vin-supply = <&vcc3v3_stb>;
+	};
+
+	vcc_3v3: vcc3v3_dev: vcc-3v3 {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_3v3";
+		regulator-always-on;
+		regulator-boot-on;
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		vin-supply = <&vccsys_stb>;
+	};
+
+	vdd_log: vdd-log {
+		compatible = "pwm-regulator";
+		pwms = <&pwm1_4ch_2 0 25000 1>;
+		regulator-name = "vdd_log";
+		regulator-init-microvolt = <905000>;
+		regulator-min-microvolt = <810000>;
+		regulator-max-microvolt = <1006000>;
+		regulator-always-on;
+		regulator-boot-on;
+		pwm-supply = <&vccsys_stb>;
+		status = "okay";
+	};
+
+	vdd_cpu: vdd-cpu {
+		compatible = "pwm-regulator";
+		pwms = <&pwm1_4ch_0 0 25000 1>;
+		regulator-name = "vdd_cpu";
+		regulator-init-microvolt = <950000>;
+		regulator-min-microvolt = <750000>;
+		regulator-max-microvolt = <1100000>;
+		regulator-always-on;
+		regulator-boot-on;
+		pwm-supply = <&vccsys_stb>;
+		status = "okay";
+	};
+
+	vdd_npu: vdd-npu {
+		compatible = "pwm-regulator";
+		pwms = <&pwm1_4ch_1 0 25000 1>;
+		regulator-name = "vdd_cpu";
+		regulator-init-microvolt = <950000>;
+		regulator-min-microvolt = <750000>;
+		regulator-max-microvolt = <1100000>;
+		regulator-always-on;
+		regulator-boot-on;
+		pwm-supply = <&vccsys_stb>;
+		status = "okay";
+	};
 };
 
+&pwm1_4ch_0 {
+	status = "okay";
+};
+
+&pwm1_4ch_1 {
+	status = "okay";
+};
+
+&pwm1_4ch_2 {
+	status = "okay";
+};
