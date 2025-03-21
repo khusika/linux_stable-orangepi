@@ -423,6 +423,14 @@
 	status = "okay";
 };
 
+&rknpu {
+	status = "okay";
+};
+
+&rknpu_mmu {
+	status = "okay";
+};
+
 &usb2phy {
 	status = "okay";
 };
