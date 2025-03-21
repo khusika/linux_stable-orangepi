@@ -2923,6 +2923,34 @@
 		status = "disabled";
 	};
 
+	rknpu: npu@22000000 {
+		compatible = "rockchip,rv1126b-rknpu";
+		reg = <0x22000000 0x8000>;
+		interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "npu_irq";
+		clocks = <&cru ACLK_RKNN>, <&cru HCLK_RKNN>;
+		clock-names = "aclk", "hclk";
+		assigned-clocks = <&cru ACLK_RKNN>;
+		assigned-clock-rates = <800000000>;
+		resets = <&cru SRST_ARESETN_RKNN>, <&cru SRST_HRESETN_RKNN>;
+		reset-names = "srst_a", "srst_h";
+		power-domains = <&power RV1126B_PD_NPU>;
+		iommus = <&rknpu_mmu>;
+		status = "disabled";
+	};
+
+	rknpu_mmu: iommu@22002000 {
+		compatible = "rockchip,iommu-v2";
+		reg = <0x22002000 0x100>;
+		interrupts = <GIC_SPI 144 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "rknpu_mmu";
+		clocks = <&cru ACLK_RKNN>, <&cru HCLK_RKNN>;
+		clock-names = "aclk", "hclk";
+		power-domains = <&power RV1126B_PD_NPU>;
+		#iommu-cells = <0>;
+		status = "disabled";
+	};
+
 	hw_decompress: decompress@22100000 {
 		compatible = "rockchip,hw-decompress";
 		reg = <0x22100000 0x1000>;
