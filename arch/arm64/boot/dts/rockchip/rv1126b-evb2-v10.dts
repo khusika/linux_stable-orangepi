@@ -177,6 +177,14 @@
 	pwms = <&pwm2_8ch_7 0 25000 0>;
 };
 
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
+};
+
 &pinctrl {
 	usb {
 		vcc5v0_host_en: vcc5v0-host-en {
