@@ -2506,6 +2506,193 @@ static const struct rk_gmac_ops rv1126_ops = {
 	.set_rmii_speed = rv1126_set_rmii_speed,
 };
 
+#define RV1126B_VI_GRF_GMAC_CON0		0X50050
+
+#define RV1126B_GMAC_PHY_INTF_SEL_RGMII		GRF_CLR_BIT(3)
+#define RV1126B_GMAC_PHY_INTF_SEL_RMII		GRF_BIT(3)
+
+#define RV1126B_GMAC_CLK_RMII_GATE		GRF_BIT(4)
+#define RV1126B_GMAC_CLK_RMII_NOGATE		GRF_CLR_BIT(4)
+
+#define RV1126B_GMAC_CLK_RMII_DIV2		GRF_BIT(5)
+#define RV1126B_GMAC_CLK_RMII_DIV20		GRF_CLR_BIT(5)
+
+#define RV1126B_GMAC_CLK_RGMII_DIV1		\
+				(GRF_CLR_BIT(6) | GRF_CLR_BIT(5))
+#define RV1126B_GMAC_CLK_RGMII_DIV5		\
+				(GRF_BIT(6) | GRF_BIT(5))
+#define RV1126B_GMAC_CLK_RGMII_DIV50		\
+				(GRF_BIT(6) | GRF_CLR_BIT(5))
+
+#define RV1126B_GMAC_CLK_SELET_CRU		GRF_CLR_BIT(7)
+#define RV1126B_GMAC_CLK_SELET_IO		GRF_BIT(7)
+
+#define RV1126B_GMAC_RK_MACPHY_ENABLE		GRF_BIT(15)
+#define RV1126B_GMAC_RK_MACPHY_DISABLE		GRF_CLR_BIT(15)
+
+#define RV1126B_IOC_GRF_GMACIO_M0_CON0		0X38BA0
+#define RV1126B_IOC_GRF_GMACIO_M0_CON1		0X38BA4
+#define RV1126B_IOC_GRF_GMACIO_M1_CON0		0X30BA8
+#define RV1126B_IOC_GRF_GMACIO_M1_CON1		0X30BAC
+
+#define RV1126B_GMAC_RXCLK_DLY_ENABLE		GRF_BIT(1)
+#define RV1126B_GMAC_RXCLK_DLY_DISABLE		GRF_CLR_BIT(1)
+#define RV1126B_GMAC_TXCLK_DLY_ENABLE		GRF_BIT(0)
+#define RV1126B_GMAC_TXCLK_DLY_DISABLE		GRF_CLR_BIT(0)
+
+#define RV1126B_GMAC_CLK_RX_DL_CFG(val)		HIWORD_UPDATE(val, 0x7F, 8)
+#define RV1126B_GMAC_CLK_TX_DL_CFG(val)		HIWORD_UPDATE(val, 0x7F, 0)
+
+#define RV1126B_VI_GRF_RK_MACPHY_CON0		0X500B4
+#define RV1126B_VI_GRF_RK_MACPHY_CON1		0X500B8
+#define RV1126B_VI_GRF_RK_MACPHY_CON2		0X500BC
+
+#define RV1126B_RK_MACPHY_PHY_ID		(0x200680 << 5)
+#define RV1126B_RK_MACPHY_PHY_ADDR		0x2
+
+#define RV1126B_RK_MACPHY_PHY_REVISION		(0x1 << 6)
+#define RV1126B_RK_MACPHY_PHY_MODEL		(0X10 << 0)
+
+#define RV1126B_RK_MACPHY_DISABLE		0
+#define RV1126B_RK_MACPHY_ENABLE		BIT(31)
+
+static void rv1126b_set_to_rgmii(struct rk_priv_data *bsp_priv,
+				 int tx_delay, int rx_delay)
+{
+	struct device *dev = &bsp_priv->pdev->dev;
+
+	if (IS_ERR(bsp_priv->grf) || IS_ERR(bsp_priv->php_grf)) {
+		dev_err(dev, "Missing rockchip,grf or rockchip,php_grf property\n");
+		return;
+	}
+
+	regmap_write(bsp_priv->grf, RV1126B_VI_GRF_GMAC_CON0,
+		     RV1126B_GMAC_PHY_INTF_SEL_RGMII);
+
+	regmap_write(bsp_priv->php_grf, RV1126B_IOC_GRF_GMACIO_M0_CON1,
+		     DELAY_ENABLE(RV1126B, tx_delay, rx_delay));
+	regmap_write(bsp_priv->php_grf, RV1126B_IOC_GRF_GMACIO_M1_CON1,
+		     DELAY_ENABLE(RV1126B, tx_delay, rx_delay));
+
+	regmap_write(bsp_priv->php_grf, RV1126B_IOC_GRF_GMACIO_M0_CON0,
+		     DELAY_VALUE(RV1126B, tx_delay, rx_delay));
+	regmap_write(bsp_priv->php_grf, RV1126B_IOC_GRF_GMACIO_M1_CON0,
+		     DELAY_VALUE(RV1126B, tx_delay, rx_delay));
+}
+
+static void rv1126b_set_to_rmii(struct rk_priv_data *bsp_priv)
+{
+	struct device *dev = &bsp_priv->pdev->dev;
+
+	if (IS_ERR(bsp_priv->grf)) {
+		dev_err(dev, "%s: Missing rockchip,grf property\n", __func__);
+		return;
+	}
+
+	regmap_write(bsp_priv->grf, RV1126B_VI_GRF_GMAC_CON0,
+		     RV1126B_GMAC_PHY_INTF_SEL_RMII |
+		     RV1126B_GMAC_CLK_RMII_DIV2);
+}
+
+static void rv1126b_set_rgmii_speed(struct rk_priv_data *bsp_priv, int speed)
+{
+	struct device *dev = &bsp_priv->pdev->dev;
+	unsigned int val;
+
+	switch (speed) {
+	case 10:
+		val = RV1126B_GMAC_CLK_RGMII_DIV50;
+		break;
+	case 100:
+		val = RV1126B_GMAC_CLK_RGMII_DIV5;
+		break;
+	case 1000:
+		val = RV1126B_GMAC_CLK_RGMII_DIV1;
+		break;
+	default:
+		goto err;
+	}
+
+	regmap_write(bsp_priv->grf, RV1126B_VI_GRF_GMAC_CON0, val);
+	return;
+err:
+	dev_err(dev, "unknown RGMII speed value for GMAC speed=%d", speed);
+}
+
+static void rv1126b_set_rmii_speed(struct rk_priv_data *bsp_priv, int speed)
+{
+	struct device *dev = &bsp_priv->pdev->dev;
+	unsigned int val;
+
+	switch (speed) {
+	case 10:
+		val = RV1126B_GMAC_CLK_RMII_DIV20;
+		break;
+	case 100:
+		val = RV1126B_GMAC_CLK_RMII_DIV2;
+		break;
+	default:
+		goto err;
+	}
+
+	regmap_write(bsp_priv->grf, RV1126B_VI_GRF_GMAC_CON0, val);
+	return;
+err:
+	dev_err(dev, "unknown RMII speed value for GMAC speed=%d", speed);
+}
+
+static void rv1126b_set_clock_selection(struct rk_priv_data *bsp_priv,
+					bool input, bool enable)
+{
+	unsigned int value;
+
+	value = input ? RV1126B_GMAC_CLK_SELET_IO :
+			RV1126B_GMAC_CLK_SELET_CRU;
+	value |= enable ? RV1126B_GMAC_CLK_RMII_NOGATE :
+			  RV1126B_GMAC_CLK_RMII_GATE;
+	regmap_write(bsp_priv->grf, RV1126B_VI_GRF_GMAC_CON0, value);
+}
+
+static void rv1126b_integrated_phy_power(struct rk_priv_data *priv, bool up)
+{
+	struct device *dev = &priv->pdev->dev;
+
+	if (IS_ERR(priv->grf) || !priv->phy_reset) {
+		dev_err(dev, "%s: Missing rockchip,grf or phy_reset property\n",
+			__func__);
+		return;
+	}
+
+	if (up) {
+		reset_control_assert(priv->phy_reset);
+		usleep_range(10, 20);
+		regmap_write(priv->grf, RV1126B_VI_GRF_GMAC_CON0,
+			     RV1126B_GMAC_RK_MACPHY_ENABLE);
+		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON0,
+			     RV1126B_RK_MACPHY_PHY_ID | RV1126B_RK_MACPHY_PHY_ADDR);
+		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
+			     RV1126B_RK_MACPHY_PHY_REVISION |
+			     RV1126B_RK_MACPHY_PHY_MODEL |
+			     RV1126B_RK_MACPHY_ENABLE);
+		usleep_range(110, 120);
+		reset_control_deassert(priv->phy_reset);
+	} else {
+		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
+			     RV1126B_RK_MACPHY_DISABLE);
+		regmap_write(priv->grf, RV1126B_VI_GRF_GMAC_CON0,
+			     RV1126B_GMAC_RK_MACPHY_DISABLE);
+	}
+}
+
+static const struct rk_gmac_ops rv1126b_ops = {
+	.set_to_rgmii = rv1126b_set_to_rgmii,
+	.set_to_rmii = rv1126b_set_to_rmii,
+	.set_rgmii_speed = rv1126b_set_rgmii_speed,
+	.set_rmii_speed = rv1126b_set_rmii_speed,
+	.set_clock_selection = rv1126b_set_clock_selection,
+	.integrated_phy_power = rv1126b_integrated_phy_power,
+};
+
 static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
 {
 	struct rk_priv_data *bsp_priv = plat->bsp_priv;
@@ -2577,12 +2764,22 @@ static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
 		bsp_priv->clk_phy = of_clk_get(plat->phy_node, 0);
 		/* If it is not integrated_phy, clk_phy is optional */
 		if (bsp_priv->integrated_phy) {
+			unsigned int rate = 0;
+
 			if (IS_ERR(bsp_priv->clk_phy)) {
 				ret = PTR_ERR(bsp_priv->clk_phy);
 				dev_err(dev, "Cannot get PHY clock: %d\n", ret);
 				return -EINVAL;
+			} else {
+				ret = of_property_read_u32(plat->phy_node, "clock-frequency", &rate);
+				if (ret)
+					rate = 0;
 			}
-			clk_set_rate(bsp_priv->clk_phy, 50000000);
+
+			if (rate)
+				clk_set_rate(bsp_priv->clk_phy, rate);
+			else
+				clk_set_rate(bsp_priv->clk_phy, 50000000);
 		}
 	}
 
@@ -3251,6 +3448,9 @@ static const struct of_device_id rk_gmac_dwmac_match[] = {
 #endif
 #ifdef CONFIG_CPU_RV1126
 	{ .compatible = "rockchip,rv1126-gmac", .data = &rv1126_ops },
+#endif
+#ifdef CONFIG_CPU_RV1126B
+	{ .compatible = "rockchip,rv1126b-gmac", .data = &rv1126b_ops },
 #endif
 	{ }
 };
