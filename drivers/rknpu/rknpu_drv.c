@@ -285,6 +285,27 @@ static const struct rknpu_config rk3576_rknpu_config = {
 	.cache_sgt_init = rk3576_cache_sgt_init,
 };
 
+static const struct rknpu_config rv1126b_rknpu_config = {
+	.bw_priority_addr = 0x0,
+	.bw_priority_length = 0x0,
+	.dma_mask = DMA_BIT_MASK(40),
+	.pc_data_amount_scale = 2,
+	.pc_task_number_bits = 16,
+	.pc_task_number_mask = 0xffff,
+	.pc_task_status_offset = 0x48,
+	.pc_dma_ctrl = 1,
+	.irqs = rknpu_irqs,
+	.num_irqs = ARRAY_SIZE(rknpu_irqs),
+	.nbuf_phyaddr = 0x3ff30000,
+	.nbuf_size = 512 * 1024,
+	.max_submit_number = (1 << 16) - 1,
+	.core_mask = 0x1,
+	.amount_top = &rknpu_top_amount,
+	.amount_core = &rknpu_core_amount,
+	.state_init = NULL,
+	.cache_sgt_init = NULL,
+};
+
 /* driver probe and init */
 static const struct of_device_id rknpu_of_match[] = {
 	{
@@ -310,6 +331,10 @@ static const struct of_device_id rknpu_of_match[] = {
 	{
 		.compatible = "rockchip,rk3576-rknpu",
 		.data = &rk3576_rknpu_config,
+	},
+	{
+		.compatible = "rockchip,rv1126b-rknpu",
+		.data = &rv1126b_rknpu_config,
 	},
 	{},
 };
