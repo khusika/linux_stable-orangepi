@@ -101,3 +101,11 @@
 		vin-supply = <&vcc_sys>;
 	};
 };
+
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
+};
