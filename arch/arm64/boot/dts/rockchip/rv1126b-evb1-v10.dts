@@ -144,6 +144,10 @@
 	pwms = <&pwm2_8ch_4 0 25000 0>;
 };
 
+&cpu0 {
+	cpu-supply = <&vdd_cpu>;
+};
+
 &display_subsystem {
 	status = "okay";
 };
@@ -286,6 +290,10 @@
 
 &mipi_dphy {
 	status = "okay";
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
 };
 
 &pinctrl {
