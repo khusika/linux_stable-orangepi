@@ -331,6 +331,10 @@
 	};
 };
 
+&pwm0_8ch_0 {
+	status = "okay";
+};
+
 &pwm2_8ch_4 {
 	pinctrl-0 = <&pwm2m1_ch4_pins>;
 	status = "okay";
