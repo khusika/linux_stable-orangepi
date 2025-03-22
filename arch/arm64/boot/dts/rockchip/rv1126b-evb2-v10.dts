@@ -182,6 +182,18 @@
 	cpu-supply = <&vdd_cpu>;
 };
 
+&fspi0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "jedec,spi-nor";
+		reg = <0>;
+		spi-max-frequency = <100000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
 &imx415 {
 	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
 };
