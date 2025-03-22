@@ -1100,6 +1100,12 @@ static const struct csi2_match_data rv1103b_csi2_match_data = {
 	.num_hw = 2,
 };
 
+static const struct csi2_match_data rv1126b_csi2_match_data = {
+	.chip_id = CHIP_RV1126B_CSI2,
+	.num_pads = CSI2_NUM_PADS_MAX,
+	.num_hw = 4,
+};
+
 static const struct of_device_id csi2_dt_ids[] = {
 #ifdef CONFIG_CPU_RK1808
 	{
@@ -1153,6 +1159,12 @@ static const struct of_device_id csi2_dt_ids[] = {
 	{
 		.compatible = "rockchip,rv1103b-mipi-csi2",
 		.data = &rv1103b_csi2_match_data,
+	},
+#endif
+#ifdef CONFIG_CPU_RV1126B
+	{
+		.compatible = "rockchip,rv1126b-mipi-csi2",
+		.data = &rv1126b_csi2_match_data,
 	},
 #endif
 	{ /* sentinel */ }
@@ -1316,6 +1328,10 @@ static const struct csi2_hw_match_data rv1103b_csi2_hw_match_data = {
 	.chip_id = CHIP_RV1103B_CSI2,
 };
 
+static const struct csi2_hw_match_data rv1126b_csi2_hw_match_data = {
+	.chip_id = CHIP_RV1126B_CSI2,
+};
+
 static const struct of_device_id csi2_hw_ids[] = {
 #ifdef CONFIG_CPU_RK1808
 	{
@@ -1369,6 +1385,12 @@ static const struct of_device_id csi2_hw_ids[] = {
 	{
 		.compatible = "rockchip,rv1103b-mipi-csi2-hw",
 		.data = &rv1103b_csi2_hw_match_data,
+	},
+#endif
+#ifdef CONFIG_CPU_RV1126B
+	{
+		.compatible = "rockchip,rv1126b-mipi-csi2-hw",
+		.data = &rv1126b_csi2_hw_match_data,
 	},
 #endif
 	{ /* sentinel */ }
