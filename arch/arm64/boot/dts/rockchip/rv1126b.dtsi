@@ -678,8 +678,22 @@
 	};
 
 	grf: syscon@20100000 {
-		compatible = "rockchip,rv1126b-grf", "syscon";
+		compatible = "rockchip,rv1126b-grf", "syscon", "simple-mfd";
 		reg = <0x20100000 0x91000>;
+
+		reboot_mode: reboot-mode {
+			compatible = "syscon-reboot-mode";
+			offset = <0x30200>;
+			mode-bootloader = <BOOT_BL_DOWNLOAD>;
+			mode-charge = <BOOT_CHARGING>;
+			mode-fastboot = <BOOT_FASTBOOT>;
+			mode-loader = <BOOT_BL_DOWNLOAD>;
+			mode-normal = <BOOT_NORMAL>;
+			mode-recovery = <BOOT_RECOVERY>;
+			mode-ums = <BOOT_UMS>;
+			mode-panic = <BOOT_PANIC>;
+			mode-watchdog = <BOOT_WATCHDOG>;
+		};
 	};
 
 	ioc_grf: syscon@201a0000 {
