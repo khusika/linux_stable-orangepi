@@ -131,6 +131,7 @@
 
 &acdcdig_dsm {
 	status = "okay";
+	pa-ctl-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
 };
 
 &acodec_sound {
