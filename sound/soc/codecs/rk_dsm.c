@@ -331,13 +331,9 @@ static int rk_dsm_set_dai_fmt(struct snd_soc_dai *dai,
 		snd_soc_component_get_drvdata(dai->component);
 	unsigned int mask = 0, val = 0;
 
-	/* master mode only */
-	regmap_update_bits(rd->regmap, I2S_CKR1,
-			   DSM_I2S_CKR1_MSS_MASK,
-			   DSM_I2S_CKR1_MSS_MASTER);
-
 	mask = DSM_I2S_CKR1_CKP_MASK |
-	       DSM_I2S_CKR1_RLP_MASK;
+	       DSM_I2S_CKR1_RLP_MASK |
+	       DSM_I2S_CKR1_MSS_MASK;
 
 	switch (fmt & SND_SOC_DAIFMT_INV_MASK) {
 	case SND_SOC_DAIFMT_NB_NF:
@@ -355,6 +351,17 @@ static int rk_dsm_set_dai_fmt(struct snd_soc_dai *dai,
 	case SND_SOC_DAIFMT_NB_IF:
 		val = DSM_I2S_CKR1_CKP_NORMAL |
 		      DSM_I2S_CKR1_RLP_INVERTED;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	switch (fmt & SND_SOC_DAIFMT_MASTER_MASK) {
+	case SND_SOC_DAIFMT_CBS_CFS:
+		val |= DSM_I2S_CKR1_MSS_SLAVE;
+		break;
+	case SND_SOC_DAIFMT_CBM_CFM:
+		val |= DSM_I2S_CKR1_MSS_MASTER;
 		break;
 	default:
 		return -EINVAL;
