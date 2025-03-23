@@ -239,7 +239,7 @@ rkisp_stats_update_buf(struct rkisp_isp_stats_vdev *stats_vdev)
 		ret = -EINVAL;
 	}
 
-	if (addr) {
+	if (ret != -EINVAL) {
 		for (i = 0; i < dev->unite_div; i++) {
 			val = addr + i * size;
 
@@ -698,9 +698,10 @@ rkisp_stats_send_meas(struct rkisp_isp_stats_vdev *stats_vdev)
 		vb2_buffer_done(&cur_buf->vb.vb2_buf, VB2_BUF_STATE_DONE);
 	}
 	v4l2_dbg(4, rkisp_debug, &stats_vdev->dev->v4l2_dev,
-		 "%s seq:%d params_id:%d ris:0x%x buf:%p meas_type:0x%x aiawb(idx:%d 0x%x)\n",
+		 "%s seq:%d params_id:%d ris:0x%x buf:0x%x meas_type:0x%x aiawb(idx:%d 0x%x)\n",
 		 __func__, cur_frame_id, params_vdev->cur_frame_id, ris,
-		 cur_buf, !cur_stat_buf ? 0 : cur_stat_buf->meas_type,
+		 !cur_buf ? -1 : cur_buf->buff_addr[0],
+		 !cur_stat_buf ? 0 : cur_stat_buf->meas_type,
 		 !cur_stat_buf ? -1 : cur_stat_buf->stat.buf_aiawb_index,
 		 isp3_stats_read(stats_vdev, ISP35_AIAWB_WR_BASE_SHD));
 }
