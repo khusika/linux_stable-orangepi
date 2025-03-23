@@ -180,6 +180,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x0>;
+			enable-method = "psci";
 			clocks = <&cru ARMCLK>;
 			operating-points-v2 = <&cpu_opp_table>;
 		};
@@ -187,6 +188,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x1>;
+			enable-method = "psci";
 			clocks = <&cru ARMCLK>;
 			operating-points-v2 = <&cpu_opp_table>;
 		};
@@ -194,6 +196,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x2>;
+			enable-method = "psci";
 			clocks = <&cru ARMCLK>;
 			operating-points-v2 = <&cpu_opp_table>;
 		};
@@ -201,6 +204,7 @@
 			device_type = "cpu";
 			compatible = "arm,cortex-a53";
 			reg = <0x3>;
+			enable-method = "psci";
 			clocks = <&cru ARMCLK>;
 			operating-points-v2 = <&cpu_opp_table>;
 		};
