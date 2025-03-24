@@ -302,6 +302,8 @@
 			};
 
 			vcc5v0_host: SWITCH_REG1 {
+				regulator-always-on;
+				regulator-boot-on;
 				regulator-name = "vcc5v0_host";
 			};
 
@@ -357,4 +359,18 @@
 
 &sai0_mclkout {
 	status = "okay";
+};
+
+&usb2phy_host {
+	phy-supply = <&vcc5v0_host>;
+};
+
+&usb_drd_dwc3 {
+	extcon = <&usb2phy>;
+	phys = <&usb2phy_otg>;
+	phy-names = "usb2-phy";
+	maximum-speed = "high-speed";
+	snps,dis_u2_susphy_quirk;
+	snps,usb2-lpm-disable;
+	snps,usb2-gadget-lpm-disable;
 };
