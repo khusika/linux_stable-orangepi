@@ -539,7 +539,7 @@ static int rk_dma_start_txd(struct rk_dma_chan *c)
 	if (!c->lch)
 		return -EAGAIN;
 
-	if (BIT(c->lch->id) & rk_dma_get_chan_stat(c->lch))
+	if (rk_dma_get_chan_stat(c->lch))
 		return -EAGAIN;
 
 	if (vd) {
@@ -566,8 +566,9 @@ static void rk_dma_task(struct rk_dma_dev *d)
 {
 	struct rk_dma_lch *l;
 	struct rk_dma_chan *c, *cn;
-	unsigned int i = 0, lch_alloc = 0;
+	unsigned int i = 0;
 	unsigned long flags;
+	u64 lch_alloc = 0;
 
 	/* check new dma request of running channel in vc->desc_issued */
 	list_for_each_entry_safe(c, cn, &d->slave.channels, vc.chan.device_node) {
@@ -589,7 +590,7 @@ static void rk_dma_task(struct rk_dma_dev *d)
 		l = &d->lch[c->id];
 		if (!l->vchan) {
 			list_del_init(&c->node);
-			lch_alloc |= 1 << c->id;
+			lch_alloc |= BIT_ULL(c->id);
 			l->vchan = c;
 			c->lch = l;
 		} else {
@@ -599,7 +600,7 @@ static void rk_dma_task(struct rk_dma_dev *d)
 	spin_unlock_irqrestore(&d->lock, flags);
 
 	for (i = 0; i < d->dma_channels; i++) {
-		if (lch_alloc & (1 << i)) {
+		if (lch_alloc & BIT_ULL(i)) {
 			l = &d->lch[i];
 			c = l->vchan;
 			if (c) {
@@ -623,7 +624,7 @@ static irqreturn_t rk_dma_irq_handler(int irq, void *dev_id)
 	is_raw = is;
 	while (is) {
 		i = __ffs64(is);
-		is &= ~BIT(i);
+		is &= ~BIT_ULL(i);
 		l = &d->lch[i];
 		c = l->vchan;
 		if (c) {
