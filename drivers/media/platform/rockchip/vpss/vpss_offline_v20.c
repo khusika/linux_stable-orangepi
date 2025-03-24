@@ -2548,6 +2548,11 @@ static int ofl_open(struct file *file)
 	struct rkvpss_offline_dev *ofl = video_drvdata(file);
 	int ret;
 
+	if (!ofl || !ofl->hw) {
+		ret = -ENODEV;
+		goto end;
+	}
+
 	ret = v4l2_fh_open(file);
 	if (ret)
 		goto end;
@@ -2555,13 +2560,18 @@ static int ofl_open(struct file *file)
 	mutex_lock(&ofl->hw->dev_lock);
 	ret = pm_runtime_get_sync(ofl->hw->dev);
 	mutex_unlock(&ofl->hw->dev_lock);
-	if (ret < 0)
+
+	if (ret < 0) {
 		v4l2_fh_release(file);
-	else
-		ret = rkvpss_ofl_add_file_id(ofl, (void *)file);
+		goto end;
+	}
+
+	ret = rkvpss_ofl_add_file_id(ofl, (void *)file);
 end:
-	v4l2_dbg(1, rkvpss_debug, &ofl->v4l2_dev,
-		 "%s file:%p ret:%d\n", __func__, file, ret);
+	if (ofl) {
+		v4l2_dbg(1, rkvpss_debug, &ofl->v4l2_dev,
+			 "%s file:%p ret:%d\n", __func__, file, ret);
+	}
 	return (ret > 0) ? 0 : ret;
 }
 
