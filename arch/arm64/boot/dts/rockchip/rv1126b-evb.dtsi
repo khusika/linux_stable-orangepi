@@ -479,6 +479,10 @@
 	status = "okay";
 };
 
+&saradc0 {
+	status = "okay";
+};
+
 &tsadc {
 	status = "okay";
 };

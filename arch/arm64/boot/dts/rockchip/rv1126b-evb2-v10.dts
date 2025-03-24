@@ -257,6 +257,10 @@
 	status = "okay";
 };
 
+&saradc0 {
+	vref-supply = <&vcc_1v8>;
+};
+
 &sc450ai {
 	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_LOW>;
 };
