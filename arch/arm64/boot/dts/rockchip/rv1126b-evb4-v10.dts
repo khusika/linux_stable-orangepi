@@ -164,14 +164,18 @@
 	};
 };
 
-&rknpu {
-	rknpu-supply = <&vdd_npu>;
-};
-
 &pinctrl {
 	pmic {
 		pmic_int: pmic-int {
 			rockchip,pins = <0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
+};
+
+&pwm0_8ch_0 {
+	status = "okay";
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
 };
