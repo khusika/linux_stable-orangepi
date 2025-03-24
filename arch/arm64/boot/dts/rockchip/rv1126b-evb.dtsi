@@ -506,3 +506,7 @@
 &vop {
 	status = "okay";
 };
+
+&vop_mmu {
+	status = "okay";
+};
