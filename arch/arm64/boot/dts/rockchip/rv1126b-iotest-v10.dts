@@ -117,6 +117,24 @@
 	status = "okay";
 };
 
+&gmac {
+	phy-mode = "rmii";
+	clock_in_out = "input";
+	phy-handle = <&rmii_phy>;
+	status = "okay";
+};
+
+&mdio {
+	rmii_phy: ethernet-phy@2 {
+		compatible = "ethernet-phy-id0680.8101", "ethernet-phy-ieee802.3-c22";
+		reg = <2>;
+		clocks = <&cru CLK_MACPHY>;
+		clock-frequency = <24000000>;
+		resets = <&cru SRST_RESETN_MACPHY>;
+		phy-is-integrated;
+	};
+};
+
 &rknpu {
 	rknpu-supply = <&vdd_npu>;
 };
