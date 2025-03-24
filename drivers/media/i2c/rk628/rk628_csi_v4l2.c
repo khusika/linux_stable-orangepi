@@ -3031,17 +3031,16 @@ static const struct v4l2_subdev_ops rk628_csi_ops = {
 
 static int rk628_csi_get_custom_ctrl(struct v4l2_ctrl *ctrl)
 {
-	int ret = -EINVAL;
+	int ret = 0;
 	struct rk628_csi *csi = container_of(ctrl->handler, struct rk628_csi,
 			hdl);
 	struct v4l2_subdev *sd = &csi->sd;
 
 	if (ctrl->id == RK_V4L2_CID_AUDIO_SAMPLING_RATE) {
-		ret = get_audio_sampling_rate(sd);
-		*ctrl->p_new.p_s32 = ret;
+		*ctrl->p_new.p_s32 = get_audio_sampling_rate(sd);
 	} else if (ctrl->id == RK_V4L2_CID_AUDIO_PRESENT) {
-		ret = tx_5v_power_present(sd) ? rk628_hdmirx_audio_present(csi->audio_info) : 0;
-		*ctrl->p_new.p_s32 = ret;
+		*ctrl->p_new.p_s32 = tx_5v_power_present(sd) ?
+			rk628_hdmirx_audio_present(csi->audio_info) : 0;
 	} else {
 		ret = -EINVAL;
 	}
