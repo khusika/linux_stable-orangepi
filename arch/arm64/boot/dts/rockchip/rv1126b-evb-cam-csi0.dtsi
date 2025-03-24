@@ -197,3 +197,6 @@
 	};
 };
 
+&rkisp_vir0_sditf {
+	status = "okay";
+};
