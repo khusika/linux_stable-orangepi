@@ -415,6 +415,14 @@
 	status = "okay";
 };
 
+&rkavsp {
+	status = "okay";
+};
+
+&rkavsp_mmu {
+	status = "okay";
+};
+
 &rkfec {
 	status = "okay";
 };
