@@ -304,6 +304,8 @@
 		clocks = <&cru CLK_MACPHY>;
 		clock-frequency = <24000000>;
 		resets = <&cru SRST_RESETN_MACPHY>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fephym1_pins>;
 		phy-is-integrated;
 	};
 };
