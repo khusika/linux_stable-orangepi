@@ -11,6 +11,19 @@
 	model = "Rockchip RV1126B-P EVB V14 Board";
 	compatible = "rockchip,rv1126bp-evb-v14", "rockchip,rv1126b";
 
+	rk809_sound: rk809-sound {
+		compatible = "simple-audio-card";
+		simple-audio-card,format = "i2s";
+		simple-audio-card,name = "rockchip,rk809-codec";
+		simple-audio-card,mclk-fs = <256>;
+		simple-audio-card,cpu {
+			sound-dai = <&sai0>;
+		};
+		simple-audio-card,codec {
+			sound-dai = <&rk809_codec>;
+		};
+	};
+
 	vcc_sys: vcc-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc_sys";
@@ -298,11 +311,20 @@
 				regulator-name = "vcc_3v3";
 			};
 		};
-	};
-};
 
-&rknpu {
-	rknpu-supply = <&vdd_npu>;
+		rk809_codec: codec {
+			#sound-dai-cells = <0>;
+			compatible = "rockchip,rk809-codec", "rockchip,rk817-codec";
+			clocks = <&sai0_mclkout>;
+			clock-names = "mclk";
+			assigned-clocks = <&sai0_mclkout>;
+			assigned-clock-rates = <12288000>;
+			pinctrl-names = "default";
+			pinctrl-0 = <&sai0m0_mclk_pins>;
+			hp-volume = <20>;
+			spk-volume = <3>;
+		};
+	};
 };
 
 &pinctrl {
@@ -317,4 +339,22 @@
 				<0 RK_PC1 RK_FUNC_GPIO &pcfg_output_low>;
 		};
 	};
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
+};
+
+&sai0 {
+	status = "okay";
+	rockchip,sai-rx-route = <3 1 2 0>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&sai0m0_lrck_pins
+		     &sai0m0_sclk_pins
+		     &sai0m0_sdi3_pins
+		     &sai0m0_sdo0_pins>;
+};
+
+&sai0_mclkout {
+	status = "okay";
 };
