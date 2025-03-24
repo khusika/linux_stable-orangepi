@@ -423,11 +423,47 @@
 	status = "okay";
 };
 
+&jpegd {
+	status = "okay";
+};
+
+&jpeg_mmu {
+	status = "okay";
+};
+
+&mpp_srv {
+	status = "okay";
+};
+
+&mpp_vcodec {
+	status = "okay";
+};
+
+&rkdvbm {
+	status = "okay";
+};
+
 &rknpu {
 	status = "okay";
 };
 
 &rknpu_mmu {
+	status = "okay";
+};
+
+&rkvdec {
+	status = "okay";
+};
+
+&rkvdec_mmu {
+	status = "okay";
+};
+
+&rkvenc {
+	status = "okay";
+};
+
+&rkvenc_mmu {
 	status = "okay";
 };
 
