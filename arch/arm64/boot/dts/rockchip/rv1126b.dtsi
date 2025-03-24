@@ -1440,6 +1440,7 @@
 				reg = <RV1126B_PD_NPU>;
 				pm_qos = <&qos_npu>;
 				pm_shaping = <&shaping_npu>;
+				clocks = <&cru HCLK_RKNN>;
 			};
 			/* These power domains are grouped by VD_LOGIC */
 			power-domain@RV1126B_PD_VDO {
@@ -1452,6 +1453,7 @@
 					     <&shaping_rkvdec>,
 					     <&shaping_rkjpeg>,
 					     <&shaping_decom>;
+				rockchip,always-on;
 			};
 			power-domain@RV1126B_PD_AISP {
 				reg = <RV1126B_PD_AISP>;
