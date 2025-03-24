@@ -134,6 +134,13 @@
 		vin-supply = <&vccsys_stb>;
 	};
 
+	vcc_lcd: vcc-lcd {
+		compatible = "regulator-fixed";
+		gpio = <&gpio7 RK_PA7 GPIO_ACTIVE_HIGH>;
+		regulator-name = "vcc_lcd";
+		enable-active-high;
+	};
+
 	vcc_sd: vcc-sd {
 		compatible = "regulator-fixed";
 		gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
@@ -198,12 +205,41 @@
 	};
 };
 
+&acdcdig_dsm {
+	pa-ctl-gpios = <&gpio0 RK_PC1 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&acodec_sound {
+	status = "okay";
+};
+
+&audio_codec {
+	status = "okay";
+};
+
 &backlight {
 	pwms = <&pwm2_8ch_7 0 25000 0>;
 };
 
 &cpu0 {
 	cpu-supply = <&vdd_cpu>;
+};
+
+&display_subsystem {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+};
+
+&dsi_in_vop {
+	status = "okay";
+};
+
+&dsi_panel {
+	power-supply = <&vcc_lcd>;
 };
 
 &fspi0 {
@@ -218,8 +254,45 @@
 	};
 };
 
+&gmac {
+	phy-mode = "rmii";
+	clock_in_out = "input";
+	phy-handle = <&rmii_phy>;
+	status = "okay";
+};
+
 &imx415 {
 	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+};
+
+&i2c2 {
+	pinctrl-0 = <&i2c2m1_pins>;
+	status = "okay";
+
+	gt1x: gt1x@14 {
+		compatible = "goodix,gt1x";
+		reg = <0x14>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_gpio>;
+		vdd_ana-supply = <&vcc_lcd>;
+		goodix,rst-gpio = <&gpio5 RK_PD6 GPIO_ACTIVE_HIGH>;
+		goodix,irq-gpio = <&gpio3 RK_PB7 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+&mdio {
+	rmii_phy: ethernet-phy@2 {
+		compatible = "ethernet-phy-id0680.8101", "ethernet-phy-ieee802.3-c22";
+		reg = <2>;
+		clocks = <&cru CLK_MACPHY>;
+		clock-frequency = <24000000>;
+		resets = <&cru SRST_RESETN_MACPHY>;
+		phy-is-integrated;
+	};
+};
+
+&mipi_dphy {
+	status = "okay";
 };
 
 &rknpu {
@@ -231,6 +304,14 @@
 		/omit-if-no-ref/
 		sdmmc_volt: sdmmc-volt {
 			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	touch {
+		touch_gpio: touch-gpio {
+			rockchip,pins =
+				<3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_up>,
+				<5 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -255,6 +336,17 @@
 
 &pwm2_8ch_7 {
 	status = "okay";
+};
+
+&route_dsi {
+	status = "okay";
+};
+
+&sai2 {
+	rockchip,sai-rx-route = <1 0 2 3>;
+	status = "okay";
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
 };
 
 &saradc0 {
