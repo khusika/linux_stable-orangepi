@@ -467,6 +467,10 @@
 	status = "okay";
 };
 
+&rng {
+	status = "okay";
+};
+
 &usb2phy {
 	status = "okay";
 };
