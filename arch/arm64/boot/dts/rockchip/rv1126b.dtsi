@@ -69,6 +69,30 @@
 		#size-cells = <1>;
 		ranges;
 
+		sai0_fs: sai0-fs {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "fs_inter_from_sai0";
+			status = "disabled";
+		};
+
+		sai1_fs: sai1-fs {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "fs_inter_from_sai1";
+			status = "disabled";
+		};
+
+		sai2_fs: sai2-fs {
+			compatible = "fixed-clock";
+			#clock-cells = <0>;
+			clock-frequency = <0>;
+			clock-output-names = "fs_inter_from_sai2";
+			status = "disabled";
+		};
+
 		sai0_mclkin: sai0-mclkin {
 			compatible = "fixed-clock";
 			#clock-cells = <0>;
