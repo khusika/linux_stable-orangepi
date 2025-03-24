@@ -394,6 +394,14 @@
 	status = "okay";
 };
 
+&rkfec {
+	status = "okay";
+};
+
+&rkfec_mmu {
+	status = "okay";
+};
+
 &route_dsi {
 	status = "okay";
 };
