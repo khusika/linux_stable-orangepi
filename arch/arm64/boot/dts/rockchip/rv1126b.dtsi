@@ -1440,6 +1440,7 @@
 		compatible = "rockchip,rv1126b-codec", "rockchip,rk3506-codec";
 		reg = <0x20890000 0x1000>;
 		#sound-dai-cells = <0>;
+		sound-name-prefix = "ACodec_LP";
 		clocks = <&cru PCLK_AUDIO_ADC_PMU>, <&cru MCLK_AUDIO_ADC_PMU>;
 		clock-names = "pclk", "mclk";
 		resets = <&cru SRST_MRESETN_AUDIO_ADC_PMU>;
@@ -1719,6 +1720,7 @@
 		compatible = "rockchip,rv1126b-codec", "rockchip,rk3506-codec";
 		reg = <0x20bf0000 0x1000>;
 		#sound-dai-cells = <0>;
+		sound-name-prefix = "ACodec";
 		clocks = <&cru PCLK_AUDIO_ADC_BUS>, <&cru MCLK_AUDIO_ADC_BUS>;
 		clock-names = "pclk", "mclk";
 		resets = <&cru SRST_MRESETN_AUDIO_ADC_BUS>;
