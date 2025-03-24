@@ -170,6 +170,16 @@
 			rockchip,bit-set-to-disable;
 			status = "disabled";
 		};
+
+		pvtpll_core: pvtpll-core@20480000 {
+			compatible = "rockchip,rv1126b-core-pvtpll", "syscon";
+			reg = <0x20480000 0x100>;
+			clocks = <&cru ARMCLK>;
+			#clock-cells = <0>;
+			clock-output-names = "clk_core_pvtpll";
+			assigned-clocks = <&pvtpll_core>;
+			assigned-clock-rates = <1200000000>;
+		};
 	};
 
 	cpus {
@@ -217,20 +227,46 @@
 		nvmem-cells = <&cpu_leakage>;
 		nvmem-cell-names = "leakage";
 
-		opp-396000000 {
-			opp-hz = /bits/ 64 <396000000>;
-			opp-microvolt = <900000 900000 1100000>;
+		opp-594000000 {
+			opp-hz = /bits/ 64 <594000000>;
+			opp-microvolt = <850000 850000 1100000>;
 			clock-latency-ns = <40000>;
 			opp-suspend;
 		};
-		opp-594000000 {
-			opp-hz = /bits/ 64 <594000000>;
-			opp-microvolt = <900000 900000 1100000>;
+
+		opp-816000000 {
+			opp-hz = /bits/ 64 <816000000>;
+			opp-microvolt = <850000 850000 1100000>;
 			clock-latency-ns = <40000>;
 		};
-		opp-1188000000 {
-			opp-hz = /bits/ 64 <1188000000>;
-			opp-microvolt = <1000000 1000000 1100000>;
+		opp-1008000000 {
+			opp-hz = /bits/ 64 <1008000000>;
+			opp-microvolt = <850000 850000 1100000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <862500 862500 1100000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1296000000 {
+			opp-hz = /bits/ 64 <1296000000>;
+			opp-microvolt = <912500 912500 1100000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1416000000 {
+			opp-hz = /bits/ 64 <1416000000>;
+			opp-microvolt = <937500 937500 1100000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1512000000 {
+			opp-hz = /bits/ 64 <1512000000>;
+			opp-microvolt = <962500 962500 1100000>;
+			clock-latency-ns = <40000>;
+		};
+		opp-1608000000 {
+			opp-hz = /bits/ 64 <1608000000>;
+			opp-microvolt = <1012500 1012500 1100000>;
 			clock-latency-ns = <40000>;
 		};
 	};
