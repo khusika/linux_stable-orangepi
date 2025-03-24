@@ -1650,6 +1650,7 @@
 			 <&cru SRST_RESETN_TSADC_PHYCTRL>;
 		reset-names = "tsadc", "tsadc-apb", "tsadc-phy";
 		#thermal-sensor-cells = <1>;
+		rockchip,grf = <&grf>;
 		rockchip,hw-tshut-temp = <120000>;
 		rockchip,hw-tshut-mode = <0>; /* tshut mode 0:CRU 1:GPIO */
 		rockchip,hw-tshut-polarity = <0>; /* tshut polarity 0:LOW 1:HIGH */
