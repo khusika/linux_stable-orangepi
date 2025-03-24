@@ -297,6 +297,22 @@
 	};
 };
 
+&i2c4 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4m3_pins>;
+
+	gt1x: gt1x@14 {
+		compatible = "goodix,gt1x";
+		reg = <0x14>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_gpio>;
+		power-supply = <&vcc_mipi>;
+		goodix,rst-gpio = <&gpio7 RK_PA7 GPIO_ACTIVE_HIGH>;
+		goodix,irq-gpio = <&gpio7 RK_PA6 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
 &mdio {
 	rmii_phy: ethernet-phy@2 {
 		compatible = "ethernet-phy-id0680.8101", "ethernet-phy-ieee802.3-c22";
@@ -335,6 +351,14 @@
 		/omit-if-no-ref/
 		sdmmc_volt: sdmmc-volt {
 			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	touch {
+		touch_gpio: touch-gpio {
+			rockchip,pins =
+				<7 RK_PA6 RK_FUNC_GPIO &pcfg_pull_up>,
+				<7 RK_PA7 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
 
