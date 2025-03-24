@@ -301,7 +301,7 @@ static const struct rknpu_config rv1126b_rknpu_config = {
 	.max_submit_number = (1 << 16) - 1,
 	.core_mask = 0x1,
 	.amount_top = &rknpu_top_amount,
-	.amount_core = &rknpu_core_amount,
+	.amount_core = NULL,
 	.state_init = NULL,
 	.cache_sgt_init = NULL,
 };
@@ -569,8 +569,13 @@ static int rknpu_release(struct inode *inode, struct file *file)
 		vunmap(entry->kv_addr);
 		entry->kv_addr = NULL;
 
-		if (!entry->owner)
+		if (!entry->owner) {
 			dma_buf_put(entry->dmabuf);
+		} else {
+			dma_buf_unmap_attachment(entry->attachment, entry->sgt,
+						 DMA_BIDIRECTIONAL);
+			dma_buf_detach(entry->dmabuf, entry->attachment);
+		}
 
 		list_del(&entry->head);
 		kfree(entry);
