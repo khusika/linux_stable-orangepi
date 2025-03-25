@@ -138,3 +138,8 @@
 &rknpu {
 	rknpu-supply = <&vdd_npu>;
 };
+
+&usb_drd_dwc3 {
+	dr_mode = "otg";
+	extcon = <&usb2phy>;
+};
