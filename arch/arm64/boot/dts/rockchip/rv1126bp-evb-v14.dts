@@ -70,6 +70,33 @@
 	status = "okay";
 };
 
+&gmac {
+	phy-mode = "rgmii";
+	clock_in_out = "output";
+
+	snps,reset-gpio = <&gpio5 RK_PD4 GPIO_ACTIVE_LOW>;
+	snps,reset-active-low;
+	/* Reset time is 20ms, 100ms for rtl8211f */
+	snps,reset-delays-us = <0 20000 100000>;
+
+	assigned-clocks = <&cru CLK_MAC_OUT2IO>;
+	assigned-clock-rates = <25000000>;
+
+	pinctrl-names = "default";
+	pinctrl-0 = <&ethm1_miim_pins
+		     &ethm1_tx_bus2_pins
+		     &ethm1_rx_bus2_pins
+		     &ethm1_rgmii_clk_pins
+		     &ethm1_rgmii_bus_pins
+		     &eth_clk_25mm1_out_pins>;
+
+	tx_delay = <0x36>;
+	rx_delay = <0x2c>;
+
+	phy-handle = <&rgmii_phy>;
+	status = "okay";
+};
+
 &i2c0 {
 	status = "okay";
 
@@ -360,6 +387,14 @@
 &i2c3 {
 	status = "disabled";
 	/delete-node/ sc450ai@30;
+};
+
+&mdio {
+	rgmii_phy: phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <0x1>;
+		clocks = <&cru CLK_MAC_OUT2IO>;
+	};
 };
 
 &pinctrl {
