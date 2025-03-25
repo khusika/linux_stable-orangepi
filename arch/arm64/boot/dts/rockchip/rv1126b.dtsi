@@ -488,6 +488,18 @@
 		status = "disabled";
 	};
 
+	rkcif_dvp: rkcif-dvp {
+		compatible = "rockchip,rkcif-dvp";
+		rockchip,hw = <&rkcif>;
+		status = "disabled";
+	};
+
+	rkcif_dvp_sditf: rkcif-dvp-sditf {
+		compatible = "rockchip,rkcif-sditf";
+		rockchip,cif = <&rkcif_dvp>;
+		status = "disabled";
+	};
+
 	rkcif_mipi_lvds: rkcif-mipi-lvds {
 		compatible = "rockchip,rkcif-mipi-lvds";
 		rockchip,hw = <&rkcif>;
@@ -2881,7 +2893,7 @@
 			 <&cru SRST_DRESETN_VICAP>, <&cru SRST_ISP0RESETN_VICAP>;
 		reset-names = "rst_cif_a", "rst_cif_h",
 			      "rst_cif_d", "rst_cif_isp0";
-		rockchip,grf = <&grf>;
+		rockchip,grf = <&ioc_grf>;
 		iommus = <&rkcif_mmu>;
 		status = "disabled";
 	};
