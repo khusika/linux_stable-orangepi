@@ -287,6 +287,10 @@
 	phy-supply = <&vcc5v0_host>;
 };
 
+&usb3phy {
+	status = "disabled";
+};
+
 &usb_drd_dwc3 {
 	dr_mode = "otg";
 	extcon = <&usb2phy>;
