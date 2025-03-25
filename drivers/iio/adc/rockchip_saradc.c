@@ -242,10 +242,11 @@ static irqreturn_t rockchip_saradc_isr(int irq, void *dev_id)
 	unsigned long flags;
 #endif
 
+#ifndef CONFIG_ROCKCHIP_SARADC_TEST_CHN
 	/* Nothing need to do if info->last_chan not ready */
 	if (!info->last_chan)
 		return IRQ_HANDLED;
-
+#endif
 	/* Read value */
 	info->last_val = rockchip_saradc_read(info);
 #ifndef CONFIG_ROCKCHIP_SARADC_TEST_CHN
