@@ -11,6 +11,14 @@
 	model = "Rockchip RV1126B EVB4 V10 Board";
 	compatible = "rockchip,rv1126b-evb4-v10", "rockchip,rv1126b";
 
+	vcc_mipi: vcc-mipi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_mipi";
+		gpio = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
 	vcc5v0_sys: vcc5v0-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc5v0_sys";
@@ -36,8 +44,28 @@
 	};
 };
 
+&backlight {
+	pwms = <&pwm0_8ch_3 0 25000 0>;
+};
+
 &cpu0 {
 	cpu-supply = <&vdd_cpu>;
+};
+
+&display_subsystem {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+};
+
+&dsi_in_vop {
+	status = "okay";
+};
+
+&dsi_panel {
+	power-supply = <&vcc_mipi>;
 };
 
 &emmc {
@@ -164,6 +192,10 @@
 	};
 };
 
+&mipi_dphy {
+	status = "okay";
+};
+
 &pinctrl {
 	pmic {
 		pmic_int: pmic-int {
@@ -176,6 +208,14 @@
 	status = "okay";
 };
 
+&pwm0_8ch_3 {
+	status = "okay";
+};
+
 &rknpu {
 	rknpu-supply = <&vdd_npu>;
+};
+
+&route_dsi {
+	status = "okay";
 };
