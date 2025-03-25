@@ -192,6 +192,19 @@
 	};
 };
 
+&i2c2 {
+	status = "okay";
+
+	gt1x: gt1x@14 {
+		compatible = "goodix,gt1x";
+		reg = <0x14>;
+		pinctrl-names = "default";
+		power-supply = <&vcc_mipi>;
+		goodix,rst-gpio = <&gpio0 RK_PC5 GPIO_ACTIVE_HIGH>;
+		goodix,irq-gpio = <&gpio0 RK_PA7 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
 &mipi_dphy {
 	status = "okay";
 };
