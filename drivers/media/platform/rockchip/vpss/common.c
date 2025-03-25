@@ -165,3 +165,13 @@ int rkvpss_attach_hw(struct rkvpss_device *vpss)
 
 	return 0;
 }
+
+void rkvpss_detach_hw(struct rkvpss_device *vpss)
+{
+	struct rkvpss_hw_dev *hw = vpss->hw_dev;
+
+	if (hw) {
+		hw->vpss[vpss->dev_id] = NULL;
+		vpss->hw_dev = NULL;
+	}
+}

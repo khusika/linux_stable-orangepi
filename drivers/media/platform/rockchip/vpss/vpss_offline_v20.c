@@ -2548,7 +2548,7 @@ static int ofl_open(struct file *file)
 	struct rkvpss_offline_dev *ofl = video_drvdata(file);
 	int ret;
 
-	if (!ofl || !ofl->hw) {
+	if (!ofl || !ofl->hw || !ofl->hw->is_probe_end) {
 		ret = -ENODEV;
 		goto end;
 	}

@@ -307,7 +307,7 @@ static int rkvpss_plat_probe(struct platform_device *pdev)
 	ret = v4l2_device_register(vpss_dev->dev, v4l2_dev);
 	if (ret < 0) {
 		v4l2_err(v4l2_dev, "register v4l2 device failed:%d\n", ret);
-		return ret;
+		goto err_detach;
 	}
 	media_device_init(&vpss_dev->media_dev);
 	ret = media_device_register(&vpss_dev->media_dev);
@@ -324,16 +324,18 @@ static int rkvpss_plat_probe(struct platform_device *pdev)
 	atomic_set(&vpss_dev->pipe_stream_cnt, 0);
 	rkvpss_proc_init(vpss_dev);
 	pm_runtime_enable(&pdev->dev);
-	vpss_dev->is_probe_end = true;
 	init_waitqueue_head(&vpss_dev->stop_done);
 	vpss_dev->is_suspend = false;
 	vpss_dev->is_idle = true;
+	vpss_dev->is_probe_end = true;
 	return 0;
 
 err_unreg_media_dev:
 	media_device_unregister(&vpss_dev->media_dev);
 err_unreg_v4l2_dev:
 	v4l2_device_unregister(&vpss_dev->v4l2_dev);
+err_detach:
+	rkvpss_detach_hw(vpss_dev);
 	return ret;
 }
 
@@ -353,6 +355,7 @@ static int rkvpss_plat_remove(struct platform_device *pdev)
 	media_device_unregister(&vpss_dev->media_dev);
 	v4l2_device_unregister(&vpss_dev->v4l2_dev);
 	mutex_destroy(&vpss_dev->apilock);
+	rkvpss_detach_hw(vpss_dev);
 	return 0;
 }
 

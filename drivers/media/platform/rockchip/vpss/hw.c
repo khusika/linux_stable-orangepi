@@ -854,7 +854,6 @@ static int rkvpss_hw_probe(struct platform_device *pdev)
 	hw_dev = devm_kzalloc(dev, sizeof(*hw_dev), GFP_KERNEL);
 	if (!hw_dev)
 		return -ENOMEM;
-
 	hw_dev->sw_reg = devm_kzalloc(dev, RKVPSS_SW_REG_SIZE, GFP_KERNEL);
 	if (!hw_dev->sw_reg)
 		return -ENOMEM;
@@ -950,7 +949,7 @@ static int rkvpss_hw_probe(struct platform_device *pdev)
 	rkvpss_register_offline(hw_dev);
 
 	pm_runtime_enable(&pdev->dev);
-
+	hw_dev->is_probe_end = true;
 	return 0;
 err:
 	return ret;
@@ -1023,10 +1022,16 @@ static int __maybe_unused rkvpss_hw_runtime_resume(struct device *dev)
 
 	if (dev->power.runtime_status) {
 		for (i = 0; i < hw_dev->dev_num; i++) {
-			void *buf = hw_dev->vpss[i]->sw_base_addr;
+			struct rkvpss_device *vpss = hw_dev->vpss[i];
 
-			memset(buf, 0, RKVPSS_SW_REG_SIZE_MAX);
-			memcpy_fromio(buf, base, RKVPSS_SW_REG_SIZE);
+			if (!vpss || !vpss->is_probe_end)
+				continue;
+			if (vpss->sw_base_addr) {
+				void *buf = vpss->sw_base_addr;
+
+				memset(buf, 0, RKVPSS_SW_REG_SIZE_MAX);
+				memcpy_fromio(buf, base, RKVPSS_SW_REG_SIZE);
+			}
 		}
 		hw_dev->is_first = true;
 	} else {

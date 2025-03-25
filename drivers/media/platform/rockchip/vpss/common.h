@@ -123,5 +123,6 @@ void rkvpss_unite_clear_bits(struct rkvpss_device *dev, u32 reg, u32 mask);
 void rkvpss_update_regs(struct rkvpss_device *dev, u32 start, u32 end);
 
 int rkvpss_attach_hw(struct rkvpss_device *vpss);
+void rkvpss_detach_hw(struct rkvpss_device *vpss);
 void rkvpss_set_clk_rate(struct clk *clk, unsigned long rate);
 #endif

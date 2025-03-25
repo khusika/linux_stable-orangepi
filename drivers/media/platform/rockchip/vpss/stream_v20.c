@@ -2221,7 +2221,8 @@ static int rkvpss_fh_open(struct file *file)
 	struct rkvpss_device *dev = stream->dev;
 	int ret;
 
-	if (!dev->is_probe_end)
+	if (!dev || !dev->is_probe_end ||
+	    !dev->hw_dev || !dev->hw_dev->is_probe_end)
 		return -EINVAL;
 
 	ret = v4l2_fh_open(file);

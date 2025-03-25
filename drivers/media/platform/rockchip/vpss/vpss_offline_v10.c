@@ -2161,6 +2161,9 @@ static int ofl_open(struct file *file)
 	struct rkvpss_offline_dev *ofl = video_drvdata(file);
 	int ret;
 
+	if (!ofl || !ofl->hw || !ofl->hw->is_probe_end)
+		return -EINVAL;
+
 	ret = v4l2_fh_open(file);
 	if (ret)
 		goto end;
