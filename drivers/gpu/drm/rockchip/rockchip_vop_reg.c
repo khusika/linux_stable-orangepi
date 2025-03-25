@@ -35,6 +35,7 @@
 		VOP_REG_VER_MASK(off, _mask, s, false, \
 				 _major, _begin_minor, _end_minor)
 
+static const struct vop_mcu_bypass_cfg rk3576_lit_mcu_bypass_cfg;
 
 static const uint32_t formats_win_full[] = {
 	DRM_FORMAT_XRGB8888,
@@ -2040,7 +2041,7 @@ static const struct vop_wb_data rv1126b_vop_wb_data = {
 static const struct vop_data rv1126b_vop = {
 	.soc_id = 0x1126b,
 	.vop_id = 0,
-	.version = VOP_VERSION(2, 5),
+	.version = VOP_VERSION(2, 0xf),
 	.max_input = {1920, 1920},
 	.max_output = {1920, 1080},
 	.ctrl = &rv1126b_ctrl_data,
@@ -2050,6 +2051,7 @@ static const struct vop_data rv1126b_vop = {
 	.grf = &rv1126b_grf_ctrl,
 	.win = rv1126_vop_win_data,
 	.win_size = ARRAY_SIZE(rv1126_vop_win_data),
+	.mcu_bypass_cfg = &rk3576_lit_mcu_bypass_cfg,
 };
 
 static const struct vop_ctrl rv1106_ctrl_data = {
