@@ -2690,7 +2690,8 @@ static void vop_plane_atomic_update(struct drm_plane *plane,
 
 	global_alpha_en = (vop_plane_state->global_alpha == 0xff) ? 0 : 1;
 	if ((is_alpha_support(fb->format->format) || global_alpha_en) &&
-	    (s->dsp_layer_sel & 0x3) != win->win_id) {
+	    ((vop->version != VOP_VERSION_RV1126B && (s->dsp_layer_sel & 0x3) != win->win_id) ||
+	     (vop->version == VOP_VERSION_RV1126B && (s->dsp_layer_sel & BIT(win->win_id))))) {
 		int src_blend_m0;
 		int pre_multi_alpha = ALPHA_SRC_PRE_MUL;
 
@@ -4510,9 +4511,10 @@ static int vop_crtc_atomic_check(struct drm_crtc *crtc,
 	struct drm_plane *plane;
 	struct drm_plane_state *pstate;
 	struct vop_plane_state *plane_state;
-	struct vop_zpos *pzpos;
+	struct vop_zpos *pzpos, *zpos;
+	const struct vop_win_data *win_data;
 	int dsp_layer_sel = 0;
-	int i, j, cnt = 0, ret = 0;
+	int i, j, cnt = 0, ret = 0, shift;
 
 	ret = vop_afbdc_atomic_check(crtc, crtc_state);
 	if (ret)
@@ -4571,15 +4573,40 @@ static int vop_crtc_atomic_check(struct drm_crtc *crtc,
 	sort(pzpos, cnt, sizeof(pzpos[0]), vop_zpos_cmp, NULL);
 
 	for (i = 0, cnt = 0; i < vop_data->win_size; i++) {
-		const struct vop_win_data *win_data = &vop_data->win[i];
-		int shift = i * 2;
+		win_data = &vop_data->win[i];
+		shift = i * 2;
+		zpos = &pzpos[cnt];
 
-		if (win_data->phy) {
-			struct vop_zpos *zpos = &pzpos[cnt++];
-
-			dsp_layer_sel |= zpos->win_id << shift;
+		/*
+		 * 1. For RV1126B:
+		 * dsp_layer2_sel, that is top layer:
+		 * - 2'b00 WIN0 is top layer
+		 * - 2'b01 WIN2 is top layer
+		 * dsp_layer1_sel, that is bottom layer:
+		 * - 2'b00 WIN0 is bottom layer
+		 * - 2'b01 WIN2 is bottom layer
+		 *
+		 * For {dsp_layer2_sel, dsp_layer1_sel}:
+		 * - 4'b0001 : WIN0 on the top, WIN2 on the bottom
+		 * - 4'b0100 : WIN2 on the top, WIN0 on the bottom
+		 *
+		 * 2. For other version:
+		 * - 2'b00 select WIN0
+		 * - 2'b10 select WIN2
+		 */
+		if (vop->version == VOP_VERSION_RV1126B) {
+			if (win_data->phy) {
+				/* only set top layer */
+				if (cnt++)
+					dsp_layer_sel |= BIT(zpos->win_id);
+			}
 		} else {
-			dsp_layer_sel |= i << shift;
+			if (win_data->phy) {
+				cnt++;
+				dsp_layer_sel |= zpos->win_id << shift;
+			} else {
+				dsp_layer_sel |= i << shift;
+			}
 		}
 	}
 
