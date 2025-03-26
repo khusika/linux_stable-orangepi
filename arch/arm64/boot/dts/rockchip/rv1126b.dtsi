@@ -204,6 +204,25 @@
 			assigned-clocks = <&pvtpll_core>;
 			assigned-clock-rates = <1200000000>;
 		};
+
+		pvtpll_enc: pvtpll-enc@21f00000 {
+			compatible = "rockchip,rv1126b-enc-pvtpll";
+			reg = <0x21f00000 0x100>;
+			#clock-cells = <0>;
+			clock-output-names = "clk_vepu_pvtpll";
+			assigned-clocks = <&pvtpll_enc>;
+			assigned-clock-rates = <550000000>;
+		};
+
+		pvtpll_npu: pvtpll-npu@22080000 {
+			compatible = "rockchip,rv1126b-npu-pvtpll", "syscon";
+			reg = <0x22080000 0x100>;
+			clocks = <&cru ACLK_RKNN>;
+			#clock-cells = <0>;
+			clock-output-names = "clk_npu_pvtpll";
+			assigned-clocks = <&pvtpll_npu>;
+			assigned-clock-rates = <800000000>;
+		};
 	};
 
 	cpus {
@@ -3101,13 +3120,25 @@
 		nvmem-cells = <&npu_leakage>;
 		nvmem-cell-names = "leakage";
 
-		opp-396000000 {
-			opp-hz = /bits/ 64 <396000000>;
-			opp-microvolt = <900000 900000 1000000>;
-		};
 		opp-594000000 {
 			opp-hz = /bits/ 64 <594000000>;
+			opp-microvolt = <850000 850000 1000000>;
+		};
+		opp-700000000 {
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <850000 850000 1000000>;
+		};
+		opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <850000 850000 1000000>;
+		};
+		opp-900000000 {
+			opp-hz = /bits/ 64 <900000000>;
 			opp-microvolt = <900000 900000 1000000>;
+		};
+		opp-950000000 {
+			opp-hz = /bits/ 64 <950000000>;
+			opp-microvolt = <925000 925000 1000000>;
 		};
 	};
 
