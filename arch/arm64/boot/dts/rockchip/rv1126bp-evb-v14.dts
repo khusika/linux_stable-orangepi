@@ -5,7 +5,7 @@
 
 /dts-v1/;
 #include "rv1126b.dtsi"
-#include "rv1126b-evb.dtsi"
+#include "rv1126bp-evb.dtsi"
 #include "rv1126b-evb-cam-csi0.dtsi"
 
 / {
@@ -37,6 +37,14 @@
 		 * - PDN (power down when low)
 		 */
 		reset-gpios = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
+	};
+
+	vcc_mipi: vcc-mipi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_mipi";
+		gpio = <&gpio6 RK_PA3 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
 	};
 
 	vcc_sys: vcc-sys {
@@ -89,8 +97,28 @@
 	};
 };
 
+&backlight {
+	pwms = <&pwm0_8ch_0 0 25000 0>;
+};
+
 &cpu0 {
 	cpu-supply = <&vdd_arm>;
+};
+
+&display_subsystem {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+};
+
+&dsi_in_vop {
+	status = "okay";
+};
+
+&dsi_panel {
+	power-supply = <&vcc_mipi>;
 };
 
 &emmc {
@@ -431,6 +459,10 @@
 	};
 };
 
+&mipi_dphy {
+	status = "okay";
+};
+
 &pinctrl {
 	pmic {
 		pmic_int: pmic_int {
@@ -461,6 +493,14 @@
 			rockchip,pins = <0 RK_PB2 RK_FUNC_GPIO &pcfg_pull_up>;
 		};
 	};
+};
+
+&pwm0_8ch_0 {
+	status = "okay";
+};
+
+&route_dsi {
+	status = "okay";
 };
 
 &rknpu {
