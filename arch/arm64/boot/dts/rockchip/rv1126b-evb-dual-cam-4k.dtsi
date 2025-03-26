@@ -83,8 +83,8 @@
 		pinctrl-0 = <&cam_clk0_pins>;
 		rockchip,camera-module-index = <0>;
 		rockchip,camera-module-facing = "back";
-		rockchip,camera-module-name = "CMK-OT2022-PX1";
-		rockchip,camera-module-lens-name = "IR0147-50IRC-8M-F20";
+		rockchip,camera-module-name = "default";
+		rockchip,camera-module-lens-name = "default";
 		port {
 			imx415_out0: endpoint {
 				remote-endpoint = <&csi_dphy_input0>;
@@ -103,8 +103,8 @@
 		pinctrl-0 = <&cam_clk2_pins>;
 		rockchip,camera-module-index = <1>;
 		rockchip,camera-module-facing = "back";
-		rockchip,camera-module-name = "CMK-OT2022-PX1";
-		rockchip,camera-module-lens-name = "IR0147-50IRC-8M-F20";
+		rockchip,camera-module-name = "default";
+		rockchip,camera-module-lens-name = "default";
 		port {
 			imx415_out1: endpoint {
 				remote-endpoint = <&csi_dphy3_input0>;
