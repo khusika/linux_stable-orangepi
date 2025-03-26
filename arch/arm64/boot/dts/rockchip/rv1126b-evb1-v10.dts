@@ -446,6 +446,7 @@
 };
 
 &uart2 {
+	status = "okay";
 	pinctrl-names = "default";
 	pinctrl-0 = <&uart2m0_xfer_pins &uart2m0_ctsn_pins>;
 };
