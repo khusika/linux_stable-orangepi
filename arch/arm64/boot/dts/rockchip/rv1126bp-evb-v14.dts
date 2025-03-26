@@ -481,6 +481,10 @@
 	status = "okay";
 };
 
+&saradc0 {
+	vref-supply = <&vcc_1v8>;
+};
+
 &sdmmc0 {
 	max-frequency = <200000000>;
 	no-sdio;
