@@ -3104,8 +3104,6 @@
 		interrupt-names = "npu_irq";
 		clocks = <&cru ACLK_RKNN>, <&cru HCLK_RKNN>;
 		clock-names = "aclk", "hclk";
-		assigned-clocks = <&cru ACLK_RKNN>;
-		assigned-clock-rates = <800000000>;
 		operating-points-v2 = <&npu_opp_table>;
 		resets = <&cru SRST_ARESETN_RKNN>, <&cru SRST_HRESETN_RKNN>;
 		reset-names = "srst_a", "srst_h";
@@ -3119,6 +3117,7 @@
 
 		nvmem-cells = <&npu_leakage>;
 		nvmem-cell-names = "leakage";
+		rockchip,init-freq = <800000>;
 
 		opp-594000000 {
 			opp-hz = /bits/ 64 <594000000>;
