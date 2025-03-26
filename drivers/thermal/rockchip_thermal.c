@@ -68,6 +68,10 @@ enum adc_sort_mode {
  */
 #define SOC_MAX_SENSORS	7
 
+struct phy_config {
+	unsigned int bias;
+};
+
 /**
  * struct chip_tsadc_table - hold information about chip-specific differences
  * @id: conversion table
@@ -96,6 +100,7 @@ struct chip_tsadc_table {
  * @tshut_temp: the hardware-controlled shutdown temperature value
  * @tshut_mode: the hardware-controlled shutdown mode (0:CRU 1:GPIO)
  * @tshut_polarity: the hardware-controlled active polarity (0:LOW 1:HIGH)
+ * @phy_init: SoC special initialize tsadc phy method
  * @initialize: SoC special initialize tsadc controller method
  * @irq_ack: clear the interrupt
  * @control: enable/disable method for the tsadc controller
@@ -124,6 +129,8 @@ struct rockchip_tsadc_chip {
 	enum tshut_polarity tshut_polarity;
 
 	/* Chip-wide methods */
+	void (*phy_init)(struct device *dev, struct regmap *grf,
+			 void __iomem *reg, struct phy_config *phy_cfg);
 	void (*initialize)(struct regmap *grf,
 			   void __iomem *reg, enum tshut_polarity p);
 	void (*suspend)(struct regmap *grf, void __iomem *reg);
@@ -198,6 +205,7 @@ struct rockchip_thermal_data {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *gpio_state;
 	struct pinctrl_state *otp_state;
+	struct phy_config phy_cfg;
 
 	struct notifier_block panic_nb;
 };
@@ -325,14 +333,22 @@ struct rockchip_thermal_data {
 #define RV1126_GRF0_TSADC_SHUT_2CRU		(0x30003 << 10)
 #define RV1126_GRF0_TSADC_SHUT_2GPIO		(0x70007 << 12)
 
+#define RV1126B_GRF_TSADC_CON0			0x50
 #define RV1126B_GRF_TSADC_CON1			0x54
 #define RV1126B_GRF_TSADC_CON6			0x68
+#define RV1126B_GRF_TSADC_ST1			0x114
 #define RV1126B_CH_EN				0x300
 #define RV1126B_CH_EN_MASK			(0x300 << 16)
 #define RV1126B_UNLOCK_VALUE			0xa5
 #define RV1126B_UNLOCK_VALUE_MASK		(0xff << 16)
 #define RV1126B_UNLOCK_TRIGGER			BIT(8)
 #define RV1126B_UNLOCK_TRIGGER_MASK		(BIT(8) << 16)
+#define RV1126B_DEF_WIDTH			0x00010001
+#define RV1126B_TARGET_WIDTH			24000
+#define RV1126B_DEF_BIAS			32
+#define RV1126B_BIAS_MASK			(0x7f << 16)
+#define RV1126B_HW_CTRL				BIT(15)
+#define RV1126B_HW_CTRL_MASK			(BIT(15) << 16)
 
 #define GRF_SARADC_TESTBIT_ON			(0x10001 << 2)
 #define GRF_TSADC_TESTBIT_H_ON			(0x10001 << 2)
@@ -1289,13 +1305,6 @@ static void rk_tsadcv14_initialize(struct regmap *grf, void __iomem *regs,
 	else
 		writel_relaxed(TSADCV2_AUTO_TSHUT_POLARITY_MASK,
 			       regs + TSADCV2_AUTO_CON);
-
-	regmap_write(grf, RV1126B_GRF_TSADC_CON6,
-		     RV1126B_CH_EN | RV1126B_CH_EN_MASK);
-	regmap_write(grf, RV1126B_GRF_TSADC_CON1,
-		     RV1126B_UNLOCK_VALUE | RV1126B_UNLOCK_VALUE_MASK);
-	regmap_write(grf, RV1126B_GRF_TSADC_CON1,
-		     RV1126B_UNLOCK_TRIGGER | RV1126B_UNLOCK_TRIGGER_MASK);
 }
 
 static void rk3506_tsadc_suspend(struct regmap *grf, void __iomem *regs)
@@ -1677,6 +1686,33 @@ static int rk_tsadcv1_set_clk_rate(struct platform_device *pdev)
 	return 0;
 }
 
+static void rv1126b_tsadc_phy_init(struct device *dev, struct regmap *grf,
+				   void __iomem *reg, struct phy_config *phy_cfg)
+{
+	u32 val = 0;
+	u32 width = 0;
+
+	if (!phy_cfg->bias) {
+		phy_cfg->bias = RV1126B_DEF_BIAS;
+		regmap_read(grf, RV1126B_GRF_TSADC_ST1, &val);
+		if (val && val != RV1126B_DEF_WIDTH) {
+			width = (val & 0x0000ffff) + ((val & 0xffff0000) >> 16);
+			phy_cfg->bias = width * RV1126B_DEF_BIAS / RV1126B_TARGET_WIDTH;
+		}
+		dev_info(dev, "width=0x%x, bias=0x%x\n", val, phy_cfg->bias);
+	}
+	regmap_write(grf, RV1126B_GRF_TSADC_CON6,
+		     phy_cfg->bias | RV1126B_BIAS_MASK);
+	regmap_write(grf, RV1126B_GRF_TSADC_CON6,
+		     RV1126B_CH_EN | RV1126B_CH_EN_MASK);
+	regmap_write(grf, RV1126B_GRF_TSADC_CON0, RV1126B_HW_CTRL_MASK);
+	regmap_write(grf, RV1126B_GRF_TSADC_CON1,
+		     RV1126B_UNLOCK_VALUE | RV1126B_UNLOCK_VALUE_MASK);
+	regmap_write(grf, RV1126B_GRF_TSADC_CON1,
+		     RV1126B_UNLOCK_TRIGGER | RV1126B_UNLOCK_TRIGGER_MASK);
+	regmap_write(grf, RV1126B_GRF_TSADC_CON1, RV1126B_UNLOCK_TRIGGER_MASK);
+}
+
 static const struct rockchip_tsadc_chip px30_tsadc_data = {
 	.chn_id[SENSOR_CPU] = 0, /* cpu sensor is channel 0 */
 	.chn_id[SENSOR_GPU] = 1, /* gpu sensor is channel 1 */
@@ -1799,9 +1835,11 @@ static const struct rockchip_tsadc_chip rv1126_tsadc_data = {
 static const struct rockchip_tsadc_chip rv1126b_tsadc_data = {
 	.chn_id = {0, 1}, /* cpu, npu */
 	.chn_num = 2, /* two channels for tsadc */
+	.conversion_time = 2000, /* us */
 	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
 	.tshut_temp = 95000,
+	.phy_init = rv1126b_tsadc_phy_init,
 	.initialize = rk_tsadcv14_initialize,
 	.irq_ack = rk_tsadcv4_irq_ack,
 	.control = rk_tsadcv4_control,
@@ -2699,6 +2737,9 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
 		goto err_disable_clocks;
 	}
 
+	if (thermal->chip->phy_init)
+		thermal->chip->phy_init(&pdev->dev, thermal->grf, thermal->regs,
+					&thermal->phy_cfg);
 	thermal->chip->initialize(thermal->grf, thermal->regs,
 				  thermal->tshut_polarity);
 
@@ -2842,6 +2883,9 @@ static int __maybe_unused rockchip_thermal_resume(struct device *dev)
 
 	rockchip_thermal_reset_controller(thermal->reset);
 
+	if (thermal->chip->phy_init)
+		thermal->chip->phy_init(dev, thermal->grf, thermal->regs,
+					&thermal->phy_cfg);
 	thermal->chip->initialize(thermal->grf, thermal->regs,
 				  thermal->tshut_polarity);
 
