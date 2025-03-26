@@ -246,6 +246,10 @@
 	};
 };
 
+&rkisp_vir0_sditf {
+	status = "okay";
+};
+
 &rkisp_vir1 {
 	status = "okay";
 
@@ -258,4 +262,16 @@
 			remote-endpoint = <&mipi_lvds2_sditf>;
 		};
 	};
+};
+
+&rkisp_vir1_sditf {
+	status = "okay";
+};
+
+&rkvpss_vir0 {
+	status = "okay";
+};
+
+&rkvpss_vir1 {
+	status = "okay";
 };

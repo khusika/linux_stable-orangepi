@@ -277,3 +277,11 @@
 &rkisp_vir1_sditf {
 	status = "okay";
 };
+
+&rkvpss_vir0 {
+	status = "okay";
+};
+
+&rkvpss_vir1 {
+	status = "okay";
+};

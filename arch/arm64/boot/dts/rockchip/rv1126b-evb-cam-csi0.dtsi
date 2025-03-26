@@ -200,3 +200,7 @@
 &rkisp_vir0_sditf {
 	status = "okay";
 };
+
+&rkvpss_vir0 {
+	status = "okay";
+};

@@ -206,3 +206,10 @@
 	};
 };
 
+&rkisp_vir1_sditf {
+	status = "okay";
+};
+
+&rkvpss_vir1 {
+	status = "okay";
+};
