@@ -2382,9 +2382,9 @@
 		reg = <0x21280000 0x1000>;
 		rockchip,grf = <&grf>;
 		interrupts = <GIC_SPI 215 IRQ_TYPE_LEVEL_HIGH>;
-		clocks = <&cru PCLK_RTC_ROOT>;
+		clocks = <&cru PCLK_RTC_TEST>;
 		clock-names = "pclk_phy";
-		assigned-clocks = <&cru PCLK_RTC_ROOT>;
+		assigned-clocks = <&cru PCLK_RTC_TEST>;
 		assigned-clock-rates = <50000000>;
 		status = "disabled";
 	};
