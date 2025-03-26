@@ -71,6 +71,7 @@ struct rk_priv_data {
 	struct clk *clk_phy;
 	struct clk *pclk_xpcs;
 	struct clk *clk_xpcs_eee;
+	unsigned int clk_phy_rate;
 
 	struct reset_control *phy_reset;
 
@@ -2556,6 +2557,9 @@ static const struct rk_gmac_ops rv1126_ops = {
 #define RV1126B_RK_MACPHY_DISABLE		0
 #define RV1126B_RK_MACPHY_ENABLE		BIT(31)
 
+#define RV1126B_RK_MACPHY_CLK_24M		0
+#define RV1126B_RK_MACPHY_CLK_50M		BIT(11)
+
 static void rv1126b_set_to_rgmii(struct rk_priv_data *bsp_priv,
 				 int tx_delay, int rx_delay)
 {
@@ -2588,6 +2592,10 @@ static void rv1126b_set_to_rmii(struct rk_priv_data *bsp_priv)
 		dev_err(dev, "%s: Missing rockchip,grf property\n", __func__);
 		return;
 	}
+
+	if (bsp_priv->integrated_phy)
+		regmap_write(bsp_priv->grf, RV1126B_VI_GRF_GMAC_CON0,
+			     RV1126B_GMAC_RK_MACPHY_ENABLE);
 
 	regmap_write(bsp_priv->grf, RV1126B_VI_GRF_GMAC_CON0,
 		     RV1126B_GMAC_PHY_INTF_SEL_RMII |
@@ -2664,23 +2672,34 @@ static void rv1126b_integrated_phy_power(struct rk_priv_data *priv, bool up)
 	}
 
 	if (up) {
+		unsigned int value;
+
+		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
+			     RV1126B_RK_MACPHY_DISABLE);
 		reset_control_assert(priv->phy_reset);
-		usleep_range(10, 20);
-		regmap_write(priv->grf, RV1126B_VI_GRF_GMAC_CON0,
-			     RV1126B_GMAC_RK_MACPHY_ENABLE);
+		usleep_range(20, 40);
+
+		if (priv->clk_phy_rate == 50000000)
+			regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON2,
+				     RV1126B_RK_MACPHY_CLK_50M);
+		else
+			regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON2,
+				     RV1126B_RK_MACPHY_CLK_24M);
+
 		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON0,
 			     RV1126B_RK_MACPHY_PHY_ID | RV1126B_RK_MACPHY_PHY_ADDR);
-		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
-			     RV1126B_RK_MACPHY_PHY_REVISION |
-			     RV1126B_RK_MACPHY_PHY_MODEL |
-			     RV1126B_RK_MACPHY_ENABLE);
-		usleep_range(110, 120);
+		value = RV1126B_RK_MACPHY_PHY_REVISION | RV1126B_RK_MACPHY_PHY_MODEL |
+			RV1126B_RK_MACPHY_ENABLE;
+		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1, value);
+		usleep_range(200, 220);
 		reset_control_deassert(priv->phy_reset);
+		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
+			     RV1126B_RK_MACPHY_DISABLE);
+		usleep_range(100, 120);
+		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1, value);
 	} else {
 		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
 			     RV1126B_RK_MACPHY_DISABLE);
-		regmap_write(priv->grf, RV1126B_VI_GRF_GMAC_CON0,
-			     RV1126B_GMAC_RK_MACPHY_DISABLE);
 	}
 }
 
@@ -2764,22 +2783,17 @@ static int rk_gmac_clk_init(struct plat_stmmacenet_data *plat)
 		bsp_priv->clk_phy = of_clk_get(plat->phy_node, 0);
 		/* If it is not integrated_phy, clk_phy is optional */
 		if (bsp_priv->integrated_phy) {
-			unsigned int rate = 0;
-
 			if (IS_ERR(bsp_priv->clk_phy)) {
 				ret = PTR_ERR(bsp_priv->clk_phy);
 				dev_err(dev, "Cannot get PHY clock: %d\n", ret);
 				return -EINVAL;
 			} else {
-				ret = of_property_read_u32(plat->phy_node, "clock-frequency", &rate);
+				ret = of_property_read_u32(plat->phy_node, "clock-frequency",
+							   &bsp_priv->clk_phy_rate);
 				if (ret)
-					rate = 0;
+					bsp_priv->clk_phy_rate = 50000000;
 			}
-
-			if (rate)
-				clk_set_rate(bsp_priv->clk_phy, rate);
-			else
-				clk_set_rate(bsp_priv->clk_phy, 50000000);
+			clk_set_rate(bsp_priv->clk_phy, bsp_priv->clk_phy_rate);
 		}
 	}
 
