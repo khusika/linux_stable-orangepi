@@ -825,6 +825,22 @@ static const struct isp_clk_info rv1126_isp_clk_rate[] = {
 	}
 };
 
+static const struct isp_clk_info rv1126b_isp_clk_rate[] = {
+	{
+		.clk_rate = 100,
+	}, {
+		.clk_rate = 200,
+	}, {
+		.clk_rate = 300,
+	}, {
+		.clk_rate = 400,
+	}, {
+		.clk_rate = 500,
+	}, {
+		.clk_rate = 600,
+	}
+};
+
 static struct isp_irqs_data isp_irqs[] = {
 	{"isp_irq", isp_irq_hdl},
 	{"mi_irq", mi_irq_hdl},
@@ -876,8 +892,8 @@ static const struct isp_match_data rv1126b_isp_match_data = {
 	.clks = rv1126b_isp_clks,
 	.num_clks = ARRAY_SIZE(rv1126b_isp_clks),
 	.isp_ver = ISP_V35,
-	.clk_rate_tbl = rv1126_isp_clk_rate,
-	.num_clk_rate_tbl = ARRAY_SIZE(rv1126_isp_clk_rate),
+	.clk_rate_tbl = rv1126b_isp_clk_rate,
+	.num_clk_rate_tbl = ARRAY_SIZE(rv1126b_isp_clk_rate),
 	.irqs = isp35_irqs,
 	.num_irqs = ARRAY_SIZE(isp35_irqs),
 	.unite = false,
