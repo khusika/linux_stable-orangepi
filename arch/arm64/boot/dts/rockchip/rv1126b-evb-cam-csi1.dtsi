@@ -210,6 +210,15 @@
 	status = "okay";
 };
 
+&rkvpss {
+	status = "okay";
+	dvbm = <&rkdvbm>;
+};
+
+&rkvpss_mmu {
+	status = "okay";
+};
+
 &rkvpss_vir1 {
 	status = "okay";
 };
