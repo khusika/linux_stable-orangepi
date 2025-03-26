@@ -151,7 +151,10 @@ static int rockchip_saradc_read_v2(struct rockchip_saradc *info)
 	writel_relaxed(0x1, info->regs + SARADC2_END_INT_ST);
 
 #ifdef CONFIG_ROCKCHIP_SARADC_TEST_CHN
-	channel = info->test_chn;
+	if (info->test)
+		channel = info->test_chn;
+	else
+		channel = info->last_chan->channel;
 #else
 	channel = info->last_chan->channel;
 #endif
