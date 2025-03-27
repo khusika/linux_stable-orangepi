@@ -73,6 +73,12 @@ static struct rkvpss_stream *rkvpss_rockit_get_stream(struct rockit_rkvpss_cfg *
 	case 3:
 		stream = &vpss_dev->stream_vdev.stream[RKVPSS_OUTPUT_CH3];
 		break;
+	case 4:
+		stream = &vpss_dev->stream_vdev.stream[RKVPSS_OUTPUT_CH4];
+		break;
+	case 5:
+		stream = &vpss_dev->stream_vdev.stream[RKVPSS_OUTPUT_CH5];
+		break;
 	default:
 		stream = NULL;
 		break;
