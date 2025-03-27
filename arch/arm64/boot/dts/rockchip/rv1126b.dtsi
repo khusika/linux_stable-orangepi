@@ -3374,6 +3374,7 @@
 		clocks = <&xin24m>, <&cru PCLK_DSIPHY>, <&cru PCLK_MIPI_DSI>;
 		clock-names = "ref", "pclk", "pclk_host";
 		#clock-cells = <0>;
+		power-domains = <&power RV1126B_PD_VDO>;
 		resets = <&cru SRST_PRESETN_DSIPHY>;
 		reset-names = "apb";
 		#phy-cells = <0>;
@@ -3453,6 +3454,7 @@
 		clocks = <&cru ACLK_VOP>, <&cru DCLK_VOP>, <&cru HCLK_VOP>;
 		clock-names = "aclk_vop", "dclk_vop", "hclk_vop";
 		iommus = <&vop_mmu>;
+		power-domains = <&power RV1126B_PD_VDO>;
 		status = "disabled";
 
 		vop_out: port {
