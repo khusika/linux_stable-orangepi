@@ -5127,7 +5127,8 @@ static int rkcif_csi_channel_set_rv1126b(struct rkcif_stream *stream,
 
 	if (stream->dma_en) {
 		if (mbus_type == V4L2_MBUS_CSI2_DPHY ||
-		    mbus_type == V4L2_MBUS_CSI2_CPHY) {
+		    mbus_type == V4L2_MBUS_CSI2_CPHY ||
+		    dev->chip_id >= CHIP_RV1126B_CIF) {
 			dma_en = CSI_DMA_ENABLE_RK3576;
 		} else {
 			dma_en = LVDS_DMAEN_RV1106;
@@ -12063,7 +12064,9 @@ static u32 rkcif_get_sof(struct rkcif_device *cif_dev)
 	struct csi2_dev *csi;
 
 	if (sensor->mbus.type == V4L2_MBUS_CSI2_DPHY ||
-	    sensor->mbus.type == V4L2_MBUS_CSI2_CPHY) {
+	    sensor->mbus.type == V4L2_MBUS_CSI2_CPHY ||
+	    (sensor->mbus.type == V4L2_MBUS_CCP2 &&
+	     cif_dev->chip_id >= CHIP_RV1106_CIF)) {
 		csi = container_of(sensor->sd, struct csi2_dev, sd);
 		val = rkcif_csi2_get_sof(csi);
 	} else if (sensor->mbus.type == V4L2_MBUS_CCP2) {
@@ -12081,7 +12084,9 @@ void rkcif_set_sof(struct rkcif_device *cif_dev, u32 seq)
 	struct csi2_dev *csi;
 
 	if (sensor->mbus.type == V4L2_MBUS_CSI2_DPHY ||
-	    sensor->mbus.type == V4L2_MBUS_CSI2_CPHY) {
+	    sensor->mbus.type == V4L2_MBUS_CSI2_CPHY ||
+	    (sensor->mbus.type == V4L2_MBUS_CCP2 &&
+	     cif_dev->chip_id >= CHIP_RV1106_CIF)) {
 		csi = container_of(sensor->sd, struct csi2_dev, sd);
 		rkcif_csi2_set_sof(csi, seq);
 	} else if (sensor->mbus.type == V4L2_MBUS_CCP2) {
@@ -13139,7 +13144,9 @@ static void rkcif_send_sof(struct rkcif_device *cif_dev)
 		return;
 
 	if (mbus->type == V4L2_MBUS_CSI2_DPHY ||
-	    mbus->type == V4L2_MBUS_CSI2_CPHY) {
+	    mbus->type == V4L2_MBUS_CSI2_CPHY ||
+	    (mbus->type == V4L2_MBUS_CCP2 &&
+	     cif_dev->chip_id >= CHIP_RV1106_CIF)) {
 		csi = container_of(cif_dev->active_sensor->sd, struct csi2_dev, sd);
 		rkcif_csi2_event_inc_sof(csi);
 	} else if (mbus->type == V4L2_MBUS_CCP2) {

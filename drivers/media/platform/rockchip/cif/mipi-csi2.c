@@ -125,7 +125,7 @@ static void csi2_update_sensor_info(struct csi2_dev *csi2)
 		csi2->dsi_input_en = 0;
 	}
 
-	csi2->bus = mbus.bus.mipi_csi2;
+	csi2->mbus = mbus;
 
 }
 
@@ -172,23 +172,19 @@ static void csi2_disable(struct csi2_hw *csi2_hw)
 	write_csihost_reg(csi2_hw->base, CSIHOST_MSK2, 0xffffffff);
 }
 
-static int csi2_g_mbus_config(struct v4l2_subdev *sd, unsigned int pad_id,
-			      struct v4l2_mbus_config *mbus);
-
 static void csi2_enable(struct csi2_hw *csi2_hw,
 			enum host_type_t host_type)
 {
 	void __iomem *base = csi2_hw->base;
 	struct csi2_dev *csi2 = csi2_hw->csi2;
-	int lanes = csi2->bus.num_data_lanes;
-	struct v4l2_mbus_config mbus;
+	int lanes = csi2->mbus.bus.mipi_csi2.num_data_lanes;
+	struct v4l2_mbus_config mbus = csi2->mbus;
 	u32 val = 0;
 	u32 mask1 = 0;
 	struct v4l2_subdev *terminal_sensor_sd = NULL;
 	struct rkmodule_hdr_cfg hdr_cfg = {0};
 	int ret = 0;
 
-	csi2_g_mbus_config(&csi2->sd, 0, &mbus);
 	if (mbus.type == V4L2_MBUS_CSI2_DPHY)
 		val = SW_CPHY_EN(0);
 	else if (mbus.type == V4L2_MBUS_CSI2_CPHY)
@@ -248,6 +244,10 @@ static int csi2_start(struct csi2_dev *csi2)
 
 	csi2_update_sensor_info(csi2);
 
+	if (csi2->mbus.type != V4L2_MBUS_CSI2_DPHY &&
+	    csi2->mbus.type != V4L2_MBUS_CSI2_CPHY)
+		return 0;
+
 	if (csi2->dsi_input_en == RKMODULE_DSI_INPUT)
 		host_type = RK_DSI_RXHOST;
 	else
@@ -294,6 +294,10 @@ static void csi2_stop(struct csi2_dev *csi2)
 {
 	int i = 0;
 	int csi_idx = 0;
+
+	if (csi2->mbus.type != V4L2_MBUS_CSI2_DPHY &&
+	    csi2->mbus.type != V4L2_MBUS_CSI2_CPHY)
+		return;
 
 	/* stop upstream */
 	v4l2_subdev_call(csi2->src_sd, video, s_stream, 0);
@@ -415,7 +419,7 @@ static int csi2_media_init(struct v4l2_subdev *sd)
 	csi2->crop.left = 0;
 	csi2->crop.width = RKCIF_DEFAULT_WIDTH;
 	csi2->crop.height = RKCIF_DEFAULT_HEIGHT;
-	csi2->bus.num_data_lanes = 4;
+	csi2->mbus.bus.mipi_csi2.num_data_lanes = 4;
 
 	return media_entity_pads_init(&sd->entity, num_pads, csi2->pad);
 }
@@ -536,8 +540,8 @@ static int csi2_g_mbus_config(struct v4l2_subdev *sd, unsigned int pad_id,
 	ret = v4l2_subdev_call(sensor_sd, pad, get_mbus_config, 0, mbus);
 	if (ret) {
 		mbus->type = V4L2_MBUS_CSI2_DPHY;
-		mbus->bus.mipi_csi2.flags = csi2->bus.flags;
-		mbus->bus.mipi_csi2.flags |= BIT(csi2->bus.num_data_lanes - 1);
+		mbus->bus.mipi_csi2.flags = csi2->mbus.bus.mipi_csi2.flags;
+		mbus->bus.mipi_csi2.flags |= BIT(csi2->mbus.bus.mipi_csi2.num_data_lanes - 1);
 	}
 
 	return 0;

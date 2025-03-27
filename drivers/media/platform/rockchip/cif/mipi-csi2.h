@@ -152,7 +152,7 @@ struct csi2_dev {
 
 	void __iomem		*base;
 	struct v4l2_async_notifier	notifier;
-	struct v4l2_mbus_config_mipi_csi2	bus;
+	struct v4l2_mbus_config mbus;
 
 	/* lock to protect all members below */
 	struct mutex lock;

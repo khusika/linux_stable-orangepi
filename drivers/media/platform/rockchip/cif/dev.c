@@ -1897,7 +1897,8 @@ static int rkcif_create_link(struct rkcif_device *dev,
 
 	linked_sensor.lanes = sensor->lanes;
 
-	if (sensor->mbus.type == V4L2_MBUS_CCP2) {
+	if (sensor->mbus.type == V4L2_MBUS_CCP2 &&
+	    dev->chip_id < CHIP_RV1106_CIF) {
 		linked_sensor.sd = &dev->lvds_subdev.sd;
 		dev->lvds_subdev.sensor_self.sd = &dev->lvds_subdev.sd;
 		dev->lvds_subdev.sensor_self.lanes = sensor->lanes;
@@ -2027,7 +2028,8 @@ static int rkcif_create_link(struct rkcif_device *dev,
 		}
 	}
 
-	if (sensor->mbus.type == V4L2_MBUS_CCP2) {
+	if (sensor->mbus.type == V4L2_MBUS_CCP2 &&
+	    dev->chip_id < CHIP_RV1106_CIF) {
 		source_entity = &sensor->sd->entity;
 		sink_entity = &linked_sensor.sd->entity;
 		ret = media_create_pad_link(source_entity,
@@ -2143,7 +2145,8 @@ static int subdev_notifier_complete(struct v4l2_async_notifier *notifier)
 			sensor->lanes = sensor->mbus.bus.mipi_csi1.data_lane;
 		}
 
-		if (sensor->mbus.type == V4L2_MBUS_CCP2) {
+		if (sensor->mbus.type == V4L2_MBUS_CCP2 &&
+		    dev->chip_id < CHIP_RV1106_CIF) {
 			ret = rkcif_register_lvds_subdev(dev);
 			if (ret < 0) {
 				v4l2_err(&dev->v4l2_dev,
