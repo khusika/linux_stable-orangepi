@@ -38,6 +38,12 @@
 				remote-endpoint = <&tp2815_out>;
 				data-lanes = <1 2 3 4>;
 			};
+
+			csi_dphy_input4: endpoint@5 {
+				reg = <5>;
+				remote-endpoint = <&imx327_out>;
+				data-lanes = <4>;
+			};
 		};
 		port@1 {
 			reg = <1>;
@@ -55,6 +61,27 @@
 &i2c3 {
 	status = "okay";
 	pinctrl-0 = <&i2c3m1_pins>;
+
+	imx327: imx327@1a {
+		compatible = "sony,imx327";
+		reg = <0x1a>;
+		clocks = <&cru CLK_MIPI0_OUT2IO>;
+		clock-names = "xvclk";
+		reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&cam_clk0_pins>;
+		rockchip,camera-module-index = <0>;
+		rockchip,camera-module-facing = "back";
+		rockchip,camera-module-name = "default";
+		rockchip,camera-module-lens-name = "default";
+		port {
+			imx327_out: endpoint {
+				remote-endpoint = <&csi_dphy_input4>;
+				bus-type = <3>;
+				data-lanes = <4>;
+			};
+		};
+	};
 
 	imx415: imx415@1a {
 		compatible = "sony,imx415";
