@@ -2994,12 +2994,12 @@
 		interrupt-names = "irq_rkvenc";
 		clocks = <&cru ACLK_VEPU>, <&cru HCLK_VEPU>, <&cru CLK_CORE_VEPU>;
 		clock-names = "aclk_vcodec", "hclk_vcodec", "clk_core";
-		rockchip,normal-rates = <396000000>, <0>, <396000000>;
+		rockchip,normal-rates = <396000000>, <0>, <550000000>;
 		resets = <&cru SRST_ARESETN_VEPU>, <&cru SRST_HRESETN_VEPU>,
 			 <&cru SRST_RESETN_CORE_VEPU>;
 		reset-names = "video_a", "video_h", "video_core";
 		assigned-clocks = <&cru ACLK_VEPU>, <&cru CLK_CORE_VEPU>;
-		assigned-clock-rates = <396000000>, <396000000>;
+		assigned-clock-rates = <396000000>, <550000000>;
 		iommus = <&rkvenc_mmu>;
 		rockchip,srv = <&mpp_srv>;
 		rockchip,taskqueue-node = <0>;
