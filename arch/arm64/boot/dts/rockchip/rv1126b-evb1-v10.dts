@@ -330,10 +330,6 @@
 	status = "okay";
 };
 
-&rknpu {
-	rknpu-supply = <&vdd_npu>;
-};
-
 &pinctrl {
 	pmic {
 		pmic_int: pmic-int {
@@ -394,12 +390,28 @@
 	status = "okay";
 };
 
+&rkaiisp {
+	status = "okay";
+};
+
+&rkaiisp_mmu {
+	status = "okay";
+};
+
+&rkaiisp_vir0 {
+	status = "okay";
+};
+
 &rkfec {
 	status = "okay";
 };
 
 &rkfec_mmu {
 	status = "okay";
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
 };
 
 &route_dsi {

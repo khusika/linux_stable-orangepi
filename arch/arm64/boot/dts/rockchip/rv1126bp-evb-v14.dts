@@ -514,12 +514,24 @@
 	status = "okay";
 };
 
-&route_dsi {
+&rkaiisp {
+	status = "okay";
+};
+
+&rkaiisp_mmu {
+	status = "okay";
+};
+
+&rkaiisp_vir0 {
 	status = "okay";
 };
 
 &rknpu {
 	rknpu-supply = <&vdd_npu>;
+};
+
+&route_dsi {
+	status = "okay";
 };
 
 &sai0 {

@@ -295,10 +295,6 @@
 	status = "okay";
 };
 
-&rknpu {
-	rknpu-supply = <&vdd_npu>;
-};
-
 &pinctrl {
 	sdmmc {
 		/omit-if-no-ref/
@@ -336,6 +332,22 @@
 
 &pwm2_8ch_7 {
 	status = "okay";
+};
+
+&rkaiisp {
+	status = "okay";
+};
+
+&rkaiisp_mmu {
+	status = "okay";
+};
+
+&rkaiisp_vir0 {
+	status = "okay";
+};
+
+&rknpu {
+	rknpu-supply = <&vdd_npu>;
 };
 
 &route_dsi {
