@@ -1629,6 +1629,9 @@ static void bilinear_scale(struct rkvpss_stream *stream, bool on, bool sync)
 
 	/*config scl clk gate*/
 	switch (stream->id) {
+	case RKVPSS_OUTPUT_CH0:
+		clk_mask = RKVPSS_SCL0_CKG_DIS;
+		break;
 	case RKVPSS_OUTPUT_CH1:
 		clk_mask = RKVPSS_SCL1_CKG_DIS;
 		break;
@@ -1637,6 +1640,12 @@ static void bilinear_scale(struct rkvpss_stream *stream, bool on, bool sync)
 		break;
 	case RKVPSS_OUTPUT_CH3:
 		clk_mask = RKVPSS_SCL3_CKG_DIS;
+		break;
+	case RKVPSS_OUTPUT_CH4:
+		clk_mask = RKVPSS2X_SCL4_CKG_DIS;
+		break;
+	case RKVPSS_OUTPUT_CH5:
+		clk_mask = RKVPSS2X_SCL5_CKG_DIS;
 		break;
 	default:
 		return;
@@ -1849,8 +1858,8 @@ static int rkvpss_stream_scale(struct rkvpss_stream *stream, bool on, bool sync)
 
 	if ((stream->id == 0 || stream->id == 2) && stream->avg_scl_down)
 		average_scale_down(stream, on, sync);
-
-	bilinear_scale(stream, on, sync);
+	else
+		bilinear_scale(stream, on, sync);
 
 	return 0;
 }
