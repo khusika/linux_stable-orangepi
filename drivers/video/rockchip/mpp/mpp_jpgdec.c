@@ -485,15 +485,6 @@ static int jpgdec_set_freq(struct mpp_dev *mpp,
 	return 0;
 }
 
-static int jpgdec_reduce_freq(struct mpp_dev *mpp)
-{
-	struct jpgdec_dev *dec = to_jpgdec_dev(mpp);
-
-	mpp_clk_set_rate(&dec->aclk_info, CLK_MODE_REDUCE);
-
-	return 0;
-}
-
 static int jpgdec_irq(struct mpp_dev *mpp)
 {
 	u32 clr_mask = 0;
@@ -578,7 +569,7 @@ static struct mpp_hw_ops jpgdec_v1_hw_ops = {
 	.clk_on = jpgdec_clk_on,
 	.clk_off = jpgdec_clk_off,
 	.set_freq = jpgdec_set_freq,
-	.reduce_freq = jpgdec_reduce_freq,
+	.reduce_freq = NULL,
 	.reset = jpgdec_reset,
 };
 
