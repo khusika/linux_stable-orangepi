@@ -62,6 +62,31 @@ struct rockchip_fephy_priv {
 	int wol_irq;
 };
 
+static int rockchip_fephy_init_tstmode(struct phy_device *phydev)
+{
+	int ret;
+
+	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_DISABLE);
+	if (ret)
+		return ret;
+
+	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_ENABLE);
+	if (ret)
+		return ret;
+
+	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_DISABLE);
+	if (ret)
+		return ret;
+
+	return phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_ENABLE);
+}
+
+static int rockchip_fephy_close_tstmode(struct phy_device *phydev)
+{
+	/* Back to basic register bank */
+	return phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_DISABLE);
+}
+
 static int rockchip_fephy_bank_write(struct phy_device *phydev, u8 bank,
 				     u32 reg, u16 val)
 {
@@ -83,54 +108,24 @@ static int rockchip_fephy_config_init(struct phy_device *phydev)
 	if (ret)
 		return ret;
 
-	/* AUTO MDI/X */
-	phydev->mdix = ETH_TP_MDI_AUTO;
+	ret = rockchip_fephy_init_tstmode(phydev);
+	if (ret)
+		return ret;
+
+	/* 100M amplitude control */
+	ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0x18, 0xc);
+	if (ret)
+		return ret;
+
+	ret = rockchip_fephy_close_tstmode(phydev);
+	if (ret)
+		return ret;
 
 	return ret;
 }
 
-static int rockchip_fephy_set_polarity(struct phy_device *phydev, int polarity)
-{
-	int reg, err, val;
-
-	/* get the current settings */
-	reg = phy_read(phydev, MII_INTERNAL_CTRL_STATUS);
-	if (reg < 0)
-		return reg;
-
-	val = reg;
-	val &= ~MII_AUTO_MDIX_EN;
-	switch (polarity) {
-	case ETH_TP_MDI:
-		val &= ~MII_MDIX_EN;
-		break;
-	case ETH_TP_MDI_X:
-		val |= MII_MDIX_EN;
-		break;
-	case ETH_TP_MDI_AUTO:
-	case ETH_TP_MDI_INVALID:
-	default:
-		return 0;
-	}
-
-	if (val != reg) {
-		/* Set the new polarity value in the register */
-		err = phy_write(phydev, MII_INTERNAL_CTRL_STATUS, val);
-		if (err)
-			return err;
-	}
-
-	return 0;
-}
-
 static int rockchip_fephy_config_aneg(struct phy_device *phydev)
 {
-	int err;
-
-	err = rockchip_fephy_set_polarity(phydev, phydev->mdix);
-	if (err < 0)
-		return err;
-
 	return genphy_config_aneg(phydev);
 }
 
