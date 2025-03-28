@@ -57,7 +57,6 @@ struct rkce_dev {
 	spinlock_t			lock;
 	struct crypto_engine		*symm_engine;
 	struct crypto_engine		*hash_engine;
-	struct crypto_engine		*asym_engine;
 
 	void				*hardware;
 };

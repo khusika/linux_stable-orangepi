@@ -321,11 +321,8 @@ static int rkce_probe(struct platform_device *pdev)
 	rk_dev->hash_engine = crypto_engine_alloc_init(&pdev->dev, true);
 	crypto_engine_start(rk_dev->hash_engine);
 
-	rk_dev->asym_engine = crypto_engine_alloc_init(&pdev->dev, true);
-	crypto_engine_start(rk_dev->asym_engine);
-
-	rk_debug("symm_engine = %p hash_engine = %p asym_engine = %p",
-		 rk_dev->symm_engine, rk_dev->hash_engine, rk_dev->asym_engine);
+	rk_debug("symm_engine = %p hash_engine = %p",
+		 rk_dev->symm_engine, rk_dev->hash_engine);
 
 	rk_cryptodev_register_dev(dev, "RKCE multi");
 

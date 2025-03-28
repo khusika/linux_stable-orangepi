@@ -22,6 +22,8 @@
 #include "rkce_sm2signature.asn1.h"
 #include "rkce_ecdsasignature.asn1.h"
 
+static DEFINE_MUTEX(akcipher_mutex);
+
 static void rkce_rsa_adjust_rsa_key(struct rsa_key *key)
 {
 	if (key->n_sz && key->n && !key->n[0]) {
@@ -131,32 +133,8 @@ static int rkce_rsa_setprivkey(struct crypto_akcipher *tfm, const void *key,
 	return rkce_rsa_setkey(tfm, key, keylen, true);
 }
 
-static int rkce_rsa_handle_req(struct akcipher_request *req, bool encrypt)
+static int rkce_rsa_calc(struct akcipher_request *req, bool encrypt)
 {
-	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
-	struct rkce_rsa_ctx *ctx = akcipher_tfm_ctx(tfm);
-	struct crypto_engine *engine = ctx->algt->rk_dev->asym_engine;
-
-	rk_trace("enter.\n");
-
-	ctx->is_enc = encrypt;
-
-	return crypto_transfer_akcipher_request_to_engine(engine, req);
-}
-
-static int rkce_rsa_enc(struct akcipher_request *req)
-{
-	return rkce_rsa_handle_req(req, true);
-}
-
-static int rkce_rsa_dec(struct akcipher_request *req)
-{
-	return rkce_rsa_handle_req(req, false);
-}
-
-static int rkce_rsa_run_req(struct crypto_engine *engine, void *async_req)
-{
-	struct akcipher_request *req = container_of(async_req, struct akcipher_request, base);
 	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
 	struct rkce_rsa_ctx *ctx = akcipher_tfm_ctx(tfm);
 	struct rkce_bignum *in = NULL, *out = NULL;
@@ -169,7 +147,7 @@ static int rkce_rsa_run_req(struct crypto_engine *engine, void *async_req)
 	if (unlikely(!ctx->n || !ctx->e))
 		goto exit;
 
-	if (!ctx->is_enc && !ctx->d)
+	if (!encrypt && !ctx->d)
 		goto exit;
 
 	key_byte_size = rkce_bn_get_size(ctx->n);
@@ -211,10 +189,14 @@ static int rkce_rsa_run_req(struct crypto_engine *engine, void *async_req)
 	if (ret)
 		goto exit;
 
-	if (ctx->is_enc)
+	mutex_lock(&akcipher_mutex);
+
+	if (encrypt)
 		ret = rkce_pka_expt_mod(in, ctx->e, ctx->n, out);
 	else
 		ret = rkce_pka_expt_mod(in, ctx->d, ctx->n, out);
+
+	mutex_unlock(&akcipher_mutex);
 
 	if (ret)
 		goto exit;
@@ -232,8 +214,6 @@ static int rkce_rsa_run_req(struct crypto_engine *engine, void *async_req)
 	req->dst_len = key_byte_size;
 
 exit:
-	crypto_finalize_akcipher_request(ctx->algt->rk_dev->asym_engine, req, ret);
-
 	kfree(tmp_buf);
 
 	rkce_bn_free(in);
@@ -242,6 +222,16 @@ exit:
 	rk_trace("exit.\n");
 
 	return ret;
+}
+
+static int rkce_rsa_enc(struct akcipher_request *req)
+{
+	return rkce_rsa_calc(req, true);
+}
+
+static int rkce_rsa_dec(struct akcipher_request *req)
+{
+	return rkce_rsa_calc(req, false);
 }
 
 static int rkce_rsa_init_tfm(struct crypto_akcipher *tfm)
@@ -258,7 +248,6 @@ static int rkce_rsa_init_tfm(struct crypto_akcipher *tfm)
 
 	ctx->algt = algt;
 
-	ctx->enginectx.op.do_one_request = rkce_rsa_run_req;
 
 	rkce_pka_set_crypto_base(algt->rk_dev->reg);
 
@@ -343,27 +332,8 @@ int rkce_ecc_get_signature_s(void *context, size_t hdrlen, unsigned char tag,
 	return rkce_bn_set_data(sig->y, tmp_value, vlen, RK_BG_BIG_ENDIAN);
 }
 
-static int rkce_ecc_handle_req(struct akcipher_request *req, bool sign)
-{
-	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
-	struct rkce_ecc_ctx *ctx = akcipher_tfm_ctx(tfm);
-	struct crypto_engine *engine = ctx->algt->rk_dev->asym_engine;
-
-	rk_trace("enter.\n");
-
-	ctx->is_sign = sign;
-
-	return crypto_transfer_akcipher_request_to_engine(engine, req);
-}
-
 static int rkce_ec_verify(struct akcipher_request *req)
 {
-	return rkce_ecc_handle_req(req, false);
-}
-
-static int rkce_ecc_run_req(struct crypto_engine *engine, void *async_req)
-{
-	struct akcipher_request *req = container_of(async_req, struct akcipher_request, base);
 	struct crypto_akcipher *tfm = crypto_akcipher_reqtfm(req);
 	struct rkce_ecc_ctx *ctx = akcipher_tfm_ctx(tfm);
 	size_t keylen = ctx->nbits / 8;
@@ -412,10 +382,11 @@ static int rkce_ecc_run_req(struct crypto_engine *engine, void *async_req)
 		memcpy(&rawhash, buffer + req->src_len, keylen);
 	}
 
-	ret = rkce_ecc_verify(ctx->group_id, rawhash, keylen, ctx->point_Q, sig_point);
-exit:
-	crypto_finalize_akcipher_request(ctx->algt->rk_dev->asym_engine, req, ret);
+	mutex_lock(&akcipher_mutex);
 
+	ret = rkce_ecc_verify(ctx->group_id, rawhash, keylen, ctx->point_Q, sig_point);
+	mutex_unlock(&akcipher_mutex);
+exit:
 	kfree(buffer);
 	rkce_ecc_free_point(sig_point);
 
@@ -488,8 +459,6 @@ static int rkce_ec_init_tfm(struct crypto_akcipher *tfm)
 	memzero_explicit(ctx, sizeof(*ctx));
 
 	ctx->algt = algt;
-
-	ctx->enginectx.op.do_one_request = rkce_ecc_run_req;
 
 	ctx->group_id = rkce_ecc_get_group_id(algt->algo);
 	ctx->nbits    = rkce_ecc_get_curve_nbits(ctx->group_id);
