@@ -184,14 +184,17 @@
 };
 
 &pwm1_4ch_0 {
+	pinctrl-0 = <&pwm1m2_ch0_pins>;
 	status = "okay";
 };
 
 &pwm1_4ch_1 {
+	pinctrl-0 = <&pwm1m2_ch1_pins>;
 	status = "okay";
 };
 
 &pwm1_4ch_2 {
+	pinctrl-0 = <&pwm1m2_ch2_pins>;
 	status = "okay";
 };
 
