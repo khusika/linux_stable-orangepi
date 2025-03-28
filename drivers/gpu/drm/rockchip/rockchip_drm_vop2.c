@@ -9207,6 +9207,11 @@ static int vop2_calc_if_clk(struct drm_crtc *crtc, const struct vop2_connector_i
 		if (vcstate->dsc_enable) {
 			hdmi_edp_pixclk = vcstate->dsc_cds_clk_rate << 1;
 			hdmi_edp_dclk = vcstate->dsc_cds_clk_rate;
+			/*
+			 * For HDMI DSC mode, the dclk_out_rate should be the same
+			 * as dclk_core_rate.
+			 */
+			dclk_out_rate = dclk_core_rate;
 		} else {
 			hdmi_edp_pixclk = (dclk_core_rate << 1) / K;
 			hdmi_edp_dclk = dclk_core_rate / K;
@@ -9284,13 +9289,19 @@ static int vop2_calc_if_clk(struct drm_crtc *crtc, const struct vop2_connector_i
 		}
 	}
 
+	/*
+	 * For RK3588, dclk_out is designed for DP, MIPI(both DSC and non-DSC mode)
+	 * and HDMI in DSC mode.
+	 */
 	if (dclk_core_rate > if_pixclk->rate) {
 		clk_set_rate(dclk_core->hw.clk, dclk_core_rate);
-		if (output_if_is_mipi(conn_id))
+		if (output_if_is_mipi(conn_id) ||
+		    (output_if_is_hdmi(conn_id) && vcstate->dsc_enable))
 			clk_set_rate(dclk_out->hw.clk, dclk_out_rate);
 		ret = vop2_cru_set_rate(if_pixclk, if_dclk);
 	} else {
-		if (output_if_is_mipi(conn_id))
+		if (output_if_is_mipi(conn_id) ||
+		    (output_if_is_hdmi(conn_id) && vcstate->dsc_enable))
 			clk_set_rate(dclk_out->hw.clk, dclk_out_rate);
 		ret = vop2_cru_set_rate(if_pixclk, if_dclk);
 		clk_set_rate(dclk_core->hw.clk, dclk_core_rate);
