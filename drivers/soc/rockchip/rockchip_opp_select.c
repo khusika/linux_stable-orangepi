@@ -2399,7 +2399,7 @@ int rockchip_opp_config_clks(struct device *dev, struct opp_table *opp_table,
 	unsigned long *target = data;
 	int ret;
 
-	if (info->is_scmi_clk && !info->is_runtime_active)
+	if (rockchip_opp_is_use_pvtpll(info) && !info->is_runtime_active)
 		return 0;
 
 	ret = clk_bulk_prepare_enable(info->nclocks, info->clocks);
@@ -2480,7 +2480,7 @@ int rockchip_opp_check_rate_volt(struct device *dev, struct rockchip_opp_info *i
 		return ret;
 	}
 
-	if (info->is_scmi_clk && !info->is_runtime_active)
+	if (rockchip_opp_is_use_pvtpll(info) && !info->is_runtime_active)
 		is_set_clk = false;
 	if (info->data && info->data->set_read_margin && info->is_runtime_active)
 		is_set_rm = true;
