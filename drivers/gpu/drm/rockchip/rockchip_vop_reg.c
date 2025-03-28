@@ -1943,6 +1943,8 @@ static const struct vop_ctrl rv1126b_ctrl_data = {
 	.bt1120_yc_swap = VOP_REG(RK3366_LIT_DSP_CTRL0, 0x1, 30),
 	.bt1120_en = VOP_REG(RK3366_LIT_DSP_CTRL0, 0x1, 31),
 
+	.mcu_force_rdn = VOP_REG(RV1126B_DSP_CTRL1, 0x1, 21),
+
 	.dsp_interlace = VOP_REG(RK3366_LIT_DSP_CTRL2, 0x1, 0),
 	.dither_up_en = VOP_REG(RK3366_LIT_DSP_CTRL2, 0x1, 2),
 	.overlay_mode = VOP_REG(RK3366_LIT_DSP_CTRL2, 0x1, 4),

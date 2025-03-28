@@ -3719,21 +3719,26 @@ static void vop_crtc_send_mcu_cmd(struct drm_crtc *crtc, u32 type, u32 value)
 	if (vop && vop->is_enabled) {
 		switch (type) {
 		case MCU_WRCMD:
+			VOP_CTRL_SET(vop, mcu_force_rdn, 1);
 			VOP_CTRL_SET(vop, mcu_rs, 0);
 			VOP_CTRL_SET(vop, mcu_rw_bypass_port, value);
 			VOP_CTRL_SET(vop, mcu_rs, 1);
 			break;
 		case MCU_WRDATA:
+			VOP_CTRL_SET(vop, mcu_force_rdn, 1);
 			VOP_CTRL_SET(vop, mcu_rs, 1);
 			VOP_CTRL_SET(vop, mcu_rw_bypass_port, value);
 			break;
 		case MCU_RDDATA:
+			VOP_CTRL_SET(vop, mcu_force_rdn, 0);
 			VOP_CTRL_SET(vop, mcu_rs, 1);
 			val = VOP_CTRL_GET(vop, mcu_rw_bypass_port);
 			DRM_DEBUG_DRIVER("mcu read reg[0x%02x] = 0x%02x", value, val);
 			break;
 		case MCU_SETBYPASS:
 			VOP_CTRL_SET(vop, mcu_bypass, value ? 1 : 0);
+			if (!value)
+				VOP_CTRL_SET(vop, mcu_force_rdn, 1);
 			break;
 		default:
 			break;

@@ -1039,6 +1039,7 @@
 
 #define RV1126_GRF_IOFUNC_CON3			0x1026c
 
+#define RV1126B_DSP_CTRL1                       0x0024
 #define RV1126B_CLK_CNT				0x0040
 #define RV1126B_GRF_VOP_LCDC_CON		0x30b9c
 #define RV1126B_WB_CTRL				0x0280
