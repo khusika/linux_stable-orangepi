@@ -1484,6 +1484,7 @@
 					     <&shaping_rkvdec>,
 					     <&shaping_rkjpeg>,
 					     <&shaping_decom>;
+				clocks = <&cru ACLK_RKVDEC_ROOT>;
 				rockchip,always-on;
 			};
 			power-domain@RV1126B_PD_AISP {
