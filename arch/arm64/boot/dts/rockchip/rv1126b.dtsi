@@ -3101,8 +3101,9 @@
 		reg = <0x21fa3f00 0x100>;
 		interrupts = <GIC_SPI 218 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "aiisp_mmu";
-		clocks = <&cru ACLK_AISP>, <&cru HCLK_AISP>;
-		clock-names = "aclk", "iface";
+		clocks = <&cru ACLK_AISP>, <&cru HCLK_AISP>,
+			 <&cru CLK_CORE_AISP>;
+		clock-names = "aclk_aiisp", "hclk_aiisp", "clk_aiisp_core";
 		power-domains = <&power RV1126B_PD_AISP>;
 		rockchip,disable-mmu-reset;
 		#iommu-cells = <0>;
