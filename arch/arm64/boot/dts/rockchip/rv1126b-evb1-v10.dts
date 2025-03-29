@@ -178,6 +178,18 @@
 	status = "okay";
 };
 
+&fspi0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <75000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
 &gmac {
 	phy-mode = "rmii";
 	clock_in_out = "input";
