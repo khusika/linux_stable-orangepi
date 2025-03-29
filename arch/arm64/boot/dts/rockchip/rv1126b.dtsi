@@ -3342,6 +3342,14 @@
 		status = "disabled";
 	};
 
+	debug: debug@22410000 {
+		compatible = "rockchip,debug";
+		reg = <0x22410000 0x1000>,
+		      <0x22510000 0x1000>,
+		      <0x22610000 0x1000>,
+		      <0x22710000 0x1000>;
+	};
+
 	system_sram: sram@3ffb0000 {
 		compatible = "mmio-sram";
 		reg = <0x3ffb0000 0x10000>;
