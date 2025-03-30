@@ -2305,6 +2305,7 @@
 		clock-names = "spiclk", "apb_pclk";
 		dmas = <&dmac 40>, <&dmac 41>;
 		dma-names = "rx", "tx";
+		num-cs = <2>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&spi0m0_clk_pins &spi0m0_csn0_pins &spi0m0_csn1_pins>;
 		status = "disabled";
@@ -2320,6 +2321,7 @@
 		clock-names = "spiclk", "apb_pclk";
 		dmas = <&dmac 42>, <&dmac 43>;
 		dma-names = "rx", "tx";
+		num-cs = <2>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&spi1m0_clk_pins &spi1m0_csn0_pins &spi1m0_csn1_pins>;
 		status = "disabled";
