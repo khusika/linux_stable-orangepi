@@ -12,6 +12,7 @@
 #include <dt-bindings/power/rockchip,rv1126b-power.h>
 #include <dt-bindings/soc/rockchip,boot-mode.h>
 #include <dt-bindings/soc/rockchip-system-status.h>
+#include <dt-bindings/suspend/rockchip-rv1126b.h>
 
 / {
 	compatible = "rockchip,rv1126b";
@@ -747,6 +748,25 @@
 				remote-endpoint = <&isp_sditf3>;
 			};
 		};
+	};
+
+	rockchip_suspend: rockchip-suspend {
+		compatible = "rockchip,pm-config";
+		status = "disabled";
+
+		rockchip,sleep-mode-config = <
+			(0
+			| RKPM_SLP_ARMOFF_PMUOFF
+			| RKPM_SLP_PMU_PMUALIVE_32K
+			| RKPM_SLP_PMU_DIS_OSC
+			| RKPM_SLP_32K_EXT
+			)
+		>;
+		rockchip,wakeup-config = <
+			(0
+			| RKPM_GPIO0_WKUP_EN
+			)
+		>;
 	};
 
 	rockchip_system_monitor: rockchip-system-monitor {
