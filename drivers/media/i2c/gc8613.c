@@ -443,12 +443,12 @@ static const struct regval gc8613ya_dag_12bit_3840x2160_30fps_regs[] = {
 	{0x025a, 0x98},
 
 	//30fps 0x08f8
-	//{0x0340, 0x08},
-	//{0x0341, 0xf8},
+	{0x0340, 0x08},
+	{0x0341, 0xf8},
 
 	//15fps:0x11f0
-	{0x0340, 0x11},
-	{0x0341, 0xf0},
+	//{0x0340, 0x11},
+	//{0x0341, 0xf0},
 
 	{0x0345, 0x02},
 	{0x0347, 0x02},
@@ -864,12 +864,12 @@ static const struct regval gc8613yn_dag_12bit_3840x2160_30fps_regs[] = {
 	{0x025a, 0x98},
 
 	//30fps 0x08f8
-	//{0x0340, 0x08},
-	//{0x0341, 0xf8},
+	{0x0340, 0x08},
+	{0x0341, 0xf8},
 
 	//15fps:0x11f0
-	{0x0340, 0x11},
-	{0x0341, 0xf0},
+	//{0x0340, 0x11},
+	//{0x0341, 0xf0},
 
 	{0x0345, 0x02},
 	{0x0347, 0x02},
@@ -1253,11 +1253,11 @@ static const struct gc8613_mode supported_modes[] = {
 		.height = 2160,
 		.max_fps = {
 			.numerator = 10000,
-			.denominator = 150000,
+			.denominator = 300000,
 		},
 		.exp_def = 0x0327,
 		.hts_def = 0x0310 * 8,
-		.vts_def = 0x08f8 * 2,
+		.vts_def = 0x08f8,
 		.bus_fmt = MEDIA_BUS_FMT_SRGGB12_1X12,
 		.reg_list[0] = gc8613yn_dag_12bit_3840x2160_30fps_regs,
 		.reg_list[1] = gc8613ya_dag_12bit_3840x2160_30fps_regs,
