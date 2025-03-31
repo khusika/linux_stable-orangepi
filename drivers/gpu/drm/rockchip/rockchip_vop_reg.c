@@ -1942,6 +1942,7 @@ static const struct vop_ctrl rv1126b_ctrl_data = {
 	.mipi_pin_pol = VOP_REG(RK3366_LIT_DSP_CTRL0, 0x7, 26),
 	.bt1120_yc_swap = VOP_REG(RK3366_LIT_DSP_CTRL0, 0x1, 30),
 	.bt1120_en = VOP_REG(RK3366_LIT_DSP_CTRL0, 0x1, 31),
+	.bt656_en = VOP_REG(RK3366_LIT_DSP_CTRL0, 0x1, 6),
 
 	.mcu_force_rdn = VOP_REG(RV1126B_DSP_CTRL1, 0x1, 21),
 
