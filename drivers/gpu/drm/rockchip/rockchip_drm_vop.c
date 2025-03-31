@@ -2626,7 +2626,8 @@ static void vop_plane_atomic_update(struct drm_plane *plane,
 	}
 	if ((vop->version == VOP_VERSION_RK3036 ||
 	     vop->version == VOP_VERSION_RK3506 ||
-	     vop->version == VOP_VERSION_RK3576_LITE) &&
+	     vop->version == VOP_VERSION_RK3576_LITE ||
+	     vop->version == VOP_VERSION_RV1126B) &&
 	    (adjusted_mode->flags & DRM_MODE_FLAG_INTERLACE))
 		dsp_h = dsp_h / 2;
 
@@ -2643,7 +2644,8 @@ static void vop_plane_atomic_update(struct drm_plane *plane,
 	dsp_sty = dest->y1 + mode->crtc_vtotal - mode->crtc_vsync_start;
 	if ((vop->version == VOP_VERSION_RK3036 ||
 	     vop->version == VOP_VERSION_RK3506 ||
-	     vop->version == VOP_VERSION_RK3576_LITE) &&
+	     vop->version == VOP_VERSION_RK3576_LITE ||
+	     vop->version == VOP_VERSION_RV1126B) &&
 	    (adjusted_mode->flags & DRM_MODE_FLAG_INTERLACE))
 		dsp_sty = dest->y1 / 2 + mode->crtc_vtotal - mode->crtc_vsync_start;
 	dsp_st = dsp_sty << 16 | (dsp_stx & 0xffff);
