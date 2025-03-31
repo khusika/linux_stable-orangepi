@@ -1494,9 +1494,9 @@
 		};
 	};
 
-	audio_codec_pmu: audio-codec@20890000 {
+	audio_codec_pmu: audio-codec@20898000 {
 		compatible = "rockchip,rv1126b-codec", "rockchip,rk3506-codec";
-		reg = <0x20890000 0x1000>;
+		reg = <0x20898000 0x1000>;
 		#sound-dai-cells = <0>;
 		sound-name-prefix = "ACodec_LP";
 		clocks = <&cru PCLK_AUDIO_ADC_PMU>, <&cru MCLK_AUDIO_ADC_PMU>;
