@@ -12,6 +12,21 @@
 	model = "Rockchip RV1126B EVB2 V10 Board";
 	compatible = "rockchip,rv1126b-evb2-v10", "rockchip,rv1126b";
 
+	gpio-keys {
+		compatible = "gpio-keys";
+		autorepeat;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwr_key>;
+		power-key {
+			gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			label ="GPIO Key Power";
+			debounce-interval = <100>;
+			wakeup-source;
+			/* gpio-key,wakeup; */
+		};
+	};
+
 	vcc5v0_dcin: vcc5v0-dcin {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc5v0_dcin";
@@ -296,6 +311,12 @@
 };
 
 &pinctrl {
+	buttons {
+		pwr_key: pwr-key {
+			rockchip,pins = <0 RK_PA4 RK_FUNC_GPIO &pcfg_pull_up>;
+		};
+	};
+
 	sdmmc {
 		/omit-if-no-ref/
 		sdmmc_volt: sdmmc-volt {
@@ -350,7 +371,16 @@
 	rknpu-supply = <&vdd_npu>;
 };
 
+&rockchip_suspend {
+	status = "okay";
+};
+
 &route_dsi {
+	status = "okay";
+};
+
+&rtc {
+	rockchip,rtc-suspend-bypass;
 	status = "okay";
 };
 
