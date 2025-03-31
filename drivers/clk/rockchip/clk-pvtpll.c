@@ -719,9 +719,27 @@ static int rockchip_clock_pvtpll_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int rockchip_clock_pvtpll_resume(struct device *dev)
+{
+	struct rockchip_clock_pvtpll *pvtpll = dev_get_drvdata(dev);
+	struct pvtpll_table *table;
+
+	table = rockchip_get_pvtpll_settings(pvtpll, pvtpll->cur_rate);
+	if (!table)
+		return 0;
+
+	pvtpll->info->config(pvtpll, table);
+
+	return 0;
+}
+
+static DEFINE_SIMPLE_DEV_PM_OPS(rockchip_clock_pvtpll_pm_ops, NULL,
+				rockchip_clock_pvtpll_resume);
+
 static struct platform_driver rockchip_clock_pvtpll_driver = {
 	.driver = {
 		.name = "rockchip-clcok-pvtpll",
+		.pm = pm_sleep_ptr(&rockchip_clock_pvtpll_pm_ops),
 		.of_match_table = rockchip_clock_pvtpll_match,
 	},
 	.probe = rockchip_clock_pvtpll_probe,
