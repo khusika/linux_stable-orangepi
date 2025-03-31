@@ -2399,45 +2399,6 @@ static void rk3588_get_grf_color_fmt(struct rockchip_hdmi *hdmi, u32 *fmt, u32 *
 	*fmt = *fmt & RK3588_COLOR_FORMAT_MASK;
 }
 
-static u64 rockchip_get_grf_color_fmt(void *data)
-{
-	struct rockchip_hdmi *hdmi = (struct rockchip_hdmi *)data;
-	u32 fmt, depth;
-	u64 bus_format;
-
-	hdmi->chip_data->ops->get_grf_color_fmt(hdmi, &fmt, &depth);
-
-	switch (fmt) {
-	case RK3588_YUV444:
-		if (!depth)
-			bus_format = MEDIA_BUS_FMT_YUV8_1X24;
-		else
-			bus_format = MEDIA_BUS_FMT_YUV10_1X30;
-		break;
-	case RK3588_YUV422:
-		bus_format = MEDIA_BUS_FMT_YUYV10_1X20;
-		break;
-	case RK3588_YUV420:
-		if (!depth)
-			bus_format = MEDIA_BUS_FMT_UYYVYY8_0_5X24;
-		else
-			bus_format = MEDIA_BUS_FMT_UYYVYY10_0_5X30;
-		break;
-	case RK3588_RGB:
-		if (!depth)
-			bus_format = MEDIA_BUS_FMT_RGB888_1X24;
-		else
-			bus_format = MEDIA_BUS_FMT_RGB101010_1X30;
-		break;
-	default:
-		dev_err(hdmi->dev, "can't get correct color format\n");
-		bus_format = MEDIA_BUS_FMT_YUV8_1X24;
-		break;
-	}
-
-	return bus_format;
-}
-
 static void
 dw_hdmi_rockchip_select_output(struct drm_connector_state *conn_state,
 			       struct drm_crtc_state *crtc_state,
@@ -4603,7 +4564,6 @@ static int dw_hdmi_rockchip_bind(struct device *dev, struct device *master,
 	plat_data->set_hdcp2_enable = rockchip_set_hdcp2_enable;
 	plat_data->set_hdcp_status = rockchip_set_hdcp_status;
 	plat_data->set_grf_cfg = rockchip_set_grf_cfg;
-	plat_data->get_grf_color_fmt = rockchip_get_grf_color_fmt;
 	plat_data->convert_to_split_mode = drm_mode_convert_to_split_mode;
 	plat_data->convert_to_origin_mode = drm_mode_convert_to_origin_mode;
 	plat_data->dclk_set = dw_hdmi_dclk_set;
