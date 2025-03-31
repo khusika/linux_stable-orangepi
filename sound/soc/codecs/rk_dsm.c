@@ -520,6 +520,19 @@ static int rk_dsm_pcm_trigger(struct snd_pcm_substream *substream,
 		snd_soc_component_get_drvdata(dai->component);
 
 	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		/**
+		 * NOTE: Recover DAC volumes and switch RKDSM_ON_FUNC after hw_param()
+		 * again, avoid to incorrect silence during recover from XRUN.
+		 */
+		regmap_write(rd->regmap, DACVOLL0, rd->vols.vol_l);
+		regmap_write(rd->regmap, DACVOLR0, rd->vols.vol_r);
+		regmap_write(rd->regmap, DACVOGP, rd->vols.polarity);
+		if (rd->data && rd->data->iomux_switch)
+			rd->data->iomux_switch(rd->dev, RKDSM_ON_FUNC);
+		break;
 	case SNDRV_PCM_TRIGGER_SUSPEND:
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
