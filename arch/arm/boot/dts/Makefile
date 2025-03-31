@@ -1177,6 +1177,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rv1126-evb-ddr3-v13.dtb \
 	rv1126b-evb1-v10.dtb \
 	rv1126b-evb1-v10-bt-sco.dtb \
+	rv1126b-evb1-v10-spi-nor.dtb \
 	rv1126b-evb2-v10.dtb \
 	rv1126b-evb2-v10-mcu-k350c4516t.dtb \
 	rv1126b-evb2-v10-rgb-Q7050ITH2641AA1T.dtb \
