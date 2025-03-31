@@ -1063,7 +1063,7 @@ static void __init rv1126b_clk_init(struct device_node *np)
 					rv1126b_cpuclk_rates,
 					ARRAY_SIZE(rv1126b_cpuclk_rates));
 
-	rockchip_register_softrst(np, CLK_NR_SRST / 16, reg_base + RV1126B_SOFTRST_CON(0),
+	rockchip_register_softrst(np, DIV_ROUND_UP(CLK_NR_SRST, 16), reg_base + RV1126B_SOFTRST_CON(0),
 				  ROCKCHIP_SOFTRST_HIWORD_MASK);
 
 	rockchip_register_restart_notifier(ctx, RV1126B_GLB_SRST_FST, NULL);
