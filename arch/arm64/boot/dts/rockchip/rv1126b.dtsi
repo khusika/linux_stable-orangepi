@@ -227,6 +227,7 @@
 		pvtpll_npu: pvtpll-npu@22080000 {
 			compatible = "rockchip,rv1126b-npu-pvtpll", "syscon";
 			reg = <0x22080000 0x100>;
+			rockchip,cru = <&cru>;
 			clocks = <&cru ACLK_RKNN>;
 			#clock-cells = <0>;
 			clock-output-names = "clk_npu_pvtpll";
@@ -822,7 +823,7 @@
 	};
 
 	cru: clock-controller@20000000 {
-		compatible = "rockchip,rv1126b-cru";
+		compatible = "rockchip,rv1126b-cru", "syscon";
 		reg = <0x20000000 0xc0000>;
 		#clock-cells = <1>;
 		#reset-cells = <1>;
