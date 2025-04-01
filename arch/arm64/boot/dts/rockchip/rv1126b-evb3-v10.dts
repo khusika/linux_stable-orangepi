@@ -174,7 +174,7 @@
 	vdd_npu: vdd-npu {
 		compatible = "pwm-regulator";
 		pwms = <&pwm1_4ch_1 0 25000 1>;
-		regulator-name = "vdd_cpu";
+		regulator-name = "vdd_npu";
 		regulator-init-microvolt = <950000>;
 		regulator-min-microvolt = <750000>;
 		regulator-max-microvolt = <1100000>;
