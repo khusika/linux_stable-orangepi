@@ -1543,6 +1543,11 @@ static const struct dma_map_ops iommu_ops = {
 	.unmap_resource		= arm_iommu_unmap_resource,
 };
 
+#ifdef CONFIG_ARCH_ROCKCHIP
+#define RK_DMA_IOMMU_IOVA_BLOCK_SIZE	SZ_2G
+#define RK_DMA_IOMMU_BITMAP_SIZE	((RK_DMA_IOMMU_IOVA_BLOCK_SIZE >> PAGE_SHIFT) >> 3)
+#endif
+
 /**
  * arm_iommu_create_mapping
  * @bus: pointer to the bus holding the client device (for IOMMU calls)
@@ -1572,10 +1577,17 @@ arm_iommu_create_mapping(struct bus_type *bus, dma_addr_t base, u64 size)
 	if (!bitmap_size)
 		return ERR_PTR(-EINVAL);
 
+#ifdef RK_DMA_IOMMU_BITMAP_SIZE
+	if (bitmap_size > RK_DMA_IOMMU_BITMAP_SIZE) {
+		extensions = bitmap_size / RK_DMA_IOMMU_BITMAP_SIZE;
+		bitmap_size = RK_DMA_IOMMU_BITMAP_SIZE;
+	}
+#else
 	if (bitmap_size > PAGE_SIZE) {
 		extensions = bitmap_size / PAGE_SIZE;
 		bitmap_size = PAGE_SIZE;
 	}
+#endif
 
 	mapping = kzalloc(sizeof(struct dma_iommu_mapping), GFP_KERNEL);
 	if (!mapping)
