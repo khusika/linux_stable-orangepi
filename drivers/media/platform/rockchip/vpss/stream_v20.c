@@ -826,7 +826,10 @@ static void stream_frame_start(struct rkvpss_stream *stream, u32 irq)
 	    !stream->dev->hw_dev->is_single)
 		stream->ops->update_mi(stream);
 
-	if (dev->stream_vdev.wrap_line) {
+	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0) {
+		/* vpss can be holded by enc if isp input offline */
+		if (!irq)
+			rkvpss_unite_set_bits(dev, RKVPSS_VPSS_CTRL, 0, RKVPSS_VPSS2ENC_PIPE_EN);
 		rkvpss_rockit_frame_start(dev);
 		rkvpss_dvbm_event(dev, ROCKIT_DVBM_START);
 	}
@@ -898,8 +901,8 @@ static void scl_update_mi(struct rkvpss_stream *stream)
 			stream->ops->enable_mi(stream);
 		}
 	} else if (!stream->is_pause) {
-		/* wrap mode don't disable mi */
-		if (stream->id != RKVPSS_OUTPUT_CH0 || !dev->stream_vdev.wrap_line) {
+		/* wrap mode don't disable mi for ch0 */
+		if (!dev->stream_vdev.wrap_line || stream->id != RKVPSS_OUTPUT_CH0) {
 			stream->is_pause = true;
 			stream->ops->disable_mi(stream);
 		}
@@ -918,14 +921,10 @@ static void scl_config_mi(struct rkvpss_stream *stream)
 	struct rkvpss_device *dev = stream->dev;
 	struct capture_fmt *fmt = &stream->out_cap_fmt;
 	struct v4l2_pix_format_mplane *out_fmt = &stream->out_fmt;
-	u32 reg, val, mask;
-
-	v4l2_dbg(4, rkvpss_debug, &dev->v4l2_dev,
-		 "%s stream:%d\n", __func__, stream->id);
+	u32 reg, val, mask, height = out_fmt->height;
 
 	val = out_fmt->plane_fmt[0].bytesperline;
 	reg = stream->config->mi.stride;
-	rkvpss_unite_write(dev, reg, val);
 	rkvpss_unite_write(dev, reg, val);
 
 	switch (fmt->fourcc) {
@@ -942,18 +941,27 @@ static void scl_config_mi(struct rkvpss_stream *stream)
 		break;
 	}
 
-	val = val * out_fmt->height;
+	val = val * height;
 	reg = stream->config->mi.y_pic_size;
 	rkvpss_unite_write(dev, reg, val);
 
-	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
-		val = out_fmt->plane_fmt[0].bytesperline * dev->stream_vdev.wrap_line;
-	else
-		val = out_fmt->plane_fmt[0].bytesperline * out_fmt->height;
+	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0) {
+		mask = RKVPSS_VPSS2ENC_SEL | RKVPSS2X_SENSOR_ID(7) |
+		       RKVPSS_VPSS2ENC_CNT_SEL;
+		val = RKVPSS_VPSS2ENC_SEL | RKVPSS2X_VPSS2ENC_PATH_EN |
+		      RKVPSS2X_SENSOR_ID(dev->dev_id);
+		rkvpss_unite_set_bits(dev, RKVPSS_VPSS_CTRL, mask, val);
+
+		height = dev->stream_vdev.wrap_line;
+	}
+	val = out_fmt->plane_fmt[0].bytesperline * height;
 	reg = stream->config->mi.y_size;
 	rkvpss_unite_write(dev, reg, val);
 
-	val = out_fmt->plane_fmt[1].sizeimage;
+	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
+		val = out_fmt->plane_fmt[0].bytesperline * height / 2;
+	else
+		val = out_fmt->plane_fmt[1].sizeimage;
 	reg = stream->config->mi.uv_size;
 	rkvpss_unite_write(dev, reg, val);
 
@@ -1154,14 +1162,14 @@ static void rkvpss_frame_end(struct rkvpss_stream *stream)
 	struct rkvpss_buffer *buf = NULL;
 	unsigned long lock_flags = 0;
 
-	v4l2_dbg(3, rkvpss_debug, &dev->v4l2_dev,
-		 "%s stream:%d\n", __func__, stream->id);
 	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
 	if (stream->curr_buf) {
-		buf = stream->curr_buf;
-	/* wrap mode use one buffer */
-		if (stream->curr_buf->vb.vb2_buf.memory || !dev->stream_vdev.wrap_line)
+		/* rockit wrap mode use one buffer for ch0 */
+		if (stream->curr_buf->vb.vb2_buf.memory ||
+		    !dev->stream_vdev.wrap_line || stream->id != RKVPSS_OUTPUT_CH0) {
+			buf = stream->curr_buf;
 			stream->curr_buf = NULL;
+		}
 	}
 	spin_unlock_irqrestore(&stream->vbq_lock, lock_flags);
 
@@ -1270,6 +1278,8 @@ static void rkvpss_buf_queue(struct vb2_buffer *vb)
 	if (cap_fmt->mplanes == 1) {
 		for (i = 0; i < cap_fmt->cplanes - 1; i++) {
 			height = pixm->height;
+			if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
+				height = dev->stream_vdev.wrap_line;
 			size = (i == 0) ?
 				pixm->plane_fmt[i].bytesperline * height :
 				pixm->plane_fmt[i].sizeimage;
@@ -1910,6 +1920,8 @@ static void rkvpss_stop_streaming(struct vb2_queue *queue)
 		rkvpss_stream_stop(stream);
 		rkvpss_pipeline_stream(dev, false);
 	}
+	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
+		rkvpss_dvbm_deinit(dev);
 	destroy_buf_queue(stream, VB2_BUF_STATE_ERROR);
 	rkvpss_pipeline_close(dev);
 	tasklet_disable(&stream->buf_done_tasklet);
@@ -2022,7 +2034,8 @@ static int rkvpss_start_streaming(struct vb2_queue *queue, unsigned int count)
 		v4l2_err(&dev->v4l2_dev, "start %s failed\n", node->vdev.name);
 		goto pipe_close;
 	}
-
+	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
+		rkvpss_dvbm_init(stream);
 	ret = rkvpss_pipeline_stream(dev, true);
 	if (ret < 0)
 		goto stop_stream;
@@ -2037,6 +2050,8 @@ static int rkvpss_start_streaming(struct vb2_queue *queue, unsigned int count)
 	mutex_unlock(&hw->dev_lock);
 	return 0;
 stop_stream:
+	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
+		rkvpss_dvbm_deinit(dev);
 	stream->streaming = false;
 	rkvpss_stream_stop(stream);
 pipe_close:
@@ -2758,9 +2773,6 @@ static int rkvpss_set_wrap_line(struct rkvpss_stream *stream, int *wrap_line)
 		return -EINVAL;
 
 	vpss_dev->stream_vdev.wrap_line = *wrap_line;
-
-	//set_wrap todo
-
 	return 0;
 }
 

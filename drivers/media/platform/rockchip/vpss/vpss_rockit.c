@@ -292,12 +292,17 @@ int rkvpss_rockit_buf_done(struct rkvpss_stream *stream, int cmd, struct rkvpss_
 			 curr_buf->vb.sequence,
 			 curr_buf->dma[0]);
 	} else {
-		//tosee
 		if (!(stream->dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0))
 			return 0;
 
 		rockit_vpss_cfg->frame.u64PTS = vpss_dev->vpss_sdev.frame_timestamp;
 		rockit_vpss_cfg->frame.u32TimeRef = vpss_dev->vpss_sdev.frame_seq;
+		rockit_vpss_cfg->frame.ispEncCnt =
+			RKVPSS2X_RO_VPSS2ENC_FRM_CNT(rkvpss_hw_read(vpss_dev->hw_dev, RKVPSS2X_VPSS2ENC_DEBUG));
+		v4l2_dbg(2, rkvpss_debug, &vpss_dev->v4l2_dev,
+			 "stream:%d seq:%d enc_frm_cnt:%d rockit buf done:0x%x\n",
+			 stream->id, curr_buf->vb.sequence,
+			 rockit_vpss_cfg->frame.ispEncCnt, curr_buf->dma[0]);
 	}
 
 	rockit_vpss_cfg->frame.u32Height = stream->out_fmt.height;
@@ -571,7 +576,8 @@ void rkvpss_rockit_frame_start(struct rkvpss_device *dev)
 		stream = &dev->stream_vdev.stream[i];
 		if (!stream->streaming)
 			continue;
-		rkvpss_rockit_buf_done(stream, ROCKIT_DVBM_START, stream->curr_buf);
+		if (stream->curr_buf && !stream->curr_buf->vb.vb2_buf.memory)
+			rkvpss_rockit_buf_done(stream, ROCKIT_DVBM_START, stream->curr_buf);
 	}
 }
 

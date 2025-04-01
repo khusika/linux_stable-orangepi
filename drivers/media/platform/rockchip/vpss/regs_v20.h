@@ -263,7 +263,7 @@
 
 /* VPSS2ENC_DEBUG */
 #define RKVPSS2X_RO_VPSS2ENC_LINE_CNT(x)	((x) & 0x3fff)
-#define RKVPSS2X_RO_VPSS2ENC_FRM_CNT(x)		(((x) & 0xffffff) >> 16)
+#define RKVPSS2X_RO_VPSS2ENC_FRM_CNT(x)		(((x) >> 16) & 0xff)
 
 
 /* VPSS_CTRL_SHD  */
