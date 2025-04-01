@@ -1184,7 +1184,8 @@ static void rkvpss_frame_end(struct rkvpss_stream *stream)
 
 			vb2_set_plane_payload(vb2_buf, i, payload_size);
 
-			if (stream->is_attach_info && i == fmt->mplanes - 1) {
+			if (stream->is_attach_info &&
+			    vb2_buf->memory && i == fmt->mplanes - 1) {
 				struct rkvpss_frame_info *dst_info = buf->vaddr[i] + payload_size;
 				struct rkisp_vpss_frame_info *src_info = &dev->frame_info;
 

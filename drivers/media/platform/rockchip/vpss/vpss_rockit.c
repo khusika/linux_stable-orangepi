@@ -314,6 +314,29 @@ int rkvpss_rockit_buf_done(struct rkvpss_stream *stream, int cmd, struct rkvpss_
 	rockit_vpss_cfg->node = stream_cfg->node;
 	rockit_vpss_cfg->event = cmd;
 
+	if (stream->is_attach_info) {
+		struct rkisp_vpss_frame_info *src_info = &vpss_dev->frame_info;
+
+		rockit_vpss_cfg->frame.u64PTS = src_info->timestamp;
+		rockit_vpss_cfg->frame.hdr = src_info->hdr;
+		rockit_vpss_cfg->frame.rolling_shutter_skew = src_info->rolling_shutter_skew;
+
+		rockit_vpss_cfg->frame.sensor_exposure_time = src_info->sensor_exposure_time;
+		rockit_vpss_cfg->frame.sensor_analog_gain = src_info->sensor_analog_gain;
+		rockit_vpss_cfg->frame.sensor_digital_gain = src_info->sensor_digital_gain;
+		rockit_vpss_cfg->frame.isp_digital_gain = src_info->isp_digital_gain;
+
+		rockit_vpss_cfg->frame.sensor_exposure_time_m = src_info->sensor_exposure_time_m;
+		rockit_vpss_cfg->frame.sensor_analog_gain_m = src_info->sensor_analog_gain_m;
+		rockit_vpss_cfg->frame.sensor_digital_gain_m = src_info->sensor_digital_gain_m;
+		rockit_vpss_cfg->frame.isp_digital_gain_m = src_info->isp_digital_gain_m;
+
+		rockit_vpss_cfg->frame.sensor_exposure_time_l = src_info->sensor_exposure_time_l;
+		rockit_vpss_cfg->frame.sensor_analog_gain_l = src_info->sensor_analog_gain_l;
+		rockit_vpss_cfg->frame.sensor_digital_gain_l = src_info->sensor_digital_gain_l;
+		rockit_vpss_cfg->frame.isp_digital_gain_l = src_info->isp_digital_gain_l;
+	}
+
 	if (list_empty(&stream->buf_queue))
 		rockit_vpss_cfg->is_empty = true;
 	else
