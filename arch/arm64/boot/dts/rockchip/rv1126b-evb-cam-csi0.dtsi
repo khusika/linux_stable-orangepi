@@ -46,7 +46,7 @@
 			};
 
 			csi_dphy_input5: endpoint@6 {
-				reg = <5>;
+				reg = <6>;
 				remote-endpoint = <&gc8613_out>;
 				data-lanes = <1 2 3 4>;
 			};
