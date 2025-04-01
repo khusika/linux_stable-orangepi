@@ -4033,12 +4033,13 @@ isp_bay3d_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 {
 	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	struct rkisp_device *dev = params_vdev->dev;
-	u32 value, ctrl;
+	u32 value, ctrl, b3dldc_ctrl;
 
 	ctrl = isp3_param_read_cache(params_vdev, ISP33_BAY3D_CTRL0, id);
 	if (en == !!(ctrl & ISP35_MODULE_EN))
 		return;
 
+	b3dldc_ctrl = isp3_param_read_cache(params_vdev, ISP35_B3DLDC_CTRL, id);
 	if (en) {
 		if (!priv->buf_bay3d_iir[0].mem_priv ||
 		    !priv->buf_bay3d_ds[0].mem_priv ||
@@ -4055,6 +4056,10 @@ isp_bay3d_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_RD_BASE, id);
 		if (priv->bay3d_iir_rw_fmt == 3) {
 			isp3_param_write(params_vdev, value, ISP35_B3DLDC_WR_ADDR, id);
+			if (b3dldc_ctrl & ISP35_B3DLDC_EN) {
+				b3dldc_ctrl |= ISP35_B3DLDC_FORCE_UPD;
+				isp3_param_write(params_vdev, b3dldc_ctrl, ISP35_B3DLDC_CTRL, id);
+			}
 			value += priv->bay3d_iir_offs;
 		}
 		isp3_param_write(params_vdev, value, ISP3X_MI_BAY3D_IIR_WR_BASE, id);
@@ -4115,6 +4120,12 @@ isp_bay3d_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 	} else {
 		ctrl &= ~(ISP35_MODULE_EN | ISP35_SELF_FORCE_UPD);
 		isp3_param_write(params_vdev, ctrl, ISP33_BAY3D_CTRL0, id);
+		if (b3dldc_ctrl & ISP35_B3DLDC_EN) {
+			b3dldc_ctrl &= ~(ISP35_B3DLDC_FORCE_UPD | ISP35_B3DLDC_EN);
+			isp3_param_write(params_vdev, b3dldc_ctrl, ISP35_B3DLDC_CTRL, id);
+
+			isp3_param_clear_bits(params_vdev, ISP35_B3DLDC_ADR_STS, ISP35_B3DLDC_EN, id);
+		}
 	}
 }
 
@@ -4914,14 +4925,14 @@ static int rkisp_init_mesh_buf(struct rkisp_isp_params_vdev *params_vdev,
 		priv->buf_b3dldc_idx[id] = 0;
 		buf = priv->buf_b3dldc[id];
 		/* b3d_ldch */
-		mesh_w = ALIGN((ALIGN(mesh_w, 16) / 16 + 1) / 2, 2);
+		mesh_w = DIV_ROUND_UP(ALIGN(mesh_w, 16) / 16 + 1, 2);
 		mesh_h = ALIGN(mesh_h, 8) / 8 + 1;
-		mesh_size = ALIGN(mesh_w * mesh_h, 16);
+		mesh_size = ALIGN(mesh_w * 4 * mesh_h, 16);
 		priv->b3dldc_hsize = mesh_w;
 		priv->b3dldch_vsize = mesh_h;
 		/* b3d_ldcv */
 		mesh_h = ALIGN(meshsize->meas_height, 16) / 16 + 2;
-		mesh_size += (mesh_w * mesh_h);
+		mesh_size += (mesh_w * 4 * mesh_h);
 		priv->b3dldcv_vsize = mesh_h;
 		break;
 	default:
@@ -4957,7 +4968,7 @@ static int rkisp_init_mesh_buf(struct rkisp_isp_params_vdev *params_vdev,
 			mesh_head->stat = MESH_BUF_INIT;
 			mesh_head->data_oft = ALIGN(sizeof(struct isp2x_mesh_head), 16);
 			mesh_head->data1_oft = mesh_head->data_oft +
-				ALIGN(priv->b3dldc_hsize * priv->b3dldch_vsize, 16);
+				ALIGN(priv->b3dldc_hsize * 4 * priv->b3dldch_vsize, 16);
 		}
 		buf++;
 	}
@@ -4991,6 +5002,10 @@ rkisp_params_get_meshbuf_inf_v35(struct rkisp_isp_params_vdev *params_vdev,
 	case ISP35_MODULE_LDCH:
 		priv->buf_ldch_idx[id] = 0;
 		buf = priv->buf_ldch[id];
+		break;
+	case ISP35_MODULE_BAY3D:
+		priv->buf_b3dldc_idx[id] = 0;
+		buf = priv->buf_b3dldc[id];
 		break;
 	default:
 		return;
