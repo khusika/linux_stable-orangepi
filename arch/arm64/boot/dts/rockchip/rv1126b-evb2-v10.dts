@@ -373,6 +373,15 @@
 
 &rockchip_suspend {
 	status = "okay";
+
+	rockchip,sleep-pin-config = <
+		(0
+		| RKPM_SLEEP_PIN0_EN
+		)
+		(0
+		| RKPM_SLEEP_PIN0_ACT_LOW
+		)
+	>;
 };
 
 &route_dsi {
