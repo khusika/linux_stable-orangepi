@@ -95,6 +95,14 @@
 		vin-supply = <&vcc1v8_pmu>;
 	};
 
+	vcc_mipi: vcc-mipi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_mipi";
+		gpio = <&gpio7 RK_PA7 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
 	vcc_1v8: vcc-1v8 {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc_1v8";
@@ -177,8 +185,28 @@
 	};
 };
 
+&backlight {
+	pwms = <&pwm2_8ch_7 0 25000 0>;
+};
+
 &cpu0 {
 	cpu-supply = <&vdd_cpu>;
+};
+
+&display_subsystem {
+	status = "okay";
+};
+
+&dsi {
+	status = "okay";
+};
+
+&dsi_in_vop {
+	status = "okay";
+};
+
+&dsi_panel {
+	power-supply = <&vcc_mipi>;
 };
 
 &fspi0 {
@@ -191,6 +219,26 @@
 		spi-rx-bus-width = <4>;
 		spi-tx-bus-width = <1>;
 	};
+};
+
+&i2c4 {
+	status = "okay";
+	pinctrl-names = "default";
+	pinctrl-0 = <&i2c4m3_pins>;
+
+	gt1x: gt1x@14 {
+		compatible = "goodix,gt1x";
+		reg = <0x14>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&touch_gpio>;
+		power-supply = <&vcc_mipi>;
+		goodix,rst-gpio = <&gpio5 RK_PD6 GPIO_ACTIVE_HIGH>;
+		goodix,irq-gpio = <&gpio3 RK_PB7 IRQ_TYPE_LEVEL_LOW>;
+	};
+};
+
+&mipi_dphy {
+	status = "okay";
 };
 
 &rkaiisp {
@@ -209,7 +257,19 @@
 	rknpu-supply = <&vdd_npu>;
 };
 
+&route_dsi {
+	status = "okay";
+};
+
 &pinctrl {
+	touch {
+		touch_gpio: touch-gpio {
+			rockchip,pins =
+				<3 RK_PB7 RK_FUNC_GPIO &pcfg_pull_up>,
+				<5 RK_PD6 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
 	usb {
 		vcc5v0_host_en: vcc5v0-host-en {
 			rockchip,pins = <7 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
@@ -229,6 +289,10 @@
 
 &pwm1_4ch_2 {
 	pinctrl-0 = <&pwm1m2_ch2_pins>;
+	status = "okay";
+};
+
+&pwm2_8ch_7 {
 	status = "okay";
 };
 
