@@ -347,8 +347,8 @@ struct rockchip_thermal_data {
 #define RV1126B_TARGET_WIDTH			24000
 #define RV1126B_DEF_BIAS			32
 #define RV1126B_BIAS_MASK			(0x7f << 16)
-#define RV1126B_HW_CTRL				BIT(15)
-#define RV1126B_HW_CTRL_MASK			(BIT(15) << 16)
+#define RV1126B_SW_CTRL				0x8028
+#define RV1126B_SW_CTRL_MASK			(0x8078 << 16)
 
 #define GRF_SARADC_TESTBIT_ON			(0x10001 << 2)
 #define GRF_TSADC_TESTBIT_H_ON			(0x10001 << 2)
@@ -1705,7 +1705,8 @@ static void rv1126b_tsadc_phy_init(struct device *dev, struct regmap *grf,
 		     phy_cfg->bias | RV1126B_BIAS_MASK);
 	regmap_write(grf, RV1126B_GRF_TSADC_CON6,
 		     RV1126B_CH_EN | RV1126B_CH_EN_MASK);
-	regmap_write(grf, RV1126B_GRF_TSADC_CON0, RV1126B_HW_CTRL_MASK);
+	regmap_write(grf, RV1126B_GRF_TSADC_CON0,
+		     RV1126B_SW_CTRL | RV1126B_SW_CTRL_MASK);
 	regmap_write(grf, RV1126B_GRF_TSADC_CON1,
 		     RV1126B_UNLOCK_VALUE | RV1126B_UNLOCK_VALUE_MASK);
 	regmap_write(grf, RV1126B_GRF_TSADC_CON1,
