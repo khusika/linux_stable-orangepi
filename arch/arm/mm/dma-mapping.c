@@ -1424,7 +1424,7 @@ static void arm_iommu_unmap_page(struct device *dev, dma_addr_t handle,
 	int offset = handle & ~PAGE_MASK;
 	int len = PAGE_ALIGN(size + offset);
 
-	if (!iova)
+	if (WARN(handle == DMA_MAPPING_ERROR, "invalid iommu iova address.\n"))
 		return;
 
 	if (!dev->dma_coherent && !(attrs & DMA_ATTR_SKIP_CPU_SYNC)) {
@@ -1486,7 +1486,7 @@ static void arm_iommu_unmap_resource(struct device *dev, dma_addr_t dma_handle,
 	unsigned int offset = dma_handle & ~PAGE_MASK;
 	size_t len = PAGE_ALIGN(size + offset);
 
-	if (!iova)
+	if (WARN(dma_handle == DMA_MAPPING_ERROR, "invalid iommu iova address.\n"))
 		return;
 
 	iommu_unmap(mapping->domain, iova, len);
@@ -1501,7 +1501,7 @@ static void arm_iommu_sync_single_for_cpu(struct device *dev,
 	struct page *page;
 	unsigned int offset = handle & ~PAGE_MASK;
 
-	if (dev->dma_coherent || !iova)
+	if (dev->dma_coherent || WARN(handle == DMA_MAPPING_ERROR, "invalid iommu iova address.\n"))
 		return;
 
 	page = phys_to_page(iommu_iova_to_phys(mapping->domain, iova));
@@ -1516,7 +1516,7 @@ static void arm_iommu_sync_single_for_device(struct device *dev,
 	struct page *page;
 	unsigned int offset = handle & ~PAGE_MASK;
 
-	if (dev->dma_coherent || !iova)
+	if (dev->dma_coherent || WARN(handle == DMA_MAPPING_ERROR, "invalid iommu iova address.\n"))
 		return;
 
 	page = phys_to_page(iommu_iova_to_phys(mapping->domain, iova));
