@@ -69,7 +69,7 @@ struct rkfec_offline_dev {
 	struct rkfec_hw_dev *hw;
 	struct v4l2_device v4l2_dev;
 	struct video_device vfd;
-	struct mutex apilock;
+	struct mutex ioctl_lock;
 	struct completion cmpl;
 	struct completion pm_cmpl;
 	struct list_head list;

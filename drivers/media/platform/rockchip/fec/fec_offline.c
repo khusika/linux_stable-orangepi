@@ -250,8 +250,12 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 		 buf->out_fourcc, buf->out_fourcc >> 8,
 		 buf->out_fourcc >> 16, buf->out_fourcc >> 24);
 
-
-	//clk tosee
+	if (hw->fec_ver == RKFEC_V20) {
+		if (hw->soft_reset)
+			hw->soft_reset(hw);
+		else
+			dev_warn(hw->dev, "soft_reset not implemented\n");
+	}
 
 	init_completion(&ofl->cmpl);
 
@@ -467,6 +471,12 @@ static long rkfec_ofl_ioctl(struct file *file, void *fh,
 
 	ofl->pm_need_wait = true;
 
+	v4l2_dbg(4, rkfec_debug, &ofl->v4l2_dev, "%s cmd:%d", __func__, cmd);
+
+	if (mutex_lock_interruptible(&ofl->ioctl_lock)) {
+		return -ERESTARTSYS;
+	}
+
 	if (!arg) {
 		ret =  -EINVAL;
 		goto out;
@@ -497,6 +507,7 @@ out:
 		complete(&ofl->pm_cmpl);
 
 	ofl->pm_need_wait = false;
+	mutex_unlock(&ofl->ioctl_lock);
 	return ret;
 }
 
@@ -583,7 +594,7 @@ int rkfec_register_offline(struct rkfec_hw_dev *hw)
 	if (ret)
 		return ret;
 
-	mutex_init(&ofl->apilock);
+	mutex_init(&ofl->ioctl_lock);
 	ofl->vfd = offline_videodev;
 	vfd = &ofl->vfd;
 	vfd->device_caps = V4L2_CAP_STREAMING;
@@ -607,7 +618,7 @@ int rkfec_register_offline(struct rkfec_hw_dev *hw)
 	v4l2_info(&ofl->v4l2_dev, "%s success\n", __func__);
 	return 0;
 unreg_v4l2:
-	mutex_destroy(&ofl->apilock);
+	mutex_destroy(&ofl->ioctl_lock);
 	v4l2_device_unregister(v4l2_dev);
 	return ret;
 }
@@ -617,7 +628,7 @@ void rkfec_unregister_offline(struct rkfec_hw_dev *hw)
 	struct rkfec_offline_dev *ofl = &hw->ofl_dev;
 
 	rkfec_offline_proc_cleanup(&hw->ofl_dev);
-	mutex_destroy(&ofl->apilock);
+	mutex_destroy(&ofl->ioctl_lock);
 	video_unregister_device(&ofl->vfd);
 	v4l2_device_unregister(&ofl->v4l2_dev);
 }
