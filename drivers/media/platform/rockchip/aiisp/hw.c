@@ -68,10 +68,8 @@ static irqreturn_t hw_irq_hdl(int irq, void *ctx)
 					id = i;
 				}
 			}
-			spin_unlock(&hw_dev->hw_lock);
 
 			if (max > 0) {
-				spin_lock(&hw_dev->hw_lock);
 				hw_dev->is_idle = false;
 				hw_dev->cur_dev_id = id;
 				aidev = hw_dev->aidev[hw_dev->cur_dev_id];
@@ -81,7 +79,6 @@ static irqreturn_t hw_irq_hdl(int irq, void *ctx)
 					hw_dev->cur_dev_id, max);
 				rkaiisp_trigger(aidev);
 			} else {
-				spin_lock(&hw_dev->hw_lock);
 				hw_dev->is_idle = true;
 				spin_unlock(&hw_dev->hw_lock);
 			}

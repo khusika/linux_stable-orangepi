@@ -1112,7 +1112,7 @@ static int rkaiisp_update_buf(struct rkaiisp_device *aidev)
 	struct rkaiisp_hw_dev *hw_dev = aidev->hw_dev;
 	struct rkisp_aiisp_st idxbuf = {0};
 	unsigned long flags = 0;
-	int ret = -1;
+	int ret = 0;
 
 	spin_lock_irqsave(&hw_dev->hw_lock, flags);
 	if (!kfifo_is_empty(fifo))
@@ -1497,6 +1497,9 @@ static void rkaiisp_vb2_buf_queue(struct vb2_buffer *vb)
 	spin_lock_irqsave(&aidev->config_lock, flags);
 	list_add_tail(&buf->queue, &aidev->params);
 	spin_unlock_irqrestore(&aidev->config_lock, flags);
+
+	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
+		"queue param buffer\n");
 }
 
 static void rkaiisp_vb2_stop_streaming(struct vb2_queue *vq)
@@ -1544,6 +1547,9 @@ static void rkaiisp_vb2_stop_streaming(struct vb2_queue *vq)
 
 	pm_runtime_put_sync(aidev->dev);
 	atomic_dec(&hw_dev->refcnt);
+
+	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
+		"stop streaming %d, hwstate %d\n", aidev->streamon, aidev->hwstate);
 }
 
 static int
@@ -1560,6 +1566,9 @@ rkaiisp_vb2_start_streaming(struct vb2_queue *queue, unsigned int count)
 
 	pm_runtime_get_sync(aidev->dev);
 	atomic_inc(&hw_dev->refcnt);
+
+	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
+		"start streaming %d\n", aidev->streamon);
 
 	return 0;
 }
