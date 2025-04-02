@@ -821,7 +821,7 @@ static inline void __free_iova(struct dma_iommu_mapping *mapping,
 	unsigned int start, count;
 	size_t mapping_size = mapping->bits << PAGE_SHIFT;
 	unsigned long flags;
-	dma_addr_t bitmap_base;
+	unsigned long long bitmap_base;
 	u32 bitmap_index;
 
 	if (!size)
