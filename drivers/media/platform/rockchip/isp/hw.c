@@ -836,8 +836,6 @@ static const struct isp_clk_info rv1126b_isp_clk_rate[] = {
 		.clk_rate = 400,
 	}, {
 		.clk_rate = 500,
-	}, {
-		.clk_rate = 600,
 	}
 };
 
