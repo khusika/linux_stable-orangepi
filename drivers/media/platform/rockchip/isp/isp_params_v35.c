@@ -535,7 +535,7 @@ isp_lsc_config(struct rkisp_isp_params_vdev *params_vdev,
 	}
 
 	ctrl = isp3_param_read(params_vdev, ISP3X_LSC_CTRL, id);
-	ctrl &= ISP35_MODULE_EN;
+	ctrl &= (ISP35_MODULE_EN | ISP3X_LSC_PRE_RD_ST_MODE);
 	ctrl |= !!arg->sector_16x16 << 2;
 	isp3_param_write(params_vdev, ctrl, ISP3X_LSC_CTRL, id);
 
@@ -547,15 +547,38 @@ isp_lsc_config(struct rkisp_isp_params_vdev *params_vdev,
 static void
 isp_lsc_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 {
+	struct rkisp_device *dev = params_vdev->dev;
 	u32 val = isp3_param_read(params_vdev, ISP3X_LSC_CTRL, id);
+	u32 path_sel;
 
 	if (en == !!(val & ISP35_MODULE_EN))
 		return;
 
-	if (en)
+	if (en) {
 		val |= ISP35_MODULE_EN;
-	else
+		if (dev->is_aiisp_en && !dev->is_aiisp_sync) {
+			val &= ~ISP3X_LSC_PRE_RD_ST_MODE;
+
+			path_sel = isp3_param_read_cache(params_vdev, ISP3X_VI_ISP_PATH, id);
+			/* drcLSC default frame end read table */
+			path_sel |= ISP3X_LSC_CFG_SEL(3);
+			isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
+			isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
+			/* awbLSC default frame end read table */
+			path_sel &= ~ISP3X_LSC_CFG_SEL(3);
+			path_sel |= ISP3X_LSC_CFG_SEL(2);
+			isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
+			isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
+			/* mainLSC default frame start read table and change to frame end */
+			path_sel &= ~ISP3X_LSC_CFG_SEL(3);
+			path_sel |= ISP3X_LSC_CFG_SEL(1);
+			isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
+
+			val |= ISP3X_LSC_PRE_RD_ST_MODE;
+		}
+	} else {
 		val &= ~(ISP35_MODULE_EN | ISP35_SELF_FORCE_UPD);
+	}
 	isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
 }
 
@@ -1267,6 +1290,8 @@ isp_rawawb_config(struct rkisp_isp_params_vdev *params_vdev,
 		!!arg->blk_measure_xytype << 2 |
 		!!arg->blk_measure_mode << 1 |
 		!!arg->blk_measure_enable;
+	if (dev->is_aiisp_en)
+		value |= ISP35_RAWAWB_BNR_BE_SEL;
 	isp3_param_write(params_vdev, value, ISP3X_RAWAWB_BLK_CTRL, id);
 
 	h_offs = arg->h_offs & ~0x1;
