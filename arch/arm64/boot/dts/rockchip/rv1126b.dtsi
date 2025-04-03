@@ -3123,6 +3123,8 @@
 		clocks = <&cru ACLK_AISP>, <&cru HCLK_AISP>,
 			 <&cru CLK_CORE_AISP>;
 		clock-names = "aclk_aiisp", "hclk_aiisp", "clk_aiisp_core";
+		assigned-clocks = <&cru CLK_CORE_AISP>, <&cru ACLK_AISP>;
+		assigned-clock-rates = <775000000>, <500000000>;
 		iommus = <&rkaiisp_mmu>;
 		power-domains = <&power RV1126B_PD_AISP>;
 		status = "disabled";
