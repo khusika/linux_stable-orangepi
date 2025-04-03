@@ -3570,7 +3570,7 @@ static int vehicle_cif_csi2_s_stream_v1(struct vehicle_cif *cif,
 				val |= CSI_UVDS_EN;
 			rkcif_write_reg(cif, get_reg_index_of_id_ctrl0(channel->id), val);
 
-			val = channel->data_type << 2;
+			val = channel->id | channel->data_type << 2;
 			rkcif_write_reg(cif, get_reg_index_of_id_ctrl1(channel->id), val);
 
 		}
