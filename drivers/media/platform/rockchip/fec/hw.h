@@ -73,6 +73,7 @@ struct rkfec_hw_dev {
 	enum rkfec_fec_ver fec_ver;
 
 	void (*soft_reset)(struct rkfec_hw_dev *hw);
+	int (*set_clk)(struct clk *clk, unsigned long rate);
 };
 
 #ifndef IS_LINUX_VERSION_AT_LEAST_6_1

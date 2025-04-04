@@ -21,6 +21,37 @@ MODULE_PARM_DESC(debug, "Debug level (0-6)");
 
 static void buf_del(struct file *file, int fd, bool is_all);
 
+static void rkfec_dvfs(struct rkfec_offline_dev *ofl, int width)
+{
+	int i, ret;
+	struct rkfec_hw_dev *hw = ofl->hw;
+	const struct fec_clk_info *rate_info = NULL;
+	unsigned long target_rate = 0;
+
+	for (i = 0; i < hw->clk_rate_tbl_num; i++) {
+		if (width <= hw->clk_rate_tbl[i].refer_data) {
+			rate_info = &hw->clk_rate_tbl[i];
+			break;
+		}
+	}
+
+	if (!rate_info)
+		rate_info = &hw->clk_rate_tbl[hw->clk_rate_tbl_num - 1];
+
+	target_rate = rate_info->clk_rate * 1000000;
+
+	ret = hw->set_clk(hw->clks[0], target_rate);
+	if (ret < 0)
+		v4l2_err(&ofl->v4l2_dev, "failed to set aclk rate: %d\n", ret);
+
+	ret = hw->set_clk(hw->clks[2], target_rate);
+	if (ret < 0)
+		v4l2_err(&ofl->v4l2_dev, "failed to set core clk rate: %d\n", ret);
+
+	v4l2_dbg(4, rkfec_debug, &ofl->v4l2_dev, "set clk rate: %ld\n",
+		 target_rate);
+}
+
 #if IS_LINUX_VERSION_AT_LEAST_6_1
 static void init_vb2(struct rkfec_offline_dev *ofl,
 		     struct rkfec_offline_buf *buf)
@@ -256,6 +287,9 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 		else
 			dev_warn(hw->dev, "soft_reset not implemented\n");
 	}
+
+	if (hw->set_clk)
+		rkfec_dvfs(ofl, in_w);
 
 	init_completion(&ofl->cmpl);
 

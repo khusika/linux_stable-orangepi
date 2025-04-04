@@ -22,12 +22,12 @@ static const char * const rv1126b_fec_clks[] = {
 	"clk_fec",
 };
 
-static void rkfec_set_clk_rate(struct clk *clk, unsigned long rate)
+static int rkfec_set_clk_rate(struct clk *clk, unsigned long rate)
 {
 	if (rkfec_clk_dbg)
-		return;
+		return 0;
 
-	clk_set_rate(clk, rate);
+	return clk_set_rate(clk, rate);
 }
 
 static void rkfec_soft_reset(struct rkfec_hw_dev *hw)
@@ -91,9 +91,6 @@ static int enable_sys_clk(struct rkfec_hw_dev *dev)
 		if (ret < 0)
 			goto err;
 	}
-
-	rkfec_set_clk_rate(dev->clks[0],
-			   dev->clk_rate_tbl[dev->clk_rate_tbl_num - 1].clk_rate * 1000000);
 
 	return 0;
 
@@ -287,6 +284,7 @@ static int rkfec_hw_probe(struct platform_device *pdev)
 		hw_dev->is_dma_config = false;
 	hw_dev->mem_ops = &vb2_cma_sg_memops;
 	hw_dev->soft_reset = rkfec_soft_reset;
+	hw_dev->set_clk = rkfec_set_clk_rate;
 
 	rkfec_register_offline(hw_dev);
 
