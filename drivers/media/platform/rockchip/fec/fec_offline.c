@@ -437,6 +437,20 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	v4l2_dbg(3, rkfec_debug, &ofl->v4l2_dev,
 		 "%s exit ret:%d, time:%lldus\n", __func__, ret, us);
 
+	if (rkfec_debug >= 4) {
+		pr_cont("FEC_0x200:\n");
+		print_hex_dump(KERN_CONT, "", DUMP_PREFIX_OFFSET, 16, 4,
+			       base + RKFEC_STRT, 0xc0, false);
+
+		pr_cont("FEC_CACHE:\n");
+		print_hex_dump(KERN_CONT, "", DUMP_PREFIX_OFFSET, 16, 4,
+			       base + RKFEC_CACHE_STATUS, 0x28, false);
+
+		pr_cont("FEC_MMU:\n");
+		print_hex_dump(KERN_CONT, "", DUMP_PREFIX_OFFSET, 16, 4,
+			       base + RKFEC_MMU_DTE_ADDR, 0x2c, false);
+	}
+
 	ofl->debug.interval = us;
 
 	ofl->state = RKFEC_FRAME_END;
