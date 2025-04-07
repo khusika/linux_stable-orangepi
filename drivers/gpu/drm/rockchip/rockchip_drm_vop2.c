@@ -7765,7 +7765,7 @@ static int vop2_crtc_get_inital_acm_info(struct drm_crtc *crtc)
 static int vop2_crtc_loader_protect(struct drm_crtc *crtc, bool on, void *data)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
-	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
+	struct rockchip_crtc_state *vcstate;
 	struct vop2 *vop2 = vp->vop2;
 	struct rockchip_drm_private *private = crtc->dev->dev_private;
 	const struct vop2_video_port_data *vp_data = &vop2->data->vp[vp->id];
@@ -7796,6 +7796,8 @@ static int vop2_crtc_loader_protect(struct drm_crtc *crtc, bool on, void *data)
 
 				vp->enabled_win_mask |= BIT(win->phys_id);
 				crtc_state = drm_atomic_get_crtc_state(crtc->state->state, crtc);
+				vcstate = to_rockchip_crtc_state(crtc_state);
+				vp->output_if = vcstate->output_if;
 				mode = &crtc_state->adjusted_mode;
 				if (mode->hdisplay > VOP2_MAX_VP_OUTPUT_WIDTH)	{
 					vcstate->splice_mode = true;
