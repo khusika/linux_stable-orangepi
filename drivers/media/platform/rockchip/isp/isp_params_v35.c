@@ -508,6 +508,13 @@ isp_lsc_config(struct rkisp_isp_params_vdev *params_vdev,
 	struct rkisp_device *dev = params_vdev->dev;
 	u32 i, data, ctrl;
 
+	ctrl = isp3_param_read(params_vdev, ISP3X_LSC_CTRL, id);
+	if (!(ctrl & ISP35_MODULE_EN))
+		isp3_param_clear_bits(params_vdev, ISP3X_VI_ISP_PATH, ISP3X_LSC_CFG_SEL(3), id);
+	ctrl &= (ISP35_MODULE_EN | ISP3X_LSC_PRE_RD_ST_MODE);
+	ctrl |= !!arg->sector_16x16 << 2;
+	isp3_param_write(params_vdev, ctrl, ISP3X_LSC_CTRL, id);
+
 	for (i = 0; i < ISP35_LSC_SIZE_TBL_SIZE / 4; i++) {
 		/* program x size tables */
 		data = CIF_ISP_LSC_SECT_SIZE(arg->x_size_tbl[i * 2], arg->x_size_tbl[i * 2 + 1]);
@@ -534,12 +541,8 @@ isp_lsc_config(struct rkisp_isp_params_vdev *params_vdev,
 		isp3_param_write(params_vdev, data, ISP3X_LSC_YGRAD_89 + i * 4, id);
 	}
 
-	ctrl = isp3_param_read(params_vdev, ISP3X_LSC_CTRL, id);
-	ctrl &= (ISP35_MODULE_EN | ISP3X_LSC_PRE_RD_ST_MODE);
-	ctrl |= !!arg->sector_16x16 << 2;
-	isp3_param_write(params_vdev, ctrl, ISP3X_LSC_CTRL, id);
-
-	if (dev->hw_dev->is_single)
+	if (dev->hw_dev->is_single &&
+	    (!(dev->isp_state & ISP_START) || ctrl & ISP35_MODULE_EN))
 		isp_lsc_matrix_cfg_sram(params_vdev, arg, false, id);
 	params_rec->others.lsc_cfg = *arg;
 }
@@ -554,30 +557,30 @@ isp_lsc_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 	if (en == !!(val & ISP35_MODULE_EN))
 		return;
 
-	if (en) {
+	if (en)
 		val |= ISP35_MODULE_EN;
-		if (dev->is_aiisp_en && !dev->is_aiisp_sync) {
-			val &= ~ISP3X_LSC_PRE_RD_ST_MODE;
-
-			path_sel = isp3_param_read_cache(params_vdev, ISP3X_VI_ISP_PATH, id);
-			/* drcLSC default frame end read table */
-			path_sel |= ISP3X_LSC_CFG_SEL(3);
-			isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
-			isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
-			/* awbLSC default frame end read table */
-			path_sel &= ~ISP3X_LSC_CFG_SEL(3);
-			path_sel |= ISP3X_LSC_CFG_SEL(2);
-			isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
-			isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
-			/* mainLSC default frame start read table and change to frame end */
-			path_sel &= ~ISP3X_LSC_CFG_SEL(3);
-			path_sel |= ISP3X_LSC_CFG_SEL(1);
-			isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
-
-			val |= ISP3X_LSC_PRE_RD_ST_MODE;
-		}
-	} else {
+	else
 		val &= ~(ISP35_MODULE_EN | ISP35_SELF_FORCE_UPD);
+
+	if (dev->is_aiisp_en && !dev->is_aiisp_sync) {
+		val &= ~ISP3X_LSC_PRE_RD_ST_MODE;
+
+		path_sel = isp3_param_read_cache(params_vdev, ISP3X_VI_ISP_PATH, id);
+		/* drcLSC default frame end read table */
+		path_sel |= ISP3X_LSC_CFG_SEL(3);
+		isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
+		isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
+		/* awbLSC default frame end read table */
+		path_sel &= ~ISP3X_LSC_CFG_SEL(3);
+		path_sel |= ISP3X_LSC_CFG_SEL(2);
+		isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
+		isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
+		/* mainLSC default frame start read table and change to frame end */
+		path_sel &= ~ISP3X_LSC_CFG_SEL(3);
+		path_sel |= ISP3X_LSC_CFG_SEL(1);
+		isp3_param_write(params_vdev, path_sel, ISP3X_VI_ISP_PATH, id);
+
+		val |= ISP3X_LSC_PRE_RD_ST_MODE;
 	}
 	isp3_param_write(params_vdev, val, ISP3X_LSC_CTRL, id);
 }
