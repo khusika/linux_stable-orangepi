@@ -12,7 +12,7 @@
 #include <linux/module.h>
 #include <linux/mii.h>
 #include <linux/netdevice.h>
-#include <linux/of_irq.h>
+#include <linux/platform_device.h>
 #include <linux/phy.h>
 
 #define INTERNAL_FEPHY_ID			0x06808101
@@ -202,21 +202,20 @@ static int rockchip_fephy_probe(struct phy_device *phydev)
 		return -ENOMEM;
 
 	phydev->priv = priv;
-
-	priv->wol_irq = of_irq_get_byname(phydev->mdio.dev.of_node, "wol_irq");
+	priv->wol_irq = platform_get_irq_byname_optional(to_platform_device(&phydev->mdio.dev),
+							 "wol_irq");
 	if (priv->wol_irq == -EPROBE_DEFER)
 		return priv->wol_irq;
 
 	if (priv->wol_irq > 0) {
 		ret = devm_request_threaded_irq(&phydev->mdio.dev, priv->wol_irq,
 						NULL, rockchip_fephy_wol_irq_thread,
-						IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+						IRQF_TRIGGER_RISING | IRQF_ONESHOT | IRQF_NO_AUTOEN,
 						"rockchip_fephy_wol_irq", priv);
 		if (ret) {
 			phydev_err(phydev, "request wol_irq failed: %d\n", ret);
 			goto irq_err;
 		}
-		disable_irq(priv->wol_irq);
 		enable_irq_wake(priv->wol_irq);
 	}
 
