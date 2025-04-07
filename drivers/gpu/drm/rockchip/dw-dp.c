@@ -3294,6 +3294,8 @@ static void _dw_dp_loader_protect(struct dw_dp *dp, bool on)
 		extcon_set_state_sync(dp->audio->extcon, EXTCON_DISP_DP, true);
 		dw_dp_audio_handle_plugged_change(dp->audio, true);
 		phy_power_on(dp->phy);
+		link->train.clock_recovered = true;
+		link->train.channel_equalized = true;
 	} else {
 		phy_power_off(dp->phy);
 		extcon_set_state_sync(dp->audio->extcon, EXTCON_DISP_DP, false);
