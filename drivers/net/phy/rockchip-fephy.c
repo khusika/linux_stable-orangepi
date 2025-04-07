@@ -112,6 +112,11 @@ static int rockchip_fephy_config_init(struct phy_device *phydev)
 	if (ret)
 		return ret;
 
+	/* off-energy level0 threshold */
+	ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0xa, 0x6664);
+	if (ret)
+		return ret;
+
 	/* 100M amplitude control */
 	ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0x18, 0xc);
 	if (ret)
