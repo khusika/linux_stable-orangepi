@@ -1084,6 +1084,12 @@ static inline void rk3588_vop2_dsc_cfg_done(struct drm_crtc *crtc);
 static inline void vop2_cfg_done(struct drm_crtc *crtc);
 static void vop2_wait_for_fs_by_done_bit_status(struct vop2_video_port *vp);
 static int vop2_clk_reset(struct reset_control *rstc);
+static void vop2_wait_for_scan_timing_max_to_assigned_line(struct vop2_video_port *vp,
+							   u32 current_line,
+							   u32 wait_line);
+static void vop2_wait_for_scan_timing_from_the_assigned_line(struct vop2_video_port *vp,
+							     u32 current_line,
+							     u32 wait_line);
 
 static inline struct vop2_video_port *to_vop2_video_port(struct drm_crtc *crtc)
 {
@@ -12553,6 +12559,25 @@ static void vop2_crtc_atomic_begin(struct drm_crtc *crtc, struct drm_atomic_stat
 						 GFP_KERNEL);
 		if (!vop2_zpos_splice)
 			goto out;
+	}
+
+	/*
+	 * Avoid commit new plane time close to vsync at async mode, the
+	 * following case maybe lead to error:
+	 * vsync[1] -> update plane[2] -> config done[3] -> update plane[4] -> vsync[5]
+	 * If new vsync[5] insert step 4, only part of plane register complete,
+	 * this will lead to part of plane register take effect and lead to error.
+	 *
+	 * So we introduce this safeguard, when commit time exceeds 15/16 of a frame,
+	 * this commit will be postponed to the next frame.
+	 */
+	if (state->legacy_cursor_update) {
+		u16 vtotal = VOP_MODULE_GET(vop2, vp, dsp_vtotal);
+		u32 assigned_line = vtotal * 15 >> 4;
+		u32 current_line = vop2_read_vcnt(vp);
+
+		if (current_line > assigned_line)
+			vop2_wait_for_scan_timing_max_to_assigned_line(vp, current_line, assigned_line);
 	}
 
 	if (vop2->version == VOP_VERSION_RK3588)
