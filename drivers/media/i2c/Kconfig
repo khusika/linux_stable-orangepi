@@ -1673,6 +1673,16 @@ config VIDEO_PREISP_DUMMY_SENSOR
 	  To compile this driver as a module, choose M here: the
 	  module will be called pisp_dmy.
 
+config VIDEO_PS5458
+	tristate "Prime PS5458 sensor support"
+	depends on I2C && VIDEO_DEV
+	depends on MEDIA_CAMERA_SUPPORT
+	select MEDIA_CONTROLLER
+	select VIDEO_V4L2_SUBDEV_API
+	help
+	  This is a Video4Linux2 sensor driver for the Prime
+	  PS5458 camera.
+
 config VIDEO_RDACM20
 	tristate "IMI RDACM20 camera support"
 	depends on I2C
