@@ -2148,6 +2148,8 @@ err_disable_hclk:
 static void vop_initial(struct drm_crtc *crtc)
 {
 	struct vop *vop = to_vop(crtc);
+	const struct vop_data *vop_data = vop->data;
+	struct vop_wb *wb = &vop->wb;
 	int i;
 
 	vop_power_enable(crtc);
@@ -2175,6 +2177,12 @@ static void vop_initial(struct drm_crtc *crtc)
 	if (vop->version == VOP_VERSION_RK3576_LITE) {
 		VOP_GRF_SET(vop, grf, grf_vopl_sel, 1);
 		VOP_CTRL_SET(vop, enable, 1);
+	}
+
+	if (vop_data->wb) {
+		VOP_CTRL_SET2(vop, wb, axi_yrgb_id, vop_data->wb->axi_yrgb_id);
+		VOP_CTRL_SET2(vop, wb, axi_uv_id, vop_data->wb->axi_uv_id);
+		vop_wb_cfg_done(vop);
 	}
 }
 

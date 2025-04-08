@@ -2006,8 +2006,8 @@ static const struct vop_wb_regs rv1126b_vop_wb_regs = {
 	.post_empty_stop_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 11),
 	.one_frame_mode = VOP_REG(RV1126B_WB_CTRL, 0x1, 12),
 	.xgt2_en = VOP_REG(RV1126B_WB_CTRL, 0x1, 18),
-	.axi_yrgb_id = VOP_REG(RV1126B_WB_CTRL, 0xff, 20),
-	.axi_uv_id = VOP_REG(RV1126B_WB_CTRL, 0x1f, 24),
+	.axi_yrgb_id = VOP_REG(RV1126B_WB_CTRL, 0xf, 20),
+	.axi_uv_id = VOP_REG(RV1126B_WB_CTRL, 0xf, 24),
 
 	.fifo_throd = VOP_REG(RV1126B_WB_XSCAL_FACTOR, 0x3ff, 0),
 	.scale_x_factor = VOP_REG(RV1126B_WB_XSCAL_FACTOR, 0x3fff, 16),
@@ -2040,6 +2040,8 @@ static const struct vop_wb_data rv1126b_vop_wb_data = {
 	.max_output = { 1920, 1080 },
 	.fifo_depth =  1920 * 4 / 16,
 	.regs = &rv1126b_vop_wb_regs,
+	.axi_yrgb_id = 0xd,
+	.axi_uv_id = 0xe,
 };
 
 static const struct vop_data rv1126b_vop = {

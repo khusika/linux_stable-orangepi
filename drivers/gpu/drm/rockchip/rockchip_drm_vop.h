@@ -1434,6 +1434,8 @@ struct vop_wb_data {
 	struct vop_rect max_output;
 	const struct vop_wb_regs *regs;
 	uint32_t fifo_depth;
+	uint16_t axi_yrgb_id;
+	uint16_t axi_uv_id;
 };
 
 struct vop_data {
