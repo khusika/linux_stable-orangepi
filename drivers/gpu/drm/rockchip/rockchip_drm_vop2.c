@@ -5643,8 +5643,9 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 				     struct drm_atomic_state *state)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct drm_crtc_state *new_cstate = drm_atomic_get_new_crtc_state(state, crtc);
 	struct drm_crtc_state *old_cstate = drm_atomic_get_old_crtc_state(state, crtc);
-	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
+	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(new_cstate);
 	struct vop2 *vop2 = vp->vop2;
 	const struct vop2_video_port_data *vp_data = &vop2->data->vp[vp->id];
 	struct vop2_video_port *splice_vp = &vop2->vps[vp_data->splice_vp_id];
@@ -7845,7 +7846,7 @@ static int vop2_crtc_loader_protect(struct drm_crtc *crtc, bool on, void *data)
 			VOP_MODULE_SET(vop2, vp, cubic_lut_mst, cubic_lut_mst);
 		}
 	} else {
-		vop2_crtc_atomic_disable(crtc, NULL);
+		vop2_crtc_atomic_disable(crtc, crtc->state->state);
 	}
 
 	return 0;
@@ -10779,21 +10780,20 @@ static int vop2_crtc_atomic_check(struct drm_crtc *crtc,
 	struct drm_crtc_state *new_crtc_state = drm_atomic_get_new_crtc_state(state, crtc);
 	struct drm_crtc_state *old_crtc_state = drm_atomic_get_old_crtc_state(state, crtc);
 	const struct vop2_video_port_data *vp_data = &vop2_data->vp[vp->id];
-	struct rockchip_crtc_state *vcstate = to_rockchip_crtc_state(crtc->state);
 	struct rockchip_crtc_state *new_vcstate = to_rockchip_crtc_state(new_crtc_state);
 	struct rockchip_crtc_state *old_vcstate = to_rockchip_crtc_state(old_crtc_state);
-	struct drm_display_mode *adjusted_mode = &crtc->state->adjusted_mode;
+	struct drm_display_mode *adjusted_mode = &new_crtc_state->adjusted_mode;
 
 	if (vop2_has_feature(vop2, VOP_FEATURE_SPLICE)) {
 		if (adjusted_mode->hdisplay > VOP2_MAX_VP_OUTPUT_WIDTH) {
-			vcstate->splice_mode = true;
+			new_vcstate->splice_mode = true;
 			splice_vp = &vop2->vps[vp_data->splice_vp_id];
 			splice_vp->splice_mode_right = true;
 			splice_vp->left_vp = vp;
 		}
 	}
 
-	if ((vcstate->request_refresh_rate != new_vcstate->request_refresh_rate) ||
+	if ((old_vcstate->request_refresh_rate != new_vcstate->request_refresh_rate) ||
 	    new_crtc_state->active_changed || new_crtc_state->mode_changed)
 		vp->refresh_rate_change = true;
 	else
