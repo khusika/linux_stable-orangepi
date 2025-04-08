@@ -96,6 +96,7 @@ struct rkaiisp_device {
 	spinlock_t config_lock;
 	struct mutex apilock;
 	wait_queue_head_t sync_onoff;
+	atomic_t opencnt;
 
 	struct rkaiisp_hw_dev *hw_dev;
 	bool is_hw_link;
@@ -132,6 +133,7 @@ struct rkaiisp_device {
 
 	bool streamon;
 	bool showreg;
+	bool init_buf;
 };
 
 extern int rkaiisp_debug;

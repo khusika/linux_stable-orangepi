@@ -327,6 +327,9 @@ static int rkaiisp_free_pool(struct rkaiisp_device *aidev)
 	struct rkaiisp_ispbuf_info *ispbuf = &aidev->ispbuf;
 	int i;
 
+	if (!aidev->init_buf)
+		return 0;
+
 	for (i = 0; i < ispbuf->bnr_buf.iir.buf_cnt; i++)
 		rkaiisp_detach_dmabuf(aidev, &aidev->iirbuf[i]);
 
@@ -340,6 +343,7 @@ static int rkaiisp_free_pool(struct rkaiisp_device *aidev)
 		rkaiisp_detach_dmabuf(aidev, &aidev->aiispbuf[i]);
 
 	rkaiisp_free_tempbuf(aidev);
+	aidev->init_buf = false;
 	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
 		"free buf poll\n");
 	return 0;
@@ -488,6 +492,7 @@ static int rkaiisp_init_pool(struct rkaiisp_device *aidev, struct rkaiisp_ispbuf
 
 	aidev->ispbuf = *ispbuf;
 	aidev->outbuf_idx = 0;
+	aidev->init_buf = true;
 
 	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev, "init buf poll\n");
 	return ret;
@@ -1583,12 +1588,49 @@ static const struct vb2_ops rkaiisp_vb2_ops = {
 
 };
 
-struct v4l2_file_operations rkaiisp_fops = {
+static int rkaiisp_fh_open(struct file *file)
+{
+	struct rkaiisp_device *aidev = video_drvdata(file);
+	int ret;
+
+	atomic_inc(&aidev->opencnt);
+	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
+		"%s: opencnt %d, init_buf %d\n", __func__,
+		atomic_read(&aidev->opencnt),
+		aidev->init_buf);
+
+	ret = v4l2_fh_open(file);
+
+	return ret;
+}
+
+static int rkaiisp_fop_release(struct file *file)
+{
+	struct rkaiisp_device *aidev = video_drvdata(file);
+	int ret;
+
+	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
+		"%s: opencnt %d, init_buf %d\n", __func__,
+		atomic_read(&aidev->opencnt),
+		aidev->init_buf);
+
+	ret = vb2_fop_release(file);
+
+	if (!atomic_dec_return(&aidev->opencnt)) {
+		mutex_lock(&aidev->apilock);
+		rkaiisp_free_pool(aidev);
+		mutex_unlock(&aidev->apilock);
+	}
+
+	return ret;
+}
+
+static struct v4l2_file_operations rkaiisp_fops = {
 	.mmap = vb2_fop_mmap,
 	.unlocked_ioctl = video_ioctl2,
 	.poll = vb2_fop_poll,
-	.open = v4l2_fh_open,
-	.release = vb2_fop_release
+	.open = rkaiisp_fh_open,
+	.release = rkaiisp_fop_release
 };
 
 static int
@@ -1626,6 +1668,7 @@ int rkaiisp_register_vdev(struct rkaiisp_device *aidev, struct v4l2_device *v4l2
 	struct video_device *vdev = &node->vdev;
 
 	spin_lock_init(&aidev->config_lock);
+	atomic_set(&aidev->opencnt, 0);
 	aidev->mem_ops = aidev->hw_dev->mem_ops;
 
 	ret = kfifo_alloc(&aidev->idxbuf_kfifo,
