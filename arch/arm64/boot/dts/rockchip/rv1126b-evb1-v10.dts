@@ -13,3 +13,29 @@
 	model = "Rockchip RV1126B EVB1 V10 Board";
 	compatible = "rockchip,rv1126b-evb1-v10", "rockchip,rv1126b";
 };
+
+&rockchip_suspend {
+	status = "okay";
+
+	rockchip,sleep-mode-config = <
+		(0
+		| RKPM_SLP_ARMOFF_LOGOFF
+		| RKPM_SLP_PMU_PMUALIVE_32K
+		| RKPM_SLP_PMU_DIS_OSC
+		| RKPM_SLP_32K_EXT
+		)
+	>;
+
+	rockchip,sleep-pin-config = <
+		(0
+		| RKPM_SLEEP_PIN2_EN
+		)
+		(0
+		)
+	>;
+};
+
+&rtc {
+	rockchip,rtc-suspend-bypass;
+	status = "okay";
+};
