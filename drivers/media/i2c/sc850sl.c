@@ -1383,7 +1383,7 @@ static int __sc850sl_power_on(struct sc850sl *sc850sl)
 
 	usleep_range(4000, 6000);
 	if (!IS_ERR(sc850sl->reset_gpio))
-		gpiod_set_value_cansleep(sc850sl->reset_gpio, 0);
+		gpiod_set_value_cansleep(sc850sl->reset_gpio, 1);
 
 	usleep_range(4000, 6000);
 
@@ -1394,7 +1394,7 @@ static int __sc850sl_power_on(struct sc850sl *sc850sl)
 	}
 
 	if (!IS_ERR(sc850sl->reset_gpio))
-		gpiod_set_value_cansleep(sc850sl->reset_gpio, 1);
+		gpiod_set_value_cansleep(sc850sl->reset_gpio, 0);
 
 	usleep_range(4000, 6000);
 
@@ -1425,7 +1425,7 @@ static void __sc850sl_power_off(struct sc850sl *sc850sl)
 		}
 	}
 	if (!IS_ERR(sc850sl->reset_gpio))
-		gpiod_direction_output(sc850sl->reset_gpio, 0);
+		gpiod_direction_output(sc850sl->reset_gpio, 1);
 
 	if (!IS_ERR_OR_NULL(sc850sl->pins_sleep)) {
 		ret = pinctrl_select_state(sc850sl->pinctrl,
