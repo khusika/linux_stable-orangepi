@@ -7,6 +7,7 @@
  * V0.0X01.0X01 add first implementation.
  * V0.0X01.0X02 add support wake-up/sleep (aov mode).
  * V0.0X01.0X03 add support thunder boot.
+ * V0.0X01.0X03 add support linear 3840x2160@30fps for gc8613 ya.
  */
 
 //#define DEBUG
@@ -33,17 +34,15 @@
 #include "cam-tb-setup.h"
 #include "cam-sleep-wakeup.h"
 
-#define DRIVER_VERSION			KERNEL_VERSION(0, 0x01, 0x03)
+#define DRIVER_VERSION			KERNEL_VERSION(0, 0x01, 0x04)
 
 #ifndef V4L2_CID_DIGITAL_GAIN
 #define V4L2_CID_DIGITAL_GAIN		V4L2_CID_GAIN
 #endif
 
-#define GC8613_DAG_ENABLE		1
-
 #define GC8613_LANES			4
 #define GC8613_BITS_PER_SAMPLE		10
-#define GC8613_LINK_FREQ_LINEAR		502000000
+#define GC8613_LINK_FREQ_LINEAR		729000000
 #define GC8613_LINK_FREQ_HDR		594000000
 
 #define GC8613_PIXEL_RATE_LINEAR	(GC8613_LINK_FREQ_LINEAR * 2 / 10 * 4)
@@ -67,7 +66,7 @@
 #define GC8613_REG_EXPOSURE_L		0x0203
 #define GC8613_EXPOSURE_MIN		4
 #define GC8613_EXPOSURE_STEP		1
-#define GC8613_VTS_MAX			0x7fff
+#define GC8613_VTS_MAX			0x1fff
 
 #define GC8613_GAIN_MIN			64
 #define GC8613_GAIN_MAX			0xffff
@@ -80,6 +79,8 @@
 
 #define GC8613_REG_VTS_H		0x0340
 #define GC8613_REG_VTS_L		0x0341
+#define GC8613_REG_HTS_H		0x0342
+#define GC8613_REG_HTS_L		0x0343
 
 #define GC8613_OTP_MIRROR_FLIP_REG	0x0a73
 #define GC8613_FLIP_MIRROR_REG		0x022c
@@ -206,7 +207,7 @@ static const u32 gain_level_table_dag_ya[23] = {
 	1604,
 	1930,
 	2293,
-	0xffffffff,
+	0xffff,
 };
 
 static const u32 reg_val_table_dag_ya[22][10] = {
@@ -236,37 +237,37 @@ static const u32 reg_val_table_dag_ya[22][10] = {
 };
 
 static const u32 gain_level_table_linear_ya[27] = {
-	64,
-	73,
-	89,
-	107,
-	126,
-	144,
-	170,
-	204,
-	239,
-	284,
-	338,
-	416,
-	486,
-	543,
-	635,
-	763,
-	899,
-	1061,
-	1270,
-	1521,
-	1798,
-	2119,
-	2552,
-	3033,
-	3593,
-	4216,
-	0xffffffff,
+	64,	//1.000000
+	73,	//1.156250
+	89,	//1.406250
+	107,	//1.640625
+	126,	//1.968750
+	144,	//2.218750
+	170,	//2.562500
+	204,	//3.125000
+	239,	//3.734375
+	284,	//4.437500
+	338,	//5.328125
+	416,	//6.359375
+	486,	//7.640625
+	543,	//8.312500
+	635,	//9.875000
+	763,	//12.000000
+	899,	//14.828125
+	1061,	//16.375000
+	1270,	//19.640625
+	1521,	//23.437500
+	1798,	//27.531250
+	2119,	//33.062500
+	2552,	//39.375000
+	3033,	//47.640625
+	3593,	//57.312500
+	4216,	//68.234375
+	0xffff,
 };
 
 static const u32 reg_val_table_linear_ya[26][8] = {
-//	0614  0615	0225  1467	1468  00b8	00b9  1447
+	//0614 0615  0225  1467  1468  00b8  00b9  1447
 	{0x00, 0x00, 0x00, 0x07, 0x07, 0x01, 0x00, 0x77},
 	{0x90, 0x02, 0x00, 0x07, 0x07, 0x01, 0x09, 0x77},
 	{0x01, 0x00, 0x00, 0x08, 0x08, 0x01, 0x19, 0x77},
@@ -319,7 +320,7 @@ static const u32 gain_level_table_dag_yn[23] = {
 	1500,
 	1762,
 	2116,
-	0xffffffff,
+	0xffff,
 };
 
 static const u32 reg_val_table_dag_yn[22][10] = {
@@ -375,7 +376,7 @@ static const u32 gain_level_table_linear_yn[27] = {
 	3049,
 	3668,
 	4367,
-	0xffffffff,
+	0xffff,
 };
 
 static const u32 reg_val_table_linear_yn[26][8] = {
@@ -652,10 +653,11 @@ static const struct regval __maybe_unused gc8613ya_linear_10bit_3840x2160_30fps_
 	{0x061b, 0x17},
 	{0x061c, 0x50},
 	{0x061d, 0x06},
-	{0x061e, 0x87},
+	{0x061e, 0x78},
 	{0x061f, 0x05},
 	{0x0a21, 0x10},
-	{0x0a31, 0xfb},
+	{0x0a30, 0x00},
+	{0x0a31, 0xdf},
 	{0x0a34, 0x40},
 	{0x0a35, 0x08},
 	{0x0a37, 0x46},
@@ -667,15 +669,8 @@ static const struct regval __maybe_unused gc8613ya_linear_10bit_3840x2160_30fps_
 	{0x0343, 0x20},
 	{0x0259, 0x08},
 	{0x025a, 0x96},
-
-	//30fps 0x08ca
-	//{0x0340, 0x08},
-	//{0x0341, 0xca},
-
-	//15fps:0x1194
-	{0x0340, 0x11},
-	{0x0341, 0x94},
-
+	{0x0340, 0x08},
+	{0x0341, 0xca},
 	{0x0351, 0x00},
 	{0x0345, 0x02},
 	{0x0347, 0x02},
@@ -735,6 +730,13 @@ static const struct regval __maybe_unused gc8613ya_linear_10bit_3840x2160_30fps_
 	{0x1447, 0x75},
 	{0x1470, 0x10},
 	{0x1471, 0x13},
+	{0x0122, 0x0b},
+	{0x0123, 0x30},
+	{0x0124, 0x0b},
+	{0x0126, 0x09},
+	{0x0129, 0x0b},
+	{0x012a, 0x16},
+	{0x012b, 0x0a},
 	{0x1438, 0x00},
 	{0x143a, 0x00},
 	{0x024b, 0x02},
@@ -787,8 +789,7 @@ static const struct regval __maybe_unused gc8613ya_linear_10bit_3840x2160_30fps_
 	{0x0708, 0xc8},
 	{0x0718, 0xc8},
 	{0x071d, 0xdc},
-	{0x071e, 0x05},
-	//otp autoload
+	{0x071e, 0x05}, //otp autoload
 	{0x031f, 0x01},
 	{0x031f, 0x00},
 	{0x0a67, 0x80},
@@ -817,7 +818,7 @@ static const struct regval __maybe_unused gc8613ya_linear_10bit_3840x2160_30fps_
 	{0x0a75, 0x41},
 	{0x0a70, 0x03},
 	{0x0a5a, 0x80},
-	{REG_DELAY, 0x14}, //sleep	20
+	{REG_DELAY, 0x14}, //sleep 20
 	{0x0089, 0x02},
 	{0x05be, 0x01},
 	{0x0a70, 0x00},
@@ -827,7 +828,7 @@ static const struct regval __maybe_unused gc8613ya_linear_10bit_3840x2160_30fps_
 	{0x0220, 0x80},
 	{0x0058, 0x00},
 	{0x0059, 0x04},
-	{ REG_NULL, 0x00 },
+	{REG_NULL, 0x00},
 };
 
 /*
@@ -1247,7 +1248,24 @@ static const struct regval __maybe_unused gc8613yn_linear_10bit_3840x2160_30fps_
 };
 
 static const struct gc8613_mode supported_modes[] = {
-#if GC8613_DAG_ENABLE
+	{
+		.width = 3840,
+		.height = 2160,
+		.max_fps = {
+			.numerator = 10000,
+			.denominator = 300000,
+		},
+		.exp_def = 0x0100,
+		.hts_def = 0x03b4,
+		.vts_def = 0x0c0d,
+		.bus_fmt = MEDIA_BUS_FMT_SRGGB10_1X10,
+		.reg_list[0] = gc8613yn_linear_10bit_3840x2160_30fps_regs,
+		.reg_list[1] = gc8613ya_linear_10bit_3840x2160_30fps_regs,
+		.hdr_mode = NO_HDR,
+		.vc[PAD0] = 0,
+		.mipi_freq_idx = 0,
+		.bpp = 10,
+	},
 	{
 		.width = 3840,
 		.height = 2160,
@@ -1266,26 +1284,6 @@ static const struct gc8613_mode supported_modes[] = {
 		.mipi_freq_idx = 1,
 		.bpp = 12,
 	},
-#else
-	{
-		.width = 3840,
-		.height = 2160,
-		.max_fps = {
-			.numerator = 10000,
-			.denominator = 150000,
-		},
-		.exp_def = 0x0127,
-		.hts_def = 0x0320 * 8,
-		.vts_def = 0x08ca * 2,
-		.bus_fmt = MEDIA_BUS_FMT_SRGGB10_1X10,
-		.reg_list[0] = gc8613yn_linear_10bit_3840x2160_30fps_regs,
-		.reg_list[1] = gc8613ya_linear_10bit_3840x2160_30fps_regs,
-		.hdr_mode = NO_HDR,
-		.vc[PAD0] = 0,
-		.mipi_freq_idx = 0,
-		.bpp = 10,
-	},
-#endif
 };
 
 static const u32 bus_code[] = {
@@ -1522,7 +1520,7 @@ static int gc8613_enum_frame_sizes(struct v4l2_subdev *sd,
 	if (fse->index >= gc8613->cfg_num)
 		return -EINVAL;
 
-	if (fse->code != supported_modes[0].bus_fmt)
+	if (fse->code != supported_modes[fse->index].bus_fmt)
 		return -EINVAL;
 
 	fse->min_width = supported_modes[fse->index].width;
@@ -1632,7 +1630,7 @@ static int gc8613_set_gain_reg(struct gc8613 *gc8613, u32 gain)
 					 GC8613_REG_VALUE_08BIT, (tol_dig_gain & 0x3f));
 		}
 	} else {
-		//gc8613ya sensor
+		//gc8613yn sensor
 		if (gc8613->cur_mode->bpp == 12) {
 			// dag
 			total = sizeof(gain_level_table_dag_yn) / sizeof(u32) - 1;
@@ -2606,6 +2604,7 @@ static int gc8613_set_ctrl(struct v4l2_ctrl *ctrl)
 					ctrl->val & 0xff);
 		break;
 	case V4L2_CID_ANALOGUE_GAIN:
+		dev_dbg(&client->dev, "set gain 0x%x\n", ctrl->val);
 		ret = gc8613_set_gain_reg(gc8613, ctrl->val);
 		break;
 	case V4L2_CID_VBLANK:
