@@ -24,7 +24,7 @@ struct rkisp_vpss_sof {
 	u32 seq;
 	u64 timestamp;
 	u32 unite_index;
-	u32 reserved;
+	u32 grey;
 };
 
 struct rkisp_vpss_frame_info {

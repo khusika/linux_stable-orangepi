@@ -169,6 +169,7 @@ int rkisp_rockit_buf_queue(struct rockit_cfg *input_rockit_cfg)
 		isprk_buf->dba = dba;
 		isprk_buf->sgt = sgt;
 		stream_cfg->rkisp_buff[i] = isprk_buf;
+		stream->buf_cnt++;
 	}
 
 	if (ispdev->cap_dev.wrap_line && stream->id == RKISP_STREAM_MP) {
@@ -347,6 +348,8 @@ int rkisp_rockit_buf_done(struct rkisp_stream *stream, int cmd, struct rkisp_buf
 	}
 
 	rockit_cfg->is_color = !rkisp_read(dev, ISP3X_IMG_EFF_CTRL, true);
+	if (stream->ops->switch_grey)
+		stream->ops->switch_grey(stream);
 
 	rockit_cfg->frame.u32Height = stream->out_fmt.height;
 

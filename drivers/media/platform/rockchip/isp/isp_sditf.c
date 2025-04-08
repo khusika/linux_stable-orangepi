@@ -11,6 +11,7 @@
 #include <media/v4l2-subdev.h>
 #include "dev.h"
 #include "isp_vpss.h"
+#include "regs.h"
 
 static int rkisp_sditf_get_set_fmt(struct v4l2_subdev *sd,
 				   struct v4l2_subdev_state *sd_state,
@@ -160,6 +161,8 @@ void rkisp_sditf_sof(struct rkisp_device *dev, u32 irq)
 	info.irq = irq;
 	rkisp_dmarx_get_frame(dev, &info.seq, NULL, &info.timestamp, true);
 	info.unite_index = dev->unite_index;
+	if (dev->isp_ver == ISP_V35)
+		info.grey = !!(rkisp_read(dev, ISP3X_CNR_CTRL, false) & ISP35_CNR_UV_DIS);
 	v4l2_subdev_call(sditf->remote_sd, core, ioctl, RKISP_VPSS_CMD_SOF, &info);
 
 	rkisp_config_frame_info(dev, &frame_info);

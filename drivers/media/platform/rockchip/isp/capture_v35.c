@@ -829,6 +829,68 @@ static int mp_set_wrap(struct rkisp_stream *stream, int line)
 	return 0;
 }
 
+static int mp_switch_grey(struct rkisp_stream *stream)
+{
+	struct rkisp_device *dev = stream->ispdev;
+	struct capture_fmt *fmt = &stream->out_isp_fmt;
+	u32 bw, format;
+
+	if (fmt->fourcc == V4L2_PIX_FMT_GREY)
+		return 0;
+	if (fmt->write_format != MI_CTRL_MP_WRITE_YUV_SPLA)
+		return -EINVAL;
+
+	bw = rkisp_read(dev, ISP3X_IMG_EFF_CTRL, false);
+	format = rkisp_read(dev, ISP32_MI_MP_WR_CTRL, false) & ISP32_MI_OUTPUT_MASK;
+	if (bw && format != ISP32_MI_OUTPUT_YUV400) {
+		if (stream->switch_grey_wait_frame > 0) {
+			stream->switch_grey_wait_frame--;
+		} else {
+			rkisp_unite_set_bits(dev, ISP32_MI_MP_WR_CTRL,
+					     ISP32_MI_OUTPUT_MASK,
+					     ISP32_MI_OUTPUT_YUV400, false);
+			rkisp_unite_set_bits(dev, ISP3X_MI_RD_CTRL2, 0, ISP35_MI_PWR_DIS, false);
+			stream->switch_grey_wait_frame = stream->buf_cnt;
+		}
+	} else if (!bw && format != fmt->output_format) {
+		rkisp_unite_set_bits(dev, ISP32_MI_MP_WR_CTRL,
+				     ISP32_MI_OUTPUT_MASK,
+				     fmt->output_format, false);
+	}
+	return 0;
+}
+
+static int sp_switch_grey(struct rkisp_stream *stream)
+{
+	struct rkisp_device *dev = stream->ispdev;
+	struct capture_fmt *fmt = &stream->out_isp_fmt;
+	u32 bw, format;
+
+	if (fmt->fourcc == V4L2_PIX_FMT_GREY)
+		return 0;
+	if (fmt->write_format != MI_CTRL_SP_WRITE_SPLA)
+		return -EINVAL;
+
+	bw = rkisp_read(dev, ISP3X_IMG_EFF_CTRL, false);
+	format = rkisp_read(dev, ISP3X_MI_WR_CTRL, false) & ISP3X_MI_SP_WR_OUTPUT_MASK;
+	if (bw && format != MI_CTRL_SP_OUTPUT_YUV400) {
+		if (stream->switch_grey_wait_frame > 0) {
+			stream->switch_grey_wait_frame--;
+		} else {
+			rkisp_unite_set_bits(dev, ISP3X_MI_WR_CTRL,
+					     ISP3X_MI_SP_WR_OUTPUT_MASK,
+					     MI_CTRL_SP_OUTPUT_YUV400, false);
+			rkisp_unite_set_bits(dev, ISP3X_MI_RD_CTRL2, 0, ISP35_MI_PWR_DIS, false);
+			stream->switch_grey_wait_frame = stream->buf_cnt;
+		}
+	} else if (!bw && format != fmt->output_format) {
+		rkisp_unite_set_bits(dev, ISP3X_MI_WR_CTRL,
+				     ISP3X_MI_SP_WR_OUTPUT_MASK,
+				     fmt->output_format, false);
+	}
+	return 0;
+}
+
 static struct streams_ops rkisp_mp_streams_ops = {
 	.config_mi = mp_config_mi,
 	.enable_mi = mp_enable_mi,
@@ -839,6 +901,7 @@ static struct streams_ops rkisp_mp_streams_ops = {
 	.frame_end = mi_frame_end,
 	.frame_start = mi_frame_start,
 	.set_wrap = mp_set_wrap,
+	.switch_grey = mp_switch_grey,
 };
 
 static struct streams_ops rkisp_sp_streams_ops = {
@@ -850,6 +913,7 @@ static struct streams_ops rkisp_sp_streams_ops = {
 	.update_mi = update_mi,
 	.frame_end = mi_frame_end,
 	.frame_start = mi_frame_start,
+	.switch_grey = sp_switch_grey,
 };
 
 static int mi_frame_start(struct rkisp_stream *stream, u32 irq)
@@ -1347,6 +1411,7 @@ end:
 		v4l2_pipeline_pm_put(&stream->vnode.vdev.entity);
 	}
 	mutex_unlock(&dev->hw_dev->dev_lock);
+	stream->buf_cnt = 0;
 }
 
 static int rkisp_stream_start(struct rkisp_stream *stream)
@@ -1473,6 +1538,9 @@ rkisp_start_streaming(struct vb2_queue *queue, unsigned int count)
 	}
 	tasklet_enable(&stream->buf_done_tasklet);
 	mutex_unlock(&dev->hw_dev->dev_lock);
+	if (count)
+		stream->buf_cnt = count;
+	stream->switch_grey_wait_frame = stream->buf_cnt;
 	return 0;
 
 pipe_stream_off:

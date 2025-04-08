@@ -2975,6 +2975,9 @@
 #define ISP35_AIPRE_LUMA2GAIN_DIS	BIT(17)
 #define ISP35_AIPRE_ITS_FORCE_UPD	BIT(24)
 
+/* MI_WR_CTRL */
+#define ISP3X_MI_SP_WR_OUTPUT_MASK	GENMASK(30, 28)
+
 /* mi interrupt */
 #define ISP3X_MI_MP_FRAME		BIT(0)
 #define ISP3X_MI_SP_FRAME		BIT(1)
@@ -3043,6 +3046,7 @@
 #define ISP3X_RAWX_RD_GROP_MODE(x)	(((x) & 0x3) << 18)
 #define ISP3X_RAWX_WR_BURST_LEN(x)	(((x) & 0x3) << 20)
 #define ISP3X_RAWX_RD_BURST_LEN(x)	(((x) & 0x3) << 22)
+#define ISP35_MI_PWR_DIS		BIT(25)
 #define ISP3X_MI_NEW_WR_BURST_DIS	BIT(31)
 
 /* WR_OUTPUT_FORMAT */
@@ -3282,6 +3286,9 @@
 #define ISP3X_LSC_LUT_EN		BIT(1)
 #define ISP3X_LSC_SECTOR_16X16		BIT(2)
 #define ISP3X_LSC_PRE_RD_ST_MODE	BIT(4)
+
+/* CNR */
+#define ISP35_CNR_UV_DIS		BIT(6)
 
 /* COMMON3A */
 #define ISP39_W3A_EN			BIT(0)
