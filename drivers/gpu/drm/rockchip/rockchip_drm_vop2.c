@@ -5583,16 +5583,28 @@ static void vop2_crtc_atomic_enter_psr(struct drm_crtc *crtc, struct drm_crtc_st
 	unsigned long win_mask = vp->enabled_win_mask;
 	int phys_id;
 
-	for_each_set_bit(phys_id, &win_mask, ROCKCHIP_MAX_LAYER) {
-		win = vop2_find_win_by_phys_id(vop2, phys_id);
-		VOP_WIN_SET(vop2, win, enable, 0);
+	/*
+	 * For mcu interface, if mcu_hold_mode is enabled, the wins will stop
+	 * accessing DDR and the interface will also stop output.
+	 *
+	 * In addition, the regs operations related to disabling wins will not
+	 * take effect when the mcu_hold_mode is enabled.
+	 */
+	if (vp->mcu_timing.mcu_pix_total) {
+		VOP_MODULE_SET(vop2, vp, mcu_hold_mode, 1);
+	} else {
+		for_each_set_bit(phys_id, &win_mask, ROCKCHIP_MAX_LAYER) {
+			win = vop2_find_win_by_phys_id(vop2, phys_id);
+			VOP_WIN_SET(vop2, win, enable, 0);
 
-		if (win->feature & WIN_FEATURE_CLUSTER_MAIN)
-			VOP_CLUSTER_SET(vop2, win, enable, 0);
+			if (win->feature & WIN_FEATURE_CLUSTER_MAIN)
+				VOP_CLUSTER_SET(vop2, win, enable, 0);
+		}
+
+		vop2_cfg_done(crtc);
+		vop2_wait_for_fs_by_done_bit_status(vp);
 	}
 
-	vop2_cfg_done(crtc);
-	vop2_wait_for_fs_by_done_bit_status(vp);
 	if (hweight8(vop2->active_vp_mask) == 1) {
 		u32 adjust_aclk_rate = 0;
 		u32 htotal = (VOP_MODULE_GET(vop2, vp, htotal_pw) >> 16) & 0xffff;
@@ -5626,15 +5638,23 @@ static void vop2_crtc_atomic_exit_psr(struct drm_crtc *crtc, struct drm_crtc_sta
 		clk_set_rate(vop2->aclk, vop2->aclk_current_freq);
 	vop2->aclk_rate_reset = false;
 
-	for_each_set_bit(phys_id, &enabled_win_mask, ROCKCHIP_MAX_LAYER) {
-		win = vop2_find_win_by_phys_id(vop2, phys_id);
-		VOP_WIN_SET(vop2, win, enable, 1);
-		if (win->feature & WIN_FEATURE_CLUSTER_MAIN)
-			VOP_CLUSTER_SET(vop2, win, enable, 1);
-	}
+	/*
+	 * For mcu interface, if mcu_hold_mode is disabled, the wins will
+	 * resume accessing DDR and the interface will also return to work.
+	 */
+	if (vp->mcu_timing.mcu_pix_total) {
+		VOP_MODULE_SET(vop2, vp, mcu_hold_mode, 0);
+	} else {
+		for_each_set_bit(phys_id, &enabled_win_mask, ROCKCHIP_MAX_LAYER) {
+			win = vop2_find_win_by_phys_id(vop2, phys_id);
+			VOP_WIN_SET(vop2, win, enable, 1);
+			if (win->feature & WIN_FEATURE_CLUSTER_MAIN)
+				VOP_CLUSTER_SET(vop2, win, enable, 1);
+		}
 
-	vop2_cfg_done(crtc);
-	vop2_wait_for_fs_by_done_bit_status(vp);
+		vop2_cfg_done(crtc);
+		vop2_wait_for_fs_by_done_bit_status(vp);
+	}
 }
 
 static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
