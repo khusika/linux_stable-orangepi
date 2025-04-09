@@ -3436,7 +3436,7 @@
 
 	vop: vop@22150000 {
 		compatible = "rockchip,rv1126b-vop";
-		reg = <0x22150000 0x200>, <0x22150a00 0x400>;
+		reg = <0x22150000 0x300>, <0x22150a00 0x400>;
 		reg-names = "regs", "gamma_lut";
 		rockchip,grf = <&ioc_grf>;
 		interrupts = <GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>;
