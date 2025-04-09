@@ -444,10 +444,6 @@
 	status = "okay";
 };
 
-&usb3phy {
-	status = "okay";
-};
-
 &usb_drd_dwc3 {
 	status = "okay";
 };
