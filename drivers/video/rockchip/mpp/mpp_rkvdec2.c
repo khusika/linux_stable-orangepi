@@ -1492,7 +1492,7 @@ static int rkvdec_vdpu383_reset(struct mpp_dev *mpp)
 	mpp_debug_enter();
 
 	/* disable irq */
-	writel(link->info->ip_en_val & BIT(15), link->reg_base + link->info->ip_en_base);
+	writel(link->info->ip_en_val | BIT(15), link->reg_base + link->info->ip_en_base);
 	/* use ip reset to reset core and mmu */
 	writel(link->info->ip_reset_en, link->reg_base + link->info->ip_reset_base);
 	ret = readl_relaxed_poll_timeout(link->reg_base + link->info->status_base,
