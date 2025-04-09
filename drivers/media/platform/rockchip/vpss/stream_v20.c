@@ -87,7 +87,7 @@ static const struct capture_fmt scl0_fmts[] = {
 		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
 	}, {
 		.fourcc = V4L2_PIX_FMT_TILE420,
-		.fmt_type = FMT_YUV,
+		.fmt_type = FMT_TILE,
 		.bpp = { 24 },
 		.cplanes = 1,
 		.mplanes = 1,
@@ -96,13 +96,29 @@ static const struct capture_fmt scl0_fmts[] = {
 		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV420,
 	}, {
 		.fourcc = V4L2_PIX_FMT_TILE422,
-		.fmt_type = FMT_YUV,
+		.fmt_type = FMT_TILE,
 		.bpp = { 32 },
 		.cplanes = 1,
 		.mplanes = 1,
 		.swap = 0,
 		.wr_fmt = 0,
 		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_FBC2,
+		.fmt_type = FMT_FBC,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_FBC0,
+		.fmt_type = FMT_FBC,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV420,
 	}
 };
 
@@ -242,6 +258,22 @@ static const struct capture_fmt scl1_fmts[] = {
 		   .swap = 0,
 		   .wr_fmt = 0,
 		   .output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_FBC2,
+		.fmt_type = FMT_FBC,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV422,
+	}, {
+		.fourcc = V4L2_PIX_FMT_FBC0,
+		.fmt_type = FMT_FBC,
+		.bpp = { 8, 16 },
+		.cplanes = 2,
+		.mplanes = 1,
+		.wr_fmt = RKVPSS_MI_CHN_WR_42XSP,
+		.output_fmt = RKVPSS_MI_CHN_WR_OUTPUT_YUV420,
 	}
 };
 
@@ -868,6 +900,7 @@ static void scl_force_update(struct rkvpss_stream *stream)
 
 static void scl_update_mi(struct rkvpss_stream *stream)
 {
+	struct capture_fmt *fmt = &stream->out_cap_fmt;
 	struct rkvpss_device *dev = stream->dev;
 	struct rkvpss_buffer *buf = NULL;
 	unsigned long lock_flags = 0;
@@ -882,8 +915,15 @@ static void scl_update_mi(struct rkvpss_stream *stream)
 	spin_unlock_irqrestore(&stream->vbq_lock, lock_flags);
 
 	if (buf) {
-		y_base = buf->dma[0];
-		uv_base = buf->dma[1];
+		if (fmt->fmt_type == FMT_FBC) {
+			/* uv for head at buf top */
+			uv_base = buf->dma[0];
+			/* y for payload after head */
+			y_base = buf->dma[1];
+		} else {
+			y_base = buf->dma[0];
+			uv_base = buf->dma[1];
+		}
 		rkvpss_idx_write(dev, stream->config->mi.y_base, y_base, VPSS_UNITE_LEFT);
 		rkvpss_idx_write(dev, stream->config->mi.uv_base, uv_base, VPSS_UNITE_LEFT);
 		if (dev->unite_mode) {
@@ -922,8 +962,12 @@ static void scl_config_mi(struct rkvpss_stream *stream)
 	struct capture_fmt *fmt = &stream->out_cap_fmt;
 	struct v4l2_pix_format_mplane *out_fmt = &stream->out_fmt;
 	u32 reg, val, mask, height = out_fmt->height;
+	u32 width = out_fmt->width;
 
-	val = out_fmt->plane_fmt[0].bytesperline;
+	if (fmt->fmt_type == FMT_FBC)
+		val = 0;
+	else
+		val = out_fmt->plane_fmt[0].bytesperline;
 	reg = stream->config->mi.stride;
 	rkvpss_unite_write(dev, reg, val);
 
@@ -954,12 +998,18 @@ static void scl_config_mi(struct rkvpss_stream *stream)
 
 		height = dev->stream_vdev.wrap_line;
 	}
-	val = out_fmt->plane_fmt[0].bytesperline * height;
+
+	if (fmt->fmt_type == FMT_FBC)
+		val = out_fmt->plane_fmt[0].sizeimage - stream->fbc_head_size;
+	else
+		val = out_fmt->plane_fmt[0].bytesperline * height;
 	reg = stream->config->mi.y_size;
 	rkvpss_unite_write(dev, reg, val);
 
 	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
 		val = out_fmt->plane_fmt[0].bytesperline * height / 2;
+	else if (fmt->fmt_type == FMT_FBC)
+		val = stream->fbc_head_size;
 	else
 		val = out_fmt->plane_fmt[1].sizeimage;
 	reg = stream->config->mi.uv_size;
@@ -992,6 +1042,15 @@ static void scl_config_mi(struct rkvpss_stream *stream)
 		mask = RKVPSS_MI_WR_TILE_SEL(3);
 		val = RKVPSS_MI_WR_TILE_SEL(stream->id + 1);
 		rkvpss_hw_set_bits(dev->hw_dev, RKVPSS_MI_WR_CTRL, mask, val);
+		break;
+	case V4L2_PIX_FMT_FBC0:
+	case V4L2_PIX_FMT_FBC2:
+		mask = RKVPSS2X_SW_MI_WR_FBCE_SEL(3);
+		val = RKVPSS2X_SW_MI_WR_FBCE_SEL(stream->id + 1);
+		rkvpss_unite_set_bits(dev, RKVPSS2X_MI_WR_FBCE_CTRL, mask, val);
+		val = RKVPSS2X_SW_WR_FBCE_SIZE(width, height);
+		rkvpss_unite_write(dev, RKVPSS2X_MI_WR_FBCE_SIZE, val);
+		rkvpss_unite_write(dev, RKVPSS2X_MI_WR_FBCE_OFFSET, stream->fbc_head_size);
 		break;
 	default:
 		break;
@@ -1238,7 +1297,10 @@ static int rkvpss_queue_setup(struct vb2_queue *queue,
 		const struct v4l2_plane_pix_format *plane_fmt;
 
 		plane_fmt = &pixm->plane_fmt[i];
-		sizes[i] = plane_fmt->sizeimage / pixm->height * ALIGN(pixm->height, 16);
+		if (cap_fmt->fmt_type == FMT_FBC)
+			sizes[i] = plane_fmt->sizeimage;
+		else
+			sizes[i] = plane_fmt->sizeimage / pixm->height * ALIGN(pixm->height, 16);
 
 		if (stream->is_attach_info && i == cap_fmt->mplanes - 1)
 			sizes[i] += sizeof(struct rkvpss_frame_info);
@@ -1276,7 +1338,9 @@ static void rkvpss_buf_queue(struct vb2_buffer *vb)
 	 * NOTE: plane_fmt[0].sizeimage is total size of all planes for single
 	 * memory plane formats, so calculate the size explicitly.
 	 */
-	if (cap_fmt->mplanes == 1) {
+	if (cap_fmt->fmt_type == FMT_FBC) {
+		vpssbuf->dma[1] = vpssbuf->dma[0] + stream->fbc_head_size;
+	} else if (cap_fmt->mplanes == 1) {
 		for (i = 0; i < cap_fmt->cplanes - 1; i++) {
 			height = pixm->height;
 			if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
@@ -2206,17 +2270,41 @@ static int rkvpss_set_fmt(struct rkvpss_stream *stream,
 
 		if (fmt->fourcc == V4L2_PIX_FMT_TILE420 || fmt->fourcc == V4L2_PIX_FMT_TILE422)
 			bytesperline = ALIGN(((width / 4) * fmt->bpp[i]), 16);
+		else if (fmt->fourcc == V4L2_PIX_FMT_FBC0 || fmt->fourcc == V4L2_PIX_FMT_FBC2)
+			bytesperline = ((w + 63) / 64) *
+			((fmt->output_fmt == RKVPSS_MI_CHN_WR_OUTPUT_YUV420) ? 384 : 512);
 		else
 			bytesperline = width * DIV_ROUND_UP(fmt->bpp[i], 8);
 
 		if (i != 0 || plane_fmt->bytesperline < bytesperline)
 			plane_fmt->bytesperline = bytesperline;
 
-		if (fmt->fourcc == V4L2_PIX_FMT_TILE420 || fmt->fourcc == V4L2_PIX_FMT_TILE422)
+		switch (fmt->fmt_type) {
+		case FMT_TILE:
 			plane_fmt->sizeimage = plane_fmt->bytesperline * (height / 4);
-		else
-			plane_fmt->sizeimage = plane_fmt->bytesperline * height;
+			break;
+		case FMT_FBC:
+			if (i == 0) {//FBC header
+				// Calculate virtual width - align width to a multiple of 64
+				u32 virtual_width = ((w + 63) / 64) * 64;
 
+				if (virtual_width > w) {
+					// Case where virtual_width > w
+					stream->fbc_head_size = virtual_width * ((h + 3) / 4);
+				} else {
+					// Case where virtual_width <= w
+					stream->fbc_head_size = ((w + 63) / 64) * ((h + 3) / 4) * 16;
+				}
+				plane_fmt->sizeimage = stream->fbc_head_size;
+			} else {//FBC Payload
+				plane_fmt->sizeimage = ((w + 63) / 64) *
+					((fmt->output_fmt == RKVPSS_MI_CHN_WR_OUTPUT_YUV420) ? 384 : 512) *
+					((h + 3) / 4);
+			}
+			break;
+		default:
+			plane_fmt->sizeimage = plane_fmt->bytesperline * height;
+		}
 		imagsize += plane_fmt->sizeimage;
 	}
 	if (fmt->mplanes == 1)
@@ -2325,6 +2413,16 @@ static int rkvpss_enum_fmt_vid_mplane(struct file *file, void *priv,
 	case V4L2_PIX_FMT_TILE422:
 		strscpy(f->description,
 			"Rockchip yuv422 tile",
+			sizeof(f->description));
+		break;
+	case V4L2_PIX_FMT_FBC0:
+		strscpy(f->description,
+			"Rockchip FBCE64x4 yuv420",
+			sizeof(f->description));
+		break;
+	case V4L2_PIX_FMT_FBC2:
+		strscpy(f->description,
+			"Rockchip FBCE64x4 yuv422",
 			sizeof(f->description));
 		break;
 	default:

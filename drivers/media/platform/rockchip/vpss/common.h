@@ -54,6 +54,8 @@ enum {
 enum rkvpss_fmt_pix_type {
 	FMT_YUV,
 	FMT_RGB,
+	FMT_TILE,
+	FMT_FBC,
 };
 
 enum rkvpss_rotate {

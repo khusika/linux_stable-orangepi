@@ -193,6 +193,7 @@ struct rkvpss_stream {
 
 	int id;
 	u32 alpha;
+	u32 fbc_head_size;
 	bool streaming;
 	bool stopping;
 	bool linked;
