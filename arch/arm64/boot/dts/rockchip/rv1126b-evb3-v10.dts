@@ -227,7 +227,7 @@
 	cpu-supply = <&vdd_cpu>;
 };
 
-&csi2_dphy0 {
+&csi2_dphy3 {
 	status = "okay";
 
 	ports {
@@ -238,7 +238,7 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			csi_dphy_input0: endpoint@1 {
+			csi_dphy3_input0: endpoint@1 {
 				reg = <1>;
 				remote-endpoint = <&ps5458_out>;
 				data-lanes = <1 2>;
@@ -249,9 +249,9 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			csidphy0_out: endpoint@0 {
+			csidphy3_out: endpoint@0 {
 				reg = <0>;
-				remote-endpoint = <&mipi0_csi2_input>;
+				remote-endpoint = <&mipi2_csi2_input>;
 			};
 		};
 	};
@@ -292,7 +292,7 @@
 	ps5458: ps5458@4c {
 		compatible = "prime,ps5458";
 		reg = <0x4c>;
-		clocks = <&cru CLK_MIPI0_OUT2IO>;
+		clocks = <&cru CLK_MIPI2_OUT2IO>;
 		clock-names = "xvclk";
 		reset-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_LOW>;
 		pinctrl-names = "default";
@@ -303,7 +303,7 @@
 		rockchip,camera-module-lens-name = "default";
 		port {
 			ps5458_out: endpoint {
-				remote-endpoint = <&csi_dphy_input0>;
+				remote-endpoint = <&csi_dphy3_input0>;
 				data-lanes = <1 2>;
 			};
 		};
@@ -326,7 +326,7 @@
 	};
 };
 
-&mipi0_csi2 {
+&mipi2_csi2 {
 	status = "okay";
 
 	ports {
@@ -338,9 +338,9 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			mipi0_csi2_input: endpoint@1 {
+			mipi2_csi2_input: endpoint@1 {
 				reg = <1>;
-				remote-endpoint = <&csidphy0_out>;
+				remote-endpoint = <&csidphy3_out>;
 			};
 		};
 
@@ -349,9 +349,9 @@
 			#address-cells = <1>;
 			#size-cells = <0>;
 
-			mipi0_csi2_output: endpoint@0 {
+			mipi2_csi2_output: endpoint@0 {
 				reg = <0>;
-				remote-endpoint = <&cif_mipi_in0>;
+				remote-endpoint = <&cif_mipi_in2>;
 			};
 		};
 	};
@@ -377,21 +377,21 @@
 	status = "okay";
 };
 
-&rkcif_mipi_lvds {
+&rkcif_mipi_lvds2 {
 	status = "okay";
 
 	port {
-		cif_mipi_in0: endpoint {
-			remote-endpoint = <&mipi0_csi2_output>;
+		cif_mipi_in2: endpoint {
+			remote-endpoint = <&mipi2_csi2_output>;
 		};
 	};
 };
 
-&rkcif_mipi_lvds_sditf {
+&rkcif_mipi_lvds2_sditf {
 	status = "okay";
 
 	port {
-		mipi_lvds_sditf: endpoint {
+		mipi_lvds2_sditf: endpoint {
 			remote-endpoint = <&isp_vir0>;
 		};
 	};
@@ -418,7 +418,7 @@
 
 		isp_vir0: endpoint@0 {
 			reg = <0>;
-			remote-endpoint = <&mipi_lvds_sditf>;
+			remote-endpoint = <&mipi_lvds2_sditf>;
 		};
 	};
 };
