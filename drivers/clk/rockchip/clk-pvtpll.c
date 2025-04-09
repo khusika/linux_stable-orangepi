@@ -153,12 +153,12 @@ static struct pvtpll_table rv1126b_aisp_pvtpll_table[] = {
 static struct pvtpll_table rv1126b_core_pvtpll_table[] = {
 	/* rate_hz, ring_sel, length */
 	ROCKCHIP_PVTPLL_VOLT_SEL(1608000000, 0, 30, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(1512000000, 0, 30, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(1416000000, 0, 34, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(1296000000, 0, 38, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(1200000000, 0, 38, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(1008000000, 0, 56, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(816000000, 0, 88, 0),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1512000000, 0, 30, 7),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1416000000, 0, 34, 6),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1296000000, 0, 38, 5),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1200000000, 0, 38, 3),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1008000000, 0, 52, 3),
+	ROCKCHIP_PVTPLL_VOLT_SEL(816000000, 0, 84, 3),
 };
 
 static struct pvtpll_table rv1126b_enc_pvtpll_table[] = {
@@ -168,11 +168,11 @@ static struct pvtpll_table rv1126b_enc_pvtpll_table[] = {
 
 static struct pvtpll_table rv1126b_npu_pvtpll_table[] = {
 	/* rate_hz, ring_se, length, volt_sel_thr */
-	ROCKCHIP_PVTPLL_VOLT_SEL(1000000000, 0, 12, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(950000000, 0, 12, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(900000000, 0, 12, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(800000000, 0, 16, 0),
-	ROCKCHIP_PVTPLL_VOLT_SEL(700000000, 0, 36, 0),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1000000000, 0, 12, 7),
+	ROCKCHIP_PVTPLL_VOLT_SEL(950000000, 0, 12, 5),
+	ROCKCHIP_PVTPLL_VOLT_SEL(900000000, 0, 14, 4),
+	ROCKCHIP_PVTPLL_VOLT_SEL(800000000, 0, 16, 4),
+	ROCKCHIP_PVTPLL_VOLT_SEL(700000000, 0, 36, 3),
 };
 
 static struct pvtpll_table rk3506_core_pvtpll_table[] = {
@@ -654,6 +654,8 @@ static const struct rockchip_clock_pvtpll_info rv1126b_core_pvtpll_data = {
 	.config = rv1103b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_core_pvtpll_table),
 	.table = rv1126b_core_pvtpll_table,
+	.pvtpll_adjust_factor = 4,
+	.pvtpll_volt_sel_adjust = pvtpll_volt_sel_adjust_linear,
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_enc_pvtpll_data = {
@@ -666,6 +668,8 @@ static const struct rockchip_clock_pvtpll_info rv1126b_npu_pvtpll_data = {
 	.config = rv1126b_npu_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_npu_pvtpll_table),
 	.table = rv1126b_npu_pvtpll_table,
+	.pvtpll_adjust_factor = 6,
+	.pvtpll_volt_sel_adjust = pvtpll_volt_sel_adjust_linear,
 };
 
 static const struct rockchip_clock_pvtpll_info rk3506_core_pvtpll_data = {
