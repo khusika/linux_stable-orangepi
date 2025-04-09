@@ -334,7 +334,7 @@ static struct rockchip_clk_branch rv1126b_clk_branches[] __initdata = {
 	COMPOSITE(CLK_SARADC2_SRC, "clk_saradc2_src", mux_200m_24m_p, 0,
 			RV1126B_CLKSEL_CON(63), 14, 1, MFLAGS, 8, 3, DFLAGS,
 			RV1126B_CLKGATE_CON(5), 8, GFLAGS),
-	GATE(HCLK_RKNN, "hclk_rknn", "clk_gpll_div8", 0,
+	GATE(HCLK_RKNN, "hclk_rknn", "clk_gpll_div8", CLK_IS_CRITICAL,
 			RV1126B_CLKGATE_CON(5), 10, GFLAGS),
 	GATE(PCLK_NPU_ROOT, "pclk_npu_root", "clk_cpll_div10", CLK_IS_CRITICAL,
 			RV1126B_CLKGATE_CON(5), 11, GFLAGS),
