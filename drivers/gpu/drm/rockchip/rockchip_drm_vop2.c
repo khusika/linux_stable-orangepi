@@ -8484,8 +8484,10 @@ vop2_crtc_mode_valid(struct drm_crtc *crtc, const struct drm_display_mode *mode)
 	 * modes of the right VP should be set as invalid when vop2 is working in
 	 * splice mode.
 	 */
-	if (vp->splice_mode_right)
+	if (vp->splice_mode_right) {
+		DRM_DEV_DEBUG(vop2->dev, "vp%d is in splice mode right\n", vp->id);
 		return MODE_BAD;
+	}
 
 	if ((active_vp_mask & BIT(ROCKCHIP_VOP_VP1)) && !vcstate->splice_mode &&
 	    mode->hdisplay > VOP2_MAX_VP_OUTPUT_WIDTH) {
@@ -8494,15 +8496,21 @@ vop2_crtc_mode_valid(struct drm_crtc *crtc, const struct drm_display_mode *mode)
 		return MODE_BAD;
 	}
 
-	if (mode->hdisplay > vp_data->max_output.width)
+	if (mode->hdisplay > vp_data->max_output.width) {
+		DRM_DEV_DEBUG(vop2->dev, "hdisplay:%d is out of max_output width:%d\n",
+			      mode->hdisplay, vp_data->max_output.width);
 		return MODE_BAD_HVALUE;
+	}
 
 	if (mode->flags & DRM_MODE_FLAG_DBLCLK || vcstate->output_if & VOP_OUTPUT_IF_BT656)
 		request_clock *= 2;
 
 	/* Pixel rate verify */
-	if (request_clock > vp_data->dclk_max / 1000)
+	if (request_clock > vp_data->dclk_max / 1000) {
+		DRM_DEV_DEBUG(vop2->dev, "request_clock:%d is out of dclk_max:%ld\n",
+			      request_clock, vp_data->dclk_max / 1000);
 		return MODE_CLOCK_HIGH;
+	}
 
 	if ((request_clock <= VOP2_MAX_DCLK_RATE) &&
 	    (vop2_extend_clk_find_by_name(vop2, "hdmi0_phy_pll") ||
@@ -8524,9 +8532,14 @@ vop2_crtc_mode_valid(struct drm_crtc *crtc, const struct drm_display_mode *mode)
 	 * Hdmi or DisplayPort request a Accurate clock.
 	 */
 	if (vcstate->output_type == DRM_MODE_CONNECTOR_HDMIA ||
-	    vcstate->output_type == DRM_MODE_CONNECTOR_DisplayPort)
-		if (clock != request_clock)
+	    vcstate->output_type == DRM_MODE_CONNECTOR_DisplayPort) {
+		if (clock != request_clock) {
+			DRM_DEV_DEBUG(vop2->dev,
+				      "round rate:%d is not equal to request rate:%d\n",
+				      clock, request_clock);
 			return MODE_CLOCK_RANGE;
+		}
+	}
 
 	return MODE_OK;
 }
