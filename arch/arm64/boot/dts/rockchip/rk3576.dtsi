@@ -1268,6 +1268,11 @@
 		};
 	};
 
+	dmcdbg: dmcdbg {
+		compatible = "rockchip,rk3576-dmcdbg";
+		status = "disabled";
+	};
+
 	firmware {
 		scmi: scmi {
 			compatible = "arm,scmi-smc";
