@@ -44,47 +44,37 @@
 #define TSTCNTL_READ(bank, reg)			(TSTCNTL_RD | ((bank) << TSTCNTL_BANK_SEL) \
 						| ((reg) << TSTCNTL_READ_ADDR))
 
-#define TSTMODE_ENABLE				0x400
-#define TSTMODE_DISABLE				0x0
-
+#define GAIN_PRE				GENMASK(5, 2)
 #define WR_ADDR_A7CFG				0x18
 
 enum {
 	BANK_DSP0 = 0,
 	BANK_WOL,
-	BANK_BIST = 3,
+	BANK_DSP0_READ,
+	BANK_BIST,
 	BANK_AFE,
 	BANK_DSP1
 };
 
 struct rockchip_fephy_priv {
 	struct phy_device *phydev;
+	int old_link;
 	int wol_irq;
 };
 
-static int rockchip_fephy_init_tstmode(struct phy_device *phydev)
+static int rockchip_fephy_bank_read(struct phy_device *phydev, u8 bank, u32 reg)
 {
 	int ret;
 
-	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_DISABLE);
+	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTCNTL_READ(bank, reg));
 	if (ret)
 		return ret;
 
-	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_ENABLE);
-	if (ret)
-		return ret;
-
-	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_DISABLE);
-	if (ret)
-		return ret;
-
-	return phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_ENABLE);
-}
-
-static int rockchip_fephy_close_tstmode(struct phy_device *phydev)
-{
-	/* Back to basic register bank */
-	return phy_write(phydev, SMI_ADDR_TSTCNTL, TSTMODE_DISABLE);
+	if (bank)
+		return phy_read(phydev, SMI_ADDR_TSTREAD1);
+	else
+		return (phy_read(phydev, SMI_ADDR_TSTREAD1) |
+			(phy_read(phydev, SMI_ADDR_TSTREAD2) << 16));
 }
 
 static int rockchip_fephy_bank_write(struct phy_device *phydev, u8 bank,
@@ -108,10 +98,6 @@ static int rockchip_fephy_config_init(struct phy_device *phydev)
 	if (ret)
 		return ret;
 
-	ret = rockchip_fephy_init_tstmode(phydev);
-	if (ret)
-		return ret;
-
 	/* off-energy level0 threshold */
 	ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0xa, 0x6664);
 	if (ret)
@@ -122,16 +108,38 @@ static int rockchip_fephy_config_init(struct phy_device *phydev)
 	if (ret)
 		return ret;
 
-	ret = rockchip_fephy_close_tstmode(phydev);
-	if (ret)
-		return ret;
-
 	return ret;
 }
 
 static int rockchip_fephy_config_aneg(struct phy_device *phydev)
 {
 	return genphy_config_aneg(phydev);
+}
+
+static void rockchip_feph_link_change_notify(struct phy_device *phydev)
+{
+	struct rockchip_fephy_priv *priv = phydev->priv;
+	int ret;
+
+	if (priv->old_link && !phydev->link) {
+		priv->old_link = 0;
+		ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0xa, 0x6664);
+		if (ret)
+			return;
+	} else if (!priv->old_link && phydev->link) {
+		int gain;
+
+		priv->old_link = 1;
+		/* read gain level */
+		gain = rockchip_fephy_bank_read(phydev, BANK_DSP0, 0x0);
+		if (gain < 0)
+			return;
+		if (!(gain & GAIN_PRE)) {
+			ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0xa, 0x6666);
+			if (ret)
+				return;
+		}
+	}
 }
 
 static int rockchip_fephy_wol_enable(struct phy_device *phydev)
@@ -263,6 +271,7 @@ static struct phy_driver rockchip_fephy_driver[] = {
 	/* PHY_BASIC_FEATURES */
 	.features		= PHY_BASIC_FEATURES,
 	.flags			= 0,
+	.link_change_notify	= rockchip_feph_link_change_notify,
 	.soft_reset		= genphy_soft_reset,
 	.config_init		= rockchip_fephy_config_init,
 	.config_aneg		= rockchip_fephy_config_aneg,
