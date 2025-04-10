@@ -386,6 +386,7 @@ struct rk3576_canfd {
 	int rx_max_data;
 	bool use_dma;
 	u32 dma_size;
+	u32 dma_thr;
 	int quota;
 	struct dma_chan *rxchan;
 	u32 *rxbuf;
@@ -643,7 +644,7 @@ static int rk3576_canfd_start(struct net_device *ndev)
 
 	rk3576_canfd_write(rcan, CANFD_MODE, val);
 	if (rcan->use_dma)
-		rk3576_canfd_write(rcan, CANFD_DMA_CTRL, RX_DMA_ENABLE);
+		rk3576_canfd_write(rcan, CANFD_DMA_CTRL, RX_DMA_ENABLE | rcan->dma_thr);
 
 	rk3576_canfd_write(rcan, CANFD_BRS_CFG, 0x7);
 
@@ -894,20 +895,15 @@ static void rk3576_canfd_rx_dma_callback(void *data)
 static int rk3576_canfd_rx_dma(struct rk3576_canfd *rcan)
 {
 	struct dma_async_tx_descriptor *rxdesc = NULL;
-	int quota = 0, cnt = 0;
+	int quota = 0;
 
 	quota = (rk3576_canfd_read(rcan, CANFD_STR_STATE) & rcan->rx_fifo_mask) >>
 		rcan->rx_fifo_shift;
-	quota = quota / rcan->rx_max_data;
-	cnt = (rk3576_canfd_read(rcan, CANFD_STR_STATE) & INTM_CNT_MASK) >> INTM_CNT_SHIFT;
-
-	if (quota != cnt)
-		quota = ((rk3576_canfd_read(rcan, CANFD_STR_STATE) & rcan->rx_fifo_mask) >>
-			rcan->rx_fifo_shift) / rcan->rx_max_data;
-
-	rcan->quota = quota;
-	if (rcan->quota == 0)
+	rcan->quota = DIV_ROUND_UP(quota, rcan->rx_max_data);
+	if (rcan->quota == 0) {
+		rk3576_canfd_write(rcan, CANFD_INT_MASK, INT_ENABLE);
 		return 1;
+	}
 
 	rxdesc = dmaengine_prep_slave_single(rcan->rxchan, rcan->rx_dma_dst_addr,
 					     rcan->dma_size * rcan->quota, DMA_DEV_TO_MEM, 0);
@@ -1206,6 +1202,12 @@ static void rk3576_canfd_dma_init(struct rk3576_canfd *rcan)
 		.src_maxburst = 16,
 	};
 
+	if (rcan->rx_max_data == 18)
+		rxconf.src_maxburst = 9;
+	else
+		rxconf.src_maxburst = 4;
+
+	rcan->dma_thr = rxconf.src_maxburst - 1;
 	rcan->rxbuf = dma_alloc_coherent(rcan->dev, rcan->dma_size * rcan->rx_fifo_depth,
 					 &rcan->rx_dma_dst_addr, GFP_KERNEL);
 	if (!rcan->rxbuf) {
