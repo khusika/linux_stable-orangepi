@@ -100,8 +100,13 @@ static void rkvpss_rockit_cfg_stream_buffer(struct rkvpss_stream *stream,
 	if (input_cfg->vir_width) {
 		stream->out_fmt.plane_fmt[0].bytesperline = input_cfg->vir_width *
 							    DIV_ROUND_UP(fmt->bpp[0], 8);
-		y_offs = input_cfg->y_offset;
-		uv_offs = input_cfg->uv_offset;
+		if (fmt->fmt_type == FMT_FBC) {
+			y_offs = input_cfg->y_offset;	// FBC header is at buffer start
+			uv_offs = input_cfg->uv_offset + stream->fbc_head_size;	// payload
+		} else {
+			y_offs = input_cfg->y_offset;
+			uv_offs = input_cfg->uv_offset;
+		}
 
 		stream->out_fmt.plane_fmt[1].bytesperline = input_cfg->vir_width *
 							    DIV_ROUND_UP(fmt->bpp[0], 8);
@@ -109,7 +114,10 @@ static void rkvpss_rockit_cfg_stream_buffer(struct rkvpss_stream *stream,
 							 stream->out_fmt.height;
 	} else {
 		y_offs = 0;
-		if (stream->dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0) {
+		if (fmt->fmt_type == FMT_FBC) {
+			y_offs = 0;  // FBC header is at buffer start
+			uv_offs = stream->fbc_head_size;  // Y payload after header
+		} else if (stream->dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0) {
 			uv_offs = stream->out_fmt.plane_fmt[0].bytesperline *
 				  stream->dev->stream_vdev.wrap_line;
 			stream->dev->wrap_buf.dbuf = vpssrk_buf->dmabuf;
