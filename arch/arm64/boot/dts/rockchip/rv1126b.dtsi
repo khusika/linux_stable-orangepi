@@ -1673,6 +1673,8 @@
 		compatible = "rockchip,rkrng";
 		reg = <0x20950000 0x200>;
 		interrupts = <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru HCLK_RKRNG_NS>;
+		clock-names = "hclk_trng_ns";
 		resets = <&cru SRST_HRESETN_RKRNG_NS>;
 		reset-names = "reset";
 		status = "disabled";
