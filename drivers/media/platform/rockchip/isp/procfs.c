@@ -1140,7 +1140,7 @@ static void isp35_show(struct rkisp_device *dev, struct seq_file *p)
 	struct rkisp_isp_params_val_v35 *priv = dev->params_vdev.priv_val;
 	u32 full_range_flg = CIF_ISP_CTRL_ISP_CSM_Y_FULL_ENA | CIF_ISP_CTRL_ISP_CSM_C_FULL_ENA;
 	static const char * const effect[] = { "OFF", "BLACKWHITE" };
-	u32 val, tmp;
+	u32 val, tmp, isp_path = rkisp_read(dev, ISP3X_VI_ISP_PATH, false);
 
 	val = rkisp_read(dev, ISP3X_SWS_CFG, false);
 	tmp = rkisp_read(dev, ISP3X_SWS_CFG, true);
@@ -1248,21 +1248,42 @@ static void isp35_show(struct rkisp_device *dev, struct seq_file *p)
 	seq_printf(p, "%-10s %s pregdain:0x%x offset:0x%x offset1:%d max:0x%x\n",
 		   "OB", val ? "ON" : "OFF", val, tmp & 0x1ff, (tmp >> 16) & 0x1ff,
 		   rkisp_read(dev, ISP32_BLS_ISP_OB_MAX, false));
-	val = rkisp_read(dev, ISP3X_RAWAE_LITE_CTRL, false);
-	seq_printf(p, "%-10s %s(0x%x)\n", "RAWAE0", (val & 1) ? "ON" : "OFF", val);
-	val = rkisp_read(dev, ISP3X_RAWAE_BIG1_BASE, false);
-	seq_printf(p, "%-10s %s(0x%x)\n", "RAWAE3", (val & 1) ? "ON" : "OFF", val);
 	val = rkisp_read(dev, ISP3X_RAWHIST_LITE_CTRL, false);
 	seq_printf(p, "%-10s %s(0x%x)\n", "RAWHIST0", (val & 1) ? "ON" : "OFF", val);
 	val = rkisp_read(dev, ISP3X_RAWHIST_BIG1_BASE, false);
 	seq_printf(p, "%-10s %s(0x%x)\n", "RAWHIST3", (val & 1) ? "ON" : "OFF", val);
+	val = rkisp_read(dev, ISP3X_RAWAE_LITE_CTRL, false);
+	seq_printf(p, "%-10s %s(0x%x) sel[bnr(fe:%d be:%d) swap:%d]\n",
+		   "RAWAE0", (val & 1) ? "ON" : "OFF", val,
+		   !!(isp_path & BIT(30) && !(val & BIT(9))),
+		   !!(isp_path & BIT(30) && val & BIT(9)),
+		   (isp_path >> 22) & 0x3);
+	val = rkisp_read(dev, ISP3X_RAWAE_BIG1_BASE, false);
+	seq_printf(p, "%-10s %s(0x%x) sel[bnr(fe:%d be:%d) debayer:%d dpcc:%d]\n",
+		   "RAWAE3", (val & 1) ? "ON" : "OFF", val,
+		   !!(isp_path & BIT(29) && !(val & BIT(9))),
+		   !!(isp_path & BIT(29) && val & BIT(9)),
+		   ((isp_path >> 16) & 0x3) == 3,
+		   ((isp_path >> 16) & 0x3) != 3 ? (isp_path >> 16) & 0x3 : 0);
 	val = rkisp_read(dev, ISP3X_RAWAF_CTRL, false);
-	seq_printf(p, "%-10s %s(0x%x)\n", "RAWAF", (val & 1) ? "ON" : "OFF", val);
+	seq_printf(p, "%-10s %s(0x%x) sel[ynr:%d bnr(fe:%d be:%d) debayer:%d dpcc:%d])\n",
+		   "RAWAF", (val & 1) ? "ON" : "OFF", val,
+		   !!(val & BIT(19)),
+		   !!(isp_path & BIT(28) && !(val & BIT(20))),
+		   !!(isp_path & BIT(28) && val & BIT(20)),
+		   ((isp_path >> 18) & 0x3) == 3,
+		   ((isp_path >> 18) & 0x3) != 3 ? (isp_path >> 18) & 0x3 : 0);
 	val = rkisp_read(dev, ISP3X_RAWAWB_CTRL, false);
-	seq_printf(p, "%-10s %s(0x%x)\n", "RAWAWB", (val & 1) ? "ON" : "OFF", val);
+	tmp = rkisp_read(dev, ISP3X_RAWAWB_BLK_CTRL, false);
+	seq_printf(p, "%-10s %s(0x%x) sel[drc:%d bnr(fe:%d be:%d) degamma:%d]\n",
+		   "RAWAWB", (val & 1) ? "ON" : "OFF", val,
+		   !!(isp_path & BIT(27)),
+		   !!(isp_path & BIT(26) && !(tmp & BIT(10))),
+		   !!(isp_path & BIT(26) && tmp & BIT(10)),
+		   (isp_path >> 20) & 0x3);
 	val = rkisp_read(dev, ISP35_AIAWB_CTRL0, false);
-	seq_printf(p, "%-10s %s(0x%x) idx:%d cnt:%d\n", "AIAWB", (val & 1) ? "ON" : "OFF",
-		   val, priv->buf_aiawb_cnt, priv->buf_aiawb_idx);
+	seq_printf(p, "%-10s %s(0x%x) sel:%d idx:%d cnt:%d\n", "AIAWB", (val & 1) ? "ON" : "OFF",
+		   val, (val >> 8) & 0x7, priv->buf_aiawb_cnt, priv->buf_aiawb_idx);
 	val = rkisp_read(dev, ISP35_AWBSYNC_CTRL, false);
 	seq_printf(p, "%-10s %s(0x%x)\n", "AWBSYNC", (val & 1) ? "ON" : "OFF", val);
 	val = rkisp_read(dev, ISP3X_ISP_DEBUG1, true);

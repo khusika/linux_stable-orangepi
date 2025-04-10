@@ -93,6 +93,9 @@ struct rkisp_isp_params_val_v35 {
 	bool yraw_sel;
 	bool is_ae0_fe;
 	bool is_ae3_fe;
+	bool is_af_fe;
+	bool is_awb_fe;
+	bool is_aiawb_fe;
 };
 
 #if IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_ISP_VERSION_V35)

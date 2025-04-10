@@ -918,6 +918,7 @@ static void
 isp_rawaf_config(struct rkisp_isp_params_vdev *params_vdev,
 		 const struct isp35_rawaf_meas_cfg *arg, u32 id)
 {
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	struct rkisp_device *dev = params_vdev->dev;
 	struct v4l2_rect *out_crop = &dev->isp_sdev.out_crop;
 	u32 width = out_crop->width, height = out_crop->height;
@@ -1069,6 +1070,11 @@ isp_rawaf_config(struct rkisp_isp_params_vdev *params_vdev,
 	ctrl &= ~(ISP3X_RAWAF_SEL(3) | ISP32L_BNR2AF_SEL);
 	ctrl |= ISP3X_RAWAF_SEL(arg->rawaf_sel) | !!arg->bnr2af_sel << 28;
 	isp3_param_write(params_vdev, ctrl, ISP3X_VI_ISP_PATH, id);
+	priv->is_af_fe = true;
+	if (arg->from_ynr ||
+	    (arg->bnr2af_sel && arg->bnr_be_sel) ||
+	    (!arg->bnr2af_sel && arg->rawaf_sel == 3))
+		priv->is_af_fe = false;
 }
 
 static void
@@ -1243,6 +1249,7 @@ static void
 isp_rawawb_config(struct rkisp_isp_params_vdev *params_vdev,
 		  const struct isp35_rawawb_meas_cfg *arg, u32 id)
 {
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	struct rkisp_device *dev = params_vdev->dev;
 	struct v4l2_rect *out_crop = &dev->isp_sdev.out_crop;
 	struct isp35_isp_params_cfg *params_rec = params_vdev->isp35_params + id;
@@ -1293,8 +1300,6 @@ isp_rawawb_config(struct rkisp_isp_params_vdev *params_vdev,
 		!!arg->blk_measure_xytype << 2 |
 		!!arg->blk_measure_mode << 1 |
 		!!arg->blk_measure_enable;
-	if (dev->is_aiisp_en)
-		value |= ISP35_RAWAWB_BNR_BE_SEL;
 	isp3_param_write(params_vdev, value, ISP3X_RAWAWB_BLK_CTRL, id);
 
 	h_offs = arg->h_offs & ~0x1;
@@ -1944,6 +1949,10 @@ isp_rawawb_config(struct rkisp_isp_params_vdev *params_vdev,
 		value |= val;
 		isp3_param_write(params_vdev, value, ISP3X_VI_ISP_PATH, id);
 	}
+	priv->is_awb_fe = true;
+	if (arg->drc2awb_sel ||
+	    (arg->bnr2awb_sel && arg->bnr_be_sel))
+		priv->is_awb_fe = false;
 }
 
 static void
@@ -2109,6 +2118,7 @@ static void
 isp_aiawb_config(struct rkisp_isp_params_vdev *params_vdev,
 		 const struct isp35_aiawb_meas_cfg *arg, u32 id)
 {
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	const struct isp2x_bls_fixed_val *pval = &arg->bls3_val;
 	u32 value;
 
@@ -2145,9 +2155,9 @@ isp_aiawb_config(struct rkisp_isp_params_vdev *params_vdev,
 	isp3_param_write(params_vdev, value, ISP3X_BLS_CTRL, id);
 
 	value = isp3_param_read(params_vdev, ISP39_W3A_CTRL0, id);
-	if ((!arg->rawout_sel && !(value & ISP35_W3A_RAWLSC_SEL)) ||
-	    (arg->rawout_sel && value & ISP35_W3A_RAWLSC_SEL)) {
-		if (arg->rawout_sel)
+	if ((!arg->path_sel && !(value & ISP35_W3A_RAWLSC_SEL)) ||
+	    (arg->path_sel && value & ISP35_W3A_RAWLSC_SEL)) {
+		if (arg->path_sel)
 			value &= ~ISP35_W3A_RAWLSC_SEL;
 		else
 			value |= ISP35_W3A_RAWLSC_SEL;
@@ -2163,6 +2173,11 @@ isp_aiawb_config(struct rkisp_isp_params_vdev *params_vdev,
 		 (arg->path_sel & 0x7) << 8 |
 		 (arg->in_shift & 0xf) << 12;
 	isp3_param_write(params_vdev, value, ISP35_AIAWB_CTRL0, id);
+	priv->is_aiawb_fe = true;
+	if (arg->path_sel == 2 || arg->path_sel == 3)
+		priv->is_aiawb_fe = false;
+	else if (arg->path_sel == 4)
+		priv->is_aiawb_fe = priv->is_awb_fe;
 
 	value = arg->exp_thr | (arg->saturation_hthr & 0xfff) << 8 |
 		(arg->saturation_lthr & 0x7ff) << 20 | !!arg->exp1_check_en << 31;
@@ -4732,38 +4747,67 @@ void __isp_isr_meas_config(struct rkisp_isp_params_vdev *params_vdev,
 			   struct isp35_isp_params_cfg *new_params,
 			   enum rkisp_params_type type, u32 id)
 {
+	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	struct rkisp_device *dev = params_vdev->dev;
 	u64 module_cfg_update = new_params->module_cfg_update;
+	bool is_ae0_cfg = !!(module_cfg_update & ISP35_MODULE_RAWAE0);
+	bool is_hist0_cfg = !!(module_cfg_update & ISP35_MODULE_RAWHIST0);
+	bool is_ae3_cfg = !!(module_cfg_update & ISP35_MODULE_RAWAE3);
+	bool is_hist3_cfg = !!(module_cfg_update & ISP35_MODULE_RAWHIST3);
+	bool is_af_cfg = !!(module_cfg_update & ISP35_MODULE_RAWAF);
+	bool is_awb_cfg = !!(module_cfg_update & ISP35_MODULE_RAWAWB);
+	bool is_aiawb_cfg = !!(module_cfg_update & ISP35_MODULE_AIAWB);
 
 	v4l2_dbg(4, rkisp_debug, &dev->v4l2_dev,
 		 "%s id:%d seq:%d type:%d module_cfg_update:0x%llx\n",
 		 __func__, id, new_params->frame_id, type, module_cfg_update);
-
-	if (!dev->is_aiisp_en || type != RKISP_PARAMS_LAT) {
-		if (module_cfg_update & ISP35_MODULE_RAWAE0)
-			isp_rawae0_config(params_vdev, &new_params->meas.rawae0, id);
-		if (module_cfg_update & ISP35_MODULE_RAWHIST0)
-			isp_rawhist0_config(params_vdev, &new_params->meas.rawhist0, id);
-		if ((module_cfg_update & ISP35_MODULE_RAWAF))
-			isp_rawaf_config(params_vdev, &new_params->meas.rawaf, id);
-		if (dev->is_aiisp_en && type == RKISP_PARAMS_IMD) {
-			params_vdev->cur_fe_frame_id = new_params->frame_id;
-			return;
+	if (dev->is_aiisp_en && type != RKISP_PARAMS_ALL) {
+		if ((priv->is_ae0_fe && type == RKISP_PARAMS_LAT) ||
+		    (!priv->is_ae0_fe && type == RKISP_PARAMS_IMD)) {
+			is_ae0_cfg = false;
+			is_hist0_cfg = false;
 		}
+		if ((priv->is_ae3_fe && type == RKISP_PARAMS_LAT) ||
+		    (!priv->is_ae3_fe && type == RKISP_PARAMS_IMD)) {
+			is_ae3_cfg = false;
+			is_hist3_cfg = false;
+		}
+		if ((priv->is_af_fe && type == RKISP_PARAMS_LAT) ||
+		    (!priv->is_af_fe && type == RKISP_PARAMS_IMD))
+			is_af_cfg = false;
+		if ((priv->is_awb_fe && type == RKISP_PARAMS_LAT) ||
+		    (!priv->is_awb_fe && type == RKISP_PARAMS_IMD))
+			is_awb_cfg = false;
+		if ((priv->is_aiawb_fe && type == RKISP_PARAMS_LAT) ||
+		    (!priv->is_aiawb_fe && type == RKISP_PARAMS_IMD))
+			is_aiawb_cfg = false;
 	}
+
+	if (is_ae0_cfg)
+		isp_rawae0_config(params_vdev, &new_params->meas.rawae0, id);
+	if (is_hist0_cfg)
+		isp_rawhist0_config(params_vdev, &new_params->meas.rawhist0, id);
+	if (is_ae3_cfg)
+		isp_rawae3_config(params_vdev, &new_params->meas.rawae3, id);
+	if (is_hist3_cfg)
+		isp_rawhist3_config(params_vdev, &new_params->meas.rawhist3, id);
+	if (is_af_cfg)
+		isp_rawaf_config(params_vdev, &new_params->meas.rawaf, id);
+	if (is_awb_cfg)
+		isp_rawawb_config(params_vdev, &new_params->meas.rawawb, id);
+	if (is_aiawb_cfg)
+		isp_aiawb_config(params_vdev, &new_params->meas.aiawb, id);
+
+	if (dev->is_aiisp_en && type == RKISP_PARAMS_IMD) {
+		params_vdev->cur_fe_frame_id = new_params->frame_id;
+		return;
+	}
+
 	params_vdev->cur_frame_id = new_params->frame_id;
 	params_vdev->exposure = new_params->exposure;
 
-	if (module_cfg_update & ISP35_MODULE_RAWAE3)
-		isp_rawae3_config(params_vdev, &new_params->meas.rawae3, id);
-	if (module_cfg_update & ISP35_MODULE_RAWHIST3)
-		isp_rawhist3_config(params_vdev, &new_params->meas.rawhist3, id);
-	if (module_cfg_update & ISP35_MODULE_AIAWB)
-		isp_aiawb_config(params_vdev, &new_params->meas.aiawb, id);
 	if (module_cfg_update & ISP35_MODULE_AWBSYNC)
 		isp_awbsync_config(params_vdev, &new_params->meas.awbsync, id);
-	if (module_cfg_update & ISP35_MODULE_RAWAWB)
-		isp_rawawb_config(params_vdev, &new_params->meas.rawawb, id);
 }
 
 static __maybe_unused
@@ -4867,8 +4911,12 @@ rkisp_params_first_cfg_v35(struct rkisp_isp_params_vdev *params_vdev)
 	spin_unlock_irqrestore(&params_vdev->config_lock, flags);
 
 	if (dev->hw_dev->is_single && (dev->isp_state & ISP_START)) {
-		rkisp_set_bits(dev, ISP3X_ISP_CTRL0, 0, CIF_ISP_CTRL_ISP_CFG_UPD, true);
-		rkisp_clear_reg_cache_bits(dev, CIF_ISP_CTRL, CIF_ISP_CTRL_ISP_CFG_UPD);
+		u32 val = CIF_ISP_CTRL_ISP_CFG_UPD;
+
+		if (dev->is_aiisp_en)
+			val |= ISP35_ISP_CFG_UPD_FE;
+		rkisp_set_bits(dev, ISP3X_ISP_CTRL0, 0, val, true);
+		rkisp_clear_reg_cache_bits(dev, CIF_ISP_CTRL, val);
 	}
 }
 

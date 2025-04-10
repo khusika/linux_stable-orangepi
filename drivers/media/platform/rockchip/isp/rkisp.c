@@ -697,7 +697,7 @@ static void rkisp_update_list_reg(struct rkisp_device *dev)
 			dev->params_vdev.ops->vpsl_update_regs(&dev->params_vdev);
 		}
 		if (dev->isp_ver >= ISP_V33) {
-			val = rkisp_read(dev, ISP39_W3A_CTRL0, false);
+			val = rkisp_read_reg_cache(dev, ISP39_W3A_CTRL0);
 			writel(val, hw->base_addr + ISP39_W3A_CTRL0);
 		}
 		rkisp_unite_write(dev, ISP3X_MI_WR_INIT, CIF_MI_INIT_SOFT_UPD, true);
@@ -955,6 +955,8 @@ run_next:
 	if (is_upd) {
 		val = rkisp_read(dev, ISP_CTRL, false);
 		val |= CIF_ISP_CTRL_ISP_CFG_UPD;
+		if (dev->isp_ver == ISP_V35 && dev->is_aiisp_en)
+			val |= ISP35_ISP_CFG_UPD_FE;
 		writel(val, hw->base_addr + ISP_CTRL);
 		if (hw->unite == ISP_UNITE_TWO)
 			writel(val, hw->base_next_addr + ISP_CTRL);
@@ -1968,7 +1970,7 @@ static int rkisp_config_isp(struct rkisp_device *dev)
 	u32 acq_mult = 0;
 	u32 acq_prop = 0;
 	u32 extend_line = 0;
-	u32 width, height;
+	u32 width, height, val;
 
 	sensor = dev->active_sensor;
 	in_fmt = &dev->isp_sdev.in_fmt;
@@ -2061,6 +2063,8 @@ static int rkisp_config_isp(struct rkisp_device *dev)
 	acq_prop |= signal | in_fmt->yuv_seq |
 		CIF_ISP_ACQ_PROP_BAYER_PAT(in_fmt->bayer_pat) |
 		CIF_ISP_ACQ_PROP_FIELD_SEL_ALL;
+	if (dev->isp_ver == ISP_V35 && dev->is_aiisp_en)
+		acq_prop |= ISP35_BAYER_PAT_FE(in_fmt->bayer_pat) | ISP35_BAYER_UPD_FE_EN;
 	rkisp_unite_write(dev, CIF_ISP_ACQ_PROP, acq_prop, false);
 	rkisp_unite_write(dev, CIF_ISP_ACQ_NR_FRAMES, 0, true);
 
@@ -2071,19 +2075,31 @@ static int rkisp_config_isp(struct rkisp_device *dev)
 	/* Acquisition Size */
 	rkisp_unite_write(dev, CIF_ISP_ACQ_H_OFFS, acq_mult * in_crop->left, false);
 	rkisp_unite_write(dev, CIF_ISP_ACQ_V_OFFS, in_crop->top, false);
-	rkisp_unite_write(dev, CIF_ISP_ACQ_H_SIZE, acq_mult * width, false);
+	if (dev->isp_ver == ISP_V35 && dev->is_aiisp_en)
+		val = (acq_mult * width) | (acq_mult * width) << 16;
+	else
+		val = acq_mult * width;
+	rkisp_unite_write(dev, CIF_ISP_ACQ_H_SIZE, val, false);
 
 	/* ISP Out Area differ with ACQ is only FIFO, so don't crop in this */
 	rkisp_unite_write(dev, CIF_ISP_OUT_H_OFFS, 0, true);
 	rkisp_unite_write(dev, CIF_ISP_OUT_V_OFFS, 0, true);
-	rkisp_unite_write(dev, CIF_ISP_OUT_H_SIZE, width, false);
+	if (dev->isp_ver == ISP_V35 && dev->is_aiisp_en)
+		val = width | width << 16;
+	else
+		val =  width;
+	rkisp_unite_write(dev, CIF_ISP_OUT_H_SIZE, val, false);
 
 	if (dev->cap_dev.stream[RKISP_STREAM_SP].interlaced) {
 		rkisp_unite_write(dev, CIF_ISP_ACQ_V_SIZE, height / 2, false);
 		rkisp_unite_write(dev, CIF_ISP_OUT_V_SIZE, height / 2, false);
 	} else {
-		rkisp_unite_write(dev, CIF_ISP_ACQ_V_SIZE, height + extend_line, false);
-		rkisp_unite_write(dev, CIF_ISP_OUT_V_SIZE, height + extend_line, false);
+		if (dev->isp_ver == ISP_V35 && dev->is_aiisp_en)
+			val = (height + extend_line) | (height + extend_line) << 16;
+		else
+			val = height + extend_line;
+		rkisp_unite_write(dev, CIF_ISP_ACQ_V_SIZE, val, false);
+		rkisp_unite_write(dev, CIF_ISP_OUT_V_SIZE, val, false);
 	}
 
 	/* interrupt mask */
@@ -2335,7 +2351,7 @@ static int rkisp_isp_stop(struct rkisp_device *dev)
 	struct rkisp_hw_dev *hw = dev->hw_dev;
 	void __iomem *base = dev->base_addr;
 	unsigned long old_rate, safe_rate;
-	u32 val;
+	u32 val, upd = CIF_ISP_CTRL_ISP_CFG_UPD;
 	u32 i;
 
 	v4l2_dbg(1, rkisp_debug, &dev->v4l2_dev,
@@ -2405,10 +2421,11 @@ static int rkisp_isp_stop(struct rkisp_device *dev)
 		 readl(base + CIF_ISP_CTRL), readl(base + CIF_ISP_FLAGS_SHD),
 		 ISP3X_ISP_OUT_LINE(rkisp_read(dev, ISP3X_ISP_DEBUG2, true)));
 
+	if (dev->isp_ver == ISP_V35 && dev->is_aiisp_en)
+		upd |= ISP35_ISP_CFG_UPD_FE;
 	val = rkisp_read(dev, CIF_ISP_CTRL, true);
-	val |= CIF_ISP_CTRL_ISP_CFG_UPD;
-	rkisp_unite_write(dev, CIF_ISP_CTRL, val, true);
-	rkisp_clear_reg_cache_bits(dev, CIF_ISP_CTRL, CIF_ISP_CTRL_ISP_CFG_UPD);
+	rkisp_unite_write(dev, CIF_ISP_CTRL, val | upd, true);
+	rkisp_clear_reg_cache_bits(dev, CIF_ISP_CTRL, upd);
 
 	if (!in_interrupt()) {
 		/* normal case */
@@ -2473,7 +2490,7 @@ end:
 static int rkisp_isp_start(struct rkisp_device *dev)
 {
 	struct rkisp_hw_dev *hw = dev->hw_dev;
-	u32 val;
+	u32 val, upd = CIF_ISP_CTRL_ISP_CFG_UPD;
 
 	v4l2_dbg(1, rkisp_debug, &dev->v4l2_dev,
 		 "%s refcnt:%d link_num:%d unite_div:%d\n", __func__,
@@ -2500,16 +2517,18 @@ static int rkisp_isp_start(struct rkisp_device *dev)
 		}
 	}
 
+	if (dev->isp_ver == ISP_V35 && dev->is_aiisp_en)
+		upd |= ISP35_ISP_CFG_UPD_FE;
 	/* Activate ISP */
 	val = rkisp_read_reg_cache(dev, CIF_ISP_CTRL);
-	val |= CIF_ISP_CTRL_ISP_CFG_UPD | CIF_ISP_CTRL_ISP_ENABLE |
+	val |= upd | CIF_ISP_CTRL_ISP_ENABLE |
 	       CIF_ISP_CTRL_ISP_INFORM_ENABLE | CIF_ISP_CTRL_ISP_CFG_UPD_PERMANENT;
 	if (dev->isp_ver == ISP_V20)
 		val |= NOC_HURRY_PRIORITY(2) | NOC_HURRY_W_MODE(2) | NOC_HURRY_R_MODE(1);
 	if (atomic_read(&hw->refcnt) == 1)
 		hw->cur_dev_id = dev->dev_id;
 	rkisp_unite_write(dev, CIF_ISP_CTRL, val, false);
-	rkisp_clear_reg_cache_bits(dev, CIF_ISP_CTRL, CIF_ISP_CTRL_ISP_CFG_UPD);
+	rkisp_clear_reg_cache_bits(dev, CIF_ISP_CTRL, upd);
 
 	dev->isp_err_cnt = 0;
 	dev->isp_isr_cnt = 0;
