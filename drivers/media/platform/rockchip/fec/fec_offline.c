@@ -291,6 +291,11 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	if (hw->set_clk)
 		rkfec_dvfs(ofl, in_w);
 
+	ofl->prev_frame.fs_seq = ofl->curr_frame.fs_seq;
+	ofl->prev_frame.fs_timestamp = ofl->curr_frame.fs_timestamp;
+	ofl->curr_frame.fs_seq++;
+	ofl->curr_frame.fs_timestamp = ktime_get_ns();
+
 	init_completion(&ofl->cmpl);
 
 	switch (buf->in_fourcc) {
@@ -417,7 +422,7 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	//new  bg val
 	val = SW_BG_Y_VALUE(buf->bg_val.bg_y) |
 	      SW_BG_U_VALUE(buf->bg_val.bg_u) |
-	      SW_BG_Y_VALUE(buf->bg_val.bg_v);
+	      SW_BG_V_VALUE(buf->bg_val.bg_v);
 	writel(val, base + RKFEC_BG_VALUE);
 
 	//core_ctrl
@@ -456,9 +461,6 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	ofl->out_fmt.bytesperline = buf->buf_cfg.out_stride;
 	ofl->out_fmt.sizeimage = buf->buf_cfg.out_size;
 
-	ofl->curr_frame.fs_seq++;
-	ofl->curr_frame.fs_timestamp = ktime_get_ns();
-
 	ret = wait_for_completion_timeout(&ofl->cmpl, msecs_to_jiffies(300));
 	if (!ret) {
 		v4l2_err(&ofl->v4l2_dev, "fec working timeout\n");
@@ -489,16 +491,15 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 
 	ofl->state = RKFEC_FRAME_END;
 	if (!ret) {
-		ofl->curr_frame.fe_seq++;
-		ofl->curr_frame.fe_timestamp = ktime_get_ns();
 		if (ofl->curr_frame.fe_seq > ofl->prev_frame.fe_seq &&
 		    ofl->curr_frame.fe_seq - ofl->prev_frame.fe_seq > 1)
 			ofl->debug.frameloss += ofl->curr_frame.fe_seq - ofl->prev_frame.fe_seq - 1;
-	} else {
-		ofl->debug.frameloss++;
-	}
 
-	ofl->prev_frame = ofl->curr_frame;
+		ofl->prev_frame.fe_seq = ofl->curr_frame.fe_seq;
+		ofl->prev_frame.fe_timestamp = ofl->curr_frame.fe_timestamp;
+		ofl->curr_frame.fe_seq++;
+		ofl->curr_frame.fe_timestamp = ktime_get_ns();
+	}
 
 	return ret;
 
