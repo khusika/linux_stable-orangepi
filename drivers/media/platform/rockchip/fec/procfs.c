@@ -101,13 +101,14 @@ static int offline_fec_show(struct seq_file *p, void *v)
 		   ofl->in_fmt.width, ofl->in_fmt.height, ofl->in_fmt.offset,
 		   ofl->in_fmt.sizeimage);
 
-	seq_printf(p, "%-10s (frame:%d rate:%dms state:%s time:%dms frameloss:%d)\n",
+	seq_printf(p, "%-10s (frame:%d rate:%dms state:%s time:%dms frameloss:%d frm_oversdtim_cnt:%d)\n",
 		   "Fec offline",
 		   ofl->curr_frame.fs_seq,
 		   (u32)(ofl->curr_frame.fs_timestamp - ofl->prev_frame.fs_timestamp) / 1000 / 1000,
 		   (ofl->state & RKFEC_FRAME_END) ? "idle" : "working",
 		   ofl->debug.interval / 1000,
-		   ofl->debug.frameloss);
+		   ofl->debug.frameloss,
+		   ofl->debug.frame_timeout_cnt);
 
 	seq_printf(p, "%-10s Format:%c%c%c%c Size:%dx%d Sizeimage(%d) (frame:%d rate:%dms frameloss:%d\n",
 		   "Output",

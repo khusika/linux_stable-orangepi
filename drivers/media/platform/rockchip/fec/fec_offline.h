@@ -63,6 +63,7 @@ struct rkfec_frame_info {
 struct rkfec_debug_info {
 	u32 interval;
 	u32 frameloss;
+	u32 frame_timeout_cnt;
 };
 
 struct rkfec_offline_dev {
