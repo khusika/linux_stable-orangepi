@@ -585,7 +585,7 @@
 };
 
 &sc850sl {
-	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_LOW>;
+	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
 };
 
 &sdmmc0 {
