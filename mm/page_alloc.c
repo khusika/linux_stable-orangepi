@@ -1812,6 +1812,18 @@ void __init memblock_free_pages(struct page *page, unsigned long pfn,
 	__free_pages_core(page, order);
 }
 
+#ifdef CONFIG_ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK
+void __init rk_free_pages_core(struct page *page, unsigned int order)
+{
+	__free_pages_core(page, order);
+	totalram_pages_add(1 << order);
+#ifdef CONFIG_HIGHMEM
+	if (PageHighMem(page))
+		totalhigh_pages_add(1 << order);
+#endif
+}
+#endif /* CONFIG_ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK */
+
 /*
  * Check that the whole (or subset of) a pageblock given by the interval of
  * [start_pfn, end_pfn) is valid and within the same zone, before scanning it

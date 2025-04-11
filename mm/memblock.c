@@ -2068,6 +2068,44 @@ static void __init __free_pages_memory(unsigned long start, unsigned long end)
 }
 
 #ifdef CONFIG_ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK
+static void __init rk_free_highpages(void)
+{
+#ifdef CONFIG_HIGHMEM
+	unsigned long max_low = max_low_pfn;
+	phys_addr_t range_start, range_end;
+	u64 i;
+
+	/* set highmem page free */
+	for_each_free_mem_range(i, NUMA_NO_NODE, MEMBLOCK_NONE,
+				&range_start, &range_end, NULL) {
+		unsigned long start = PFN_UP(range_start);
+		unsigned long end = PFN_DOWN(range_end);
+
+		/* Ignore complete lowmem entries */
+		if (end <= max_low)
+			continue;
+
+		/* Truncate partial highmem entries */
+		if (start < max_low)
+			start = max_low;
+
+		while (start < end) {
+			int order;
+
+			order = min(MAX_ORDER - 1UL, __ffs(start));
+
+			while (start + (1UL << order) > end)
+				order--;
+
+			rk_free_pages_core(pfn_to_page(start), order);
+			start += (1UL << order);
+
+			cond_resched();
+		}
+	}
+#endif
+}
+
 int __init defer_free_memblock(void *unused)
 {
 	int i;
@@ -2087,9 +2125,12 @@ int __init defer_free_memblock(void *unused)
 			db[i].defer_end >> (20 - PAGE_SHIFT),
 			totalram_pages() >> (20 - PAGE_SHIFT));
 	}
+
+	rk_free_highpages();
+
 	return 0;
 }
-#endif
+#endif /* CONFIG_ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK */
 
 static unsigned long __init __free_memory_core(phys_addr_t start,
 				 phys_addr_t end)
