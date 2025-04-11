@@ -516,6 +516,14 @@
 		status = "disabled";
 	};
 
+	firmware {
+		optee: optee {
+			compatible = "linaro,optee-tz";
+			method = "smc";
+			status = "disabled";
+		};
+	};
+
 	mipi0_csi2: mipi0-csi2 {
 		compatible = "rockchip,rv1126b-mipi-csi2";
 		rockchip,hw = <&mipi0_csi2_hw>, <&mipi1_csi2_hw>,
