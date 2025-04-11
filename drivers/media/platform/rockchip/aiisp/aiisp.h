@@ -90,6 +90,7 @@ struct rkaiisp_device {
 	void *sw_base_addr;
 	struct v4l2_device v4l2_dev;
 	struct media_device media_dev;
+	struct proc_dir_entry *procfs;
 	struct device *dev;
 
 	const struct vb2_mem_ops *mem_ops;
@@ -131,6 +132,12 @@ struct rkaiisp_device {
 	u32 run_idx;
 	u32 frame_id;
 
+	u64 pre_frm_st;
+	u64 frm_st;
+	u64 frm_ed;
+	u32 frm_interval;
+	u32 frm_oversdtim_cnt;
+
 	bool streamon;
 	bool showreg;
 	bool init_buf;
@@ -138,6 +145,7 @@ struct rkaiisp_device {
 
 extern int rkaiisp_debug;
 extern int rkaiisp_showreg;
+extern int rkaiisp_stdfps;
 
 static inline struct rkaiisp_buffer *to_rkaiisp_buffer(struct vb2_v4l2_buffer *vb)
 {

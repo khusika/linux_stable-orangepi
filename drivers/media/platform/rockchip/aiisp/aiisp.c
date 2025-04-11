@@ -1218,6 +1218,8 @@ void rkaiisp_trigger(struct rkaiisp_device *aidev)
 	if (!rkaiisp_update_buf(aidev)) {
 		aidev->run_idx = 0;
 		aidev->frame_id = aidev->curr_idxbuf.sequence;
+		aidev->pre_frm_st = aidev->frm_st;
+		aidev->frm_st = ktime_get_ns();
 		rkaiisp_get_new_iqparam(aidev);
 		rkaiisp_calc_outbuf_size(aidev, ispbuf->iir_height, ispbuf->iir_width);
 		rkaiisp_run_cfg(aidev, aidev->run_idx);
@@ -1255,6 +1257,7 @@ int rkaiisp_get_idxbuf_len(struct rkaiisp_device *aidev)
 enum rkaiisp_irqhdl_ret rkaiisp_irq_hdl(struct rkaiisp_device *aidev, u32 mi_mis)
 {
 	struct rkisp_aiisp_st *idxbuf = NULL;
+	u64 frm_hdntim = 0;
 
 	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
 		"irq val: 0x%x, run_idx %d, model_runcnt %d\n",
@@ -1274,6 +1277,14 @@ enum rkaiisp_irqhdl_ret rkaiisp_irq_hdl(struct rkaiisp_device *aidev, u32 mi_mis
 		rkaiisp_run_cfg(aidev, aidev->run_idx);
 		rkaiisp_run_start(aidev);
 		return CONTINUE_RUN;
+	}
+
+	aidev->frm_ed = ktime_get_ns();
+	if (aidev->frm_ed > aidev->frm_st) {
+		frm_hdntim = aidev->frm_ed - aidev->frm_st;
+		aidev->frm_interval = frm_hdntim;
+		if (frm_hdntim * rkaiisp_stdfps > NSEC_PER_SEC)
+			aidev->frm_oversdtim_cnt++;
 	}
 
 	idxbuf = &aidev->curr_idxbuf;
@@ -1571,6 +1582,8 @@ rkaiisp_vb2_start_streaming(struct vb2_queue *queue, unsigned int count)
 
 	pm_runtime_get_sync(aidev->dev);
 	atomic_inc(&hw_dev->refcnt);
+
+	aidev->frm_oversdtim_cnt = 0;
 
 	v4l2_dbg(1, rkaiisp_debug, &aidev->v4l2_dev,
 		"start streaming %d\n", aidev->streamon);
