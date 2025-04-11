@@ -4627,7 +4627,7 @@ static void vop2_initial(struct drm_crtc *crtc)
 		 * After vop initialization, keep sw_sharp_enable always on.
 		 * Only enable/disable sharp submodule to avoid black screen.
 		 */
-		if (vp_data->feature & VOP_FEATURE_POST_SHARP && vp->sharp_disabled)
+		if (vp_data->feature & VOP_FEATURE_POST_SHARP && !vp->sharp_disabled)
 			writel(0x1, vop2->sharp_res.regs);
 
 		/* disable immediately enable bit for dp */
