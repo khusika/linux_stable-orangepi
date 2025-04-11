@@ -3193,6 +3193,9 @@
 		interrupt-names = "fec_irq";
 		clocks = <&cru ACLK_FEC>, <&cru HCLK_FEC>, <&cru CLK_CORE_FEC>;
 		clock-names = "aclk_fec", "hclk_fec", "clk_fec";
+		resets = <&cru SRST_HRESETN_FEC>, <&cru SRST_ARESETN_FEC>,
+			 <&cru SRST_RESETN_CORE_FEC>;
+		reset-names = "rst_fec_h", "rst_fec_a", "rst_fec_c";
 		iommus = <&rkfec_mmu>;
 		status = "disabled";
 	};
