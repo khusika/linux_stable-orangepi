@@ -370,7 +370,7 @@
 #define CLK_CORE_VPSL				360
 #define CLK_MACPHY				361
 #define HCLK_RKRNG_NS				362
-#define HCLK_RKRNG_S_NS				362
+#define HCLK_RKRNG_S_NS				363
 
 /* secure clks */
 #define CLK_USER_OTPC_S				400
