@@ -408,10 +408,11 @@ static const struct regval sc450ai_linear_10_2688x1520_30fps_2lane_regs[] = {
 	{0x3209, 0x80},
 	{0x320a, 0x05},
 	{0x320b, 0xf0},
-	{0x320c, 0x02},
+	{0x320c, 0x02},	//hts
 	{0x320d, 0xee},
-	{0x320e, 0x06},
-	{0x320f, 0x18},
+	{0x320e, 0x06},	//vts
+	// {0x320f, 0x18},
+	{0x320f, 0x38},
 	{0x3214, 0x11},
 	{0x3215, 0x11},
 	{0x3220, 0x00},
@@ -1197,7 +1198,7 @@ static const struct sc450ai_mode supported_modes_2lane[] = {
 		},
 		.exp_def = 0x0080,//mark
 		.hts_def = 0x2ee * 4,
-		.vts_def = 0x0618,
+		.vts_def = 0x0638,
 		.bus_fmt = MEDIA_BUS_FMT_SBGGR10_1X10,
 		.reg_list = sc450ai_linear_10_2688x1520_30fps_2lane_regs,
 		.hdr_mode = NO_HDR,
