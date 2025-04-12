@@ -147,7 +147,7 @@ static struct pvtpll_table rv1103b_npu_pvtpll_table[] = {
 
 static struct pvtpll_table rv1126b_aisp_pvtpll_table[] = {
 	/* rate_hz, ring_se, length */
-	ROCKCHIP_PVTPLL(775000000, 0, 28),
+	ROCKCHIP_PVTPLL(775000000, 0, 8),
 };
 
 static struct pvtpll_table rv1126b_core_pvtpll_table[] = {
@@ -163,7 +163,7 @@ static struct pvtpll_table rv1126b_core_pvtpll_table[] = {
 
 static struct pvtpll_table rv1126b_enc_pvtpll_table[] = {
 	/* rate_hz, ring_se, length */
-	ROCKCHIP_PVTPLL(550000000, 0, 110),
+	ROCKCHIP_PVTPLL(550000000, 0, 72),
 };
 
 static struct pvtpll_table rv1126b_npu_pvtpll_table[] = {
@@ -648,6 +648,9 @@ static const struct rockchip_clock_pvtpll_info rv1126b_aisp_pvtpll_data = {
 	.config = rv1103b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_aisp_pvtpll_table),
 	.table = rv1126b_aisp_pvtpll_table,
+	.calibrate_length_step = 4,
+	.calibrate_freq_per_step = 20,
+	.pvtpll_calibrate = rv1103b_pvtpll_calibrate,
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_core_pvtpll_data = {
@@ -662,6 +665,9 @@ static const struct rockchip_clock_pvtpll_info rv1126b_enc_pvtpll_data = {
 	.config = rv1103b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_enc_pvtpll_table),
 	.table = rv1126b_enc_pvtpll_table,
+	.calibrate_length_step = 8,
+	.calibrate_freq_per_step = 20,
+	.pvtpll_calibrate = rv1103b_pvtpll_calibrate,
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_npu_pvtpll_data = {
