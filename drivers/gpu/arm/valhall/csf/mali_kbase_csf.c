@@ -211,11 +211,6 @@ static void kernel_free_user_io_pages(struct kbase_context *kctx, struct tagged_
 	kbase_gpu_vm_lock(kctx);
 
 	vunmap(user_io_addr);
-	if (kctx->csf.user_io.vma != NULL) {
-		zap_vma_ptes(kctx->csf.user_io.vma, kctx->csf.user_io.vma->vm_start,
-			     KBASEP_NUM_CS_USER_IO_PAGES * PAGE_SIZE);
-		kctx->csf.user_io.vma = NULL;
-	}
 
 	WARN_ON(atomic_read(&kctx->permanent_mapped_pages) < KBASEP_NUM_CS_USER_IO_PAGES);
 	atomic_sub(KBASEP_NUM_CS_USER_IO_PAGES, &kctx->permanent_mapped_pages);
@@ -1027,6 +1022,13 @@ static void unbind_stopped_queue(struct kbase_context *kctx, struct kbase_queue 
 		queue->group->bound_queues[queue->csi_index] = NULL;
 		queue->group = NULL;
 		kbase_csf_scheduler_spin_unlock(kctx->kbdev, flags);
+
+		/* Ensure that the user I/O pages are no longer accessible */
+		mutex_lock(&kctx->kbdev->csf.reg_lock);
+		unmap_mapping_range(kctx->kbdev->csf.db_filp->f_inode->i_mapping,
+				    (loff_t)(queue->db_file_offset << PAGE_SHIFT),
+				    BASEP_QUEUE_NR_MMAP_USER_PAGES * PAGE_SIZE, 1);
+		mutex_unlock(&kctx->kbdev->csf.reg_lock);
 
 		put_user_pages_mmap_handle(kctx, queue);
 		WARN_ON_ONCE(queue->doorbell_nr != KBASEP_USER_DB_NR_INVALID);

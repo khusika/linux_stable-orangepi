@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2010-2024 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2010-2025 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -3440,13 +3440,19 @@ static vm_fault_t kbase_csf_user_io_pages_vm_fault(struct vm_fault *vmf)
 		output_cpu_addr = input_cpu_addr + PAGE_SIZE;
 
 		if (mali_kbase_supports_csg_cs_user_page_allocation(queue->kctx->api_version)) {
-			if (!queue->group) {
-				ret = VM_FAULT_SIGBUS;
-				goto exit;
+			if (likely(queue->group)) {
+				input_page_pfn = PFN_DOWN(as_phys_addr_t(queue->group->phys[0]));
+				output_page_pfn = PFN_DOWN(as_phys_addr_t(queue->group->phys[1]));
+			} else {
+				/* This could happen if userspace tries to access this memory
+				 * after the group has already been terminated due to a fault.
+				 * Re-map to the dummy page to render the access harmless.
+				 */
+				input_page_pfn =
+					PFN_DOWN(as_phys_addr_t(kbdev->csf.user_reg.dummy_page));
+				output_page_pfn =
+					PFN_DOWN(as_phys_addr_t(kbdev->csf.user_reg.dummy_page));
 			}
-
-			input_page_pfn = PFN_DOWN(as_phys_addr_t(queue->group->phys[0]));
-			output_page_pfn = PFN_DOWN(as_phys_addr_t(queue->group->phys[1]));
 		} else {
 			input_page_pfn = PFN_DOWN(as_phys_addr_t(queue->phys[0]));
 			output_page_pfn = PFN_DOWN(as_phys_addr_t(queue->phys[1]));
@@ -3541,7 +3547,6 @@ static int kbase_csf_cpu_mmap_user_io_pages(struct kbase_context *kctx, struct v
 	get_file(vma->vm_file);
 	/* Also adjust the vm_pgoff */
 	vma->vm_pgoff = queue->db_file_offset;
-	kctx->csf.user_io.vma = vma;
 
 	return 0;
 
