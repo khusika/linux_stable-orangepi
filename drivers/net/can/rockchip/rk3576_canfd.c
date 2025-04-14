@@ -170,7 +170,7 @@ enum {
 #define RESET_MODE		0
 #define WORK_MODE		BIT(0)
 
-#define RETX_TIME_LIMIT_CNT	0x12c /* 300 */
+#define RETX_TIME_LIMIT_CNT_MAX	0xffff
 #define RETX_TIME_LIMIT_SHIFT	3
 #define RETX_LIMIT_EN		BIT(1)
 #define AUTO_RETX_EN		BIT(0)
@@ -384,6 +384,7 @@ struct rk3576_canfd {
 	u32 rx_fifo_mask;
 	int rx_fifo_depth;
 	int rx_max_data;
+	unsigned int auto_retx_cnt;
 	bool use_dma;
 	u32 dma_size;
 	u32 dma_thr;
@@ -638,9 +639,12 @@ static int rk3576_canfd_start(struct net_device *ndev)
 		rk3576_canfd_write(rcan, CANFD_ERROR_MASK, 0);
 	}
 
-	rk3576_canfd_write(rcan, CANFD_AUTO_RETX_CFG,
-			   AUTO_RETX_EN | RETX_LIMIT_EN |
-			   (RETX_TIME_LIMIT_CNT << RETX_TIME_LIMIT_SHIFT));
+	if (rcan->auto_retx_cnt)
+		rk3576_canfd_write(rcan, CANFD_AUTO_RETX_CFG,
+				   AUTO_RETX_EN | RETX_LIMIT_EN |
+				   (rcan->auto_retx_cnt << RETX_TIME_LIMIT_SHIFT));
+	else
+		rk3576_canfd_write(rcan, CANFD_AUTO_RETX_CFG, AUTO_RETX_EN);
 
 	rk3576_canfd_write(rcan, CANFD_MODE, val);
 	if (rcan->use_dma)
@@ -1278,6 +1282,13 @@ static int rk3576_canfd_probe(struct platform_device *pdev)
 
 	rcan->rx_fifo_shift = INTM_LEFT_CNT_SHIFT;
 	rcan->rx_fifo_mask = INTM_LEFT_CNT_MASK;
+
+	if (device_property_read_u32(&pdev->dev, "rockchip,auto-retx-cnt", &val))
+		rcan->auto_retx_cnt = 0;
+	else
+		rcan->auto_retx_cnt = val;
+	if (rcan->auto_retx_cnt > RETX_TIME_LIMIT_CNT_MAX)
+		rcan->auto_retx_cnt = RETX_TIME_LIMIT_CNT_MAX;
 
 	/* rx-max-data only 4 Words or 18 words are supported */
 	if (device_property_read_u32_array(&pdev->dev, "rockchip,rx-max-data", &val, 1))
