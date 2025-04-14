@@ -5575,13 +5575,41 @@ static int vop2_clk_set_parent_extend(struct vop2_video_port *vp,
 	return 0;
 }
 
-static void vop2_crtc_atomic_enter_psr(struct drm_crtc *crtc, struct drm_crtc_state *old_state)
+static void vop2_crtc_wins_switch_for_psr(struct drm_crtc *crtc, bool enable)
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
 	struct vop2_win *win;
-	unsigned long win_mask = vp->enabled_win_mask;
-	int phys_id;
+	struct vop2_win *sub_win;
+	unsigned long enabled_win_mask = vp->enabled_win_mask;
+	u32 phys_id;
+	int i = 0;
+
+	for_each_set_bit(phys_id, &enabled_win_mask, ROCKCHIP_MAX_LAYER) {
+		win = vop2_find_win_by_phys_id(vop2, phys_id);
+		VOP_WIN_SET(vop2, win, enable, enable);
+		if (win->feature & WIN_FEATURE_CLUSTER_MAIN) {
+			if (win->two_win_mode) {
+				for (i = 0; i < vop2->registered_num_wins; i++) {
+					sub_win = &vop2->win[i];
+
+					if ((sub_win->phys_id == win->phys_id) &&
+					    (sub_win->feature & WIN_FEATURE_CLUSTER_SUB))
+						VOP_WIN_SET(vop2, sub_win, enable, enable);
+				}
+			}
+			VOP_CLUSTER_SET(vop2, win, enable, enable);
+		}
+	}
+
+	vop2_cfg_done(crtc);
+	vop2_wait_for_fs_by_done_bit_status(vp);
+}
+
+static void vop2_crtc_atomic_enter_psr(struct drm_crtc *crtc, struct drm_crtc_state *old_state)
+{
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct vop2 *vop2 = vp->vop2;
 
 	/*
 	 * For mcu interface, if mcu_hold_mode is enabled, the wins will stop
@@ -5590,20 +5618,10 @@ static void vop2_crtc_atomic_enter_psr(struct drm_crtc *crtc, struct drm_crtc_st
 	 * In addition, the regs operations related to disabling wins will not
 	 * take effect when the mcu_hold_mode is enabled.
 	 */
-	if (vp->mcu_timing.mcu_pix_total) {
+	if (vp->mcu_timing.mcu_pix_total)
 		VOP_MODULE_SET(vop2, vp, mcu_hold_mode, 1);
-	} else {
-		for_each_set_bit(phys_id, &win_mask, ROCKCHIP_MAX_LAYER) {
-			win = vop2_find_win_by_phys_id(vop2, phys_id);
-			VOP_WIN_SET(vop2, win, enable, 0);
-
-			if (win->feature & WIN_FEATURE_CLUSTER_MAIN)
-				VOP_CLUSTER_SET(vop2, win, enable, 0);
-		}
-
-		vop2_cfg_done(crtc);
-		vop2_wait_for_fs_by_done_bit_status(vp);
-	}
+	else
+		vop2_crtc_wins_switch_for_psr(crtc, false);
 
 	if (hweight8(vop2->active_vp_mask) == 1) {
 		u32 adjust_aclk_rate = 0;
@@ -5630,9 +5648,6 @@ static void vop2_crtc_atomic_exit_psr(struct drm_crtc *crtc, struct drm_crtc_sta
 {
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
-	u32 phys_id;
-	struct vop2_win *win;
-	unsigned long enabled_win_mask = vp->enabled_win_mask;
 
 	if (vop2->aclk_rate_reset)
 		clk_set_rate(vop2->aclk, vop2->aclk_current_freq);
@@ -5642,19 +5657,10 @@ static void vop2_crtc_atomic_exit_psr(struct drm_crtc *crtc, struct drm_crtc_sta
 	 * For mcu interface, if mcu_hold_mode is disabled, the wins will
 	 * resume accessing DDR and the interface will also return to work.
 	 */
-	if (vp->mcu_timing.mcu_pix_total) {
+	if (vp->mcu_timing.mcu_pix_total)
 		VOP_MODULE_SET(vop2, vp, mcu_hold_mode, 0);
-	} else {
-		for_each_set_bit(phys_id, &enabled_win_mask, ROCKCHIP_MAX_LAYER) {
-			win = vop2_find_win_by_phys_id(vop2, phys_id);
-			VOP_WIN_SET(vop2, win, enable, 1);
-			if (win->feature & WIN_FEATURE_CLUSTER_MAIN)
-				VOP_CLUSTER_SET(vop2, win, enable, 1);
-		}
-
-		vop2_cfg_done(crtc);
-		vop2_wait_for_fs_by_done_bit_status(vp);
-	}
+	else
+		vop2_crtc_wins_switch_for_psr(crtc, true);
 }
 
 static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
