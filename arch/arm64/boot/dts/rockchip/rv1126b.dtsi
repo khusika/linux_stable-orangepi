@@ -1576,7 +1576,7 @@
 	};
 
 	i2c2: i2c@20800000 {
-		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
+		compatible = "rockchip,rv1126b-i2c";
 		reg = <0x20800000 0x1000>;
 		interrupts = <GIC_SPI 50 IRQ_TYPE_LEVEL_HIGH>;
 		#address-cells = <1>;
@@ -2273,22 +2273,20 @@
 	};
 
 	i2c0: i2c@21100000 {
-		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
+		compatible = "rockchip,rv1126b-i2c";
 		reg = <0x21100000 0x1000>;
 		interrupts = <GIC_SPI 48 IRQ_TYPE_LEVEL_HIGH>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clocks = <&cru CLK_I2C0>, <&cru PCLK_I2C0>;
 		clock-names = "i2c", "pclk";
-		dmas = <&dmac 29>, <&dmac 28>;
-		dma-names = "tx", "rx";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2c0m0_pins>;
 		status = "disabled";
 	};
 
 	i2c1: i2c@21110000 {
-		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
+		compatible = "rockchip,rv1126b-i2c";
 		reg = <0x21110000 0x1000>;
 		interrupts = <GIC_SPI 49 IRQ_TYPE_LEVEL_HIGH>;
 		#address-cells = <1>;
@@ -2303,7 +2301,7 @@
 	};
 
 	i2c3: i2c@21120000 {
-		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
+		compatible = "rockchip,rv1126b-i2c";
 		reg = <0x21120000 0x1000>;
 		interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_HIGH>;
 		#address-cells = <1>;
@@ -2318,30 +2316,26 @@
 	};
 
 	i2c4: i2c@21130000 {
-		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
+		compatible = "rockchip,rv1126b-i2c";
 		reg = <0x21130000 0x1000>;
 		interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_HIGH>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clocks = <&cru CLK_I2C4>, <&cru PCLK_I2C4>;
 		clock-names = "i2c", "pclk";
-		dmas = <&dmac 37>, <&dmac 36>;
-		dma-names = "tx", "rx";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2c4m0_pins>;
 		status = "disabled";
 	};
 
 	i2c5: i2c@21140000 {
-		compatible = "rockchip,rv1126b-i2c", "rockchip,rk3399-i2c";
+		compatible = "rockchip,rv1126b-i2c";
 		reg = <0x21140000 0x1000>;
 		interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_HIGH>;
 		#address-cells = <1>;
 		#size-cells = <0>;
 		clocks = <&cru CLK_I2C5>, <&cru PCLK_I2C5>;
 		clock-names = "i2c", "pclk";
-		dmas = <&dmac 39>, <&dmac 38>;
-		dma-names = "tx", "rx";
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2c5m0_pins>;
 		status = "disabled";
