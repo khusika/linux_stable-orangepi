@@ -25,7 +25,10 @@
 	_IO('V', BASE_VIDIOC_PRIVATE + 2)
 
 #define RKAIISP_CMD_QUEUE_BUF			\
-	_IOW('V', BASE_VIDIOC_PRIVATE + 3, struct rkisp_aiisp_st)
+	_IOW('V', BASE_VIDIOC_PRIVATE + 3, union rkaiisp_queue_buf)
+
+#define RKAIISP_CMD_INIT_AIRMS_BUFPOOL		\
+	_IOWR('V', BASE_VIDIOC_PRIVATE + 4, struct rkaiisp_rmsbuf_info)
 
 /**********************EVENT_PRIVATE***************************/
 #define RKAIISP_V4L2_EVENT_AIISP_DONE		(V4L2_EVENT_PRIVATE_START + 1)
@@ -44,13 +47,23 @@ enum rkaiisp_chn_src {
 	VPSL_SIG_CHN3,
 	VPSL_SIG_CHN4,
 	ISP_AIPRE_NARMAP,
-	AIISP_LAST_OUT
+	AIISP_LAST_OUT,
+	VICAP_BAYER_RAW,
+	ALLZERO_SIGMA,
+	ALLZERO_NARMAP
+};
+
+enum rkaiisp_exealgo {
+	AIBNR,
+	AIRMS,
+	AIYNR
 };
 
 enum rkaiisp_model_mode {
 	SINGLE_MODE,
 	COMBO_MODE,
-	SINGLEX2_MODE
+	SINGLEX2_MODE,
+	REMOSAIC_MODE
 };
 
 enum rkaiisp_exemode {
@@ -59,7 +72,19 @@ enum rkaiisp_exemode {
 	BOTHEVENT_IN_KERNEL
 };
 
+struct rkaiisp_airms_st {
+	int sequence;
+	int inbuf_idx;
+	int outbuf_idx;
+} __attribute__ ((packed));
+
+union rkaiisp_queue_buf {
+	struct rkisp_aiisp_st aibnr_st;
+	struct rkaiisp_airms_st airms_st;
+} __attribute__ ((packed));
+
 struct rkaiisp_param_info {
+	enum rkaiisp_exealgo exealgo;
 	enum rkaiisp_exemode exemode;
 	__u32 para_size;
 	__u32 max_runcnt;
@@ -75,6 +100,19 @@ struct rkaiisp_ispbuf_info {
 	__u32 sig_height[5];
 	__u32 narmap_width;
 	__u32 narmap_height;
+} __attribute__ ((packed));
+
+struct rkaiisp_rmsbuf_info {
+	__u32 image_width;
+	__u32 image_height;
+	__u32 sigma_width;
+	__u32 sigma_height;
+	__u32 narmap_width;
+	__u32 narmap_height;
+	__u32 inbuf_num;
+	__u32 outbuf_num;
+	int inbuf_fd[6];
+	int outbuf_fd[6];
 } __attribute__ ((packed));
 
 struct rkaiisp_other_cfg {

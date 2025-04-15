@@ -120,6 +120,7 @@ int rkaiisp_ispidx_queue(int dev_id, struct rkisp_aiisp_st *idxbuf)
 {
 	struct rkaiisp_hw_dev *hw_dev = rkaiisp_hwdev;
 	struct rkaiisp_device *aidev = NULL;
+	union rkaiisp_queue_buf queue_buf;
 	int i;
 
 	if (!hw_dev) {
@@ -146,7 +147,8 @@ int rkaiisp_ispidx_queue(int dev_id, struct rkisp_aiisp_st *idxbuf)
 		return -EINVAL;
 	}
 
-	return rkaiisp_queue_ispbuf(aidev, idxbuf);
+	queue_buf.aibnr_st = *idxbuf;
+	return rkaiisp_queue_ispbuf(aidev, &queue_buf);
 }
 EXPORT_SYMBOL(rkaiisp_ispidx_queue);
 

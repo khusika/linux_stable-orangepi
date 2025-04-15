@@ -16,13 +16,26 @@ static int rkaiisp_show(struct seq_file *p, void *v)
 	struct rkaiisp_device *aidev = p->private;
 	struct rkaiisp_hw_dev *hw_dev = aidev->hw_dev;
 	unsigned long flags = 0;
+	u32 image_width;
+	u32 image_height;
 	u32 frm_rate;
-	int idx_buf_len;
+	int i, idx_buf_len;
 
 	seq_printf(p, "%-18s Version:v%02x.%02x.%02x\n", aidev->v4l2_dev.name,
 		   RKAIISP_DRIVER_VERSION >> 16,
 		   (RKAIISP_DRIVER_VERSION & 0xff00) >> 8,
 		   RKAIISP_DRIVER_VERSION & 0x00ff);
+
+	for (i = 0; i < hw_dev->num_clks; i++) {
+		seq_printf(p, "%-18s %ld\n",
+			   hw_dev->match_data->clks[i],
+			   clk_get_rate(hw_dev->clks[i]));
+	}
+
+	seq_printf(p, "%-18s wrend cnt:%d buserr cnt:%d\n",
+		   "interrupt",
+		   aidev->isr_wrend_cnt,
+		   aidev->isr_buserr_cnt);
 
 	seq_printf(p, "%-18s %d\n", "dev id", aidev->dev_id);
 	seq_printf(p, "%-18s %d\n", "frame id", aidev->frame_id);
@@ -31,13 +44,21 @@ static int rkaiisp_show(struct seq_file *p, void *v)
 	seq_printf(p, "%-18s %d\n", "frm rate", frm_rate / 1000 / 1000);
 	seq_printf(p, "%-18s %d\n", "frm hdltime", aidev->frm_interval / 1000 / 1000);
 	seq_printf(p, "%-18s %d\n", "frm_oversdtim_cnt", aidev->frm_oversdtim_cnt);
+	seq_printf(p, "%-18s %d\n", "execute algo", aidev->exealgo);
 	seq_printf(p, "%-18s %d\n", "model mode", aidev->model_mode);
 	seq_printf(p, "%-18s %d\n", "model runcnt", aidev->model_runcnt);
 	seq_printf(p, "%-18s %d\n", "max runcnt", aidev->max_runcnt);
 	seq_printf(p, "%-18s %d\n", "para size", aidev->para_size);
 	seq_printf(p, "%-18s %d\n", "hw state", aidev->hwstate);
-	seq_printf(p, "%-18s %d\n", "iir width", aidev->ispbuf.iir_width);
-	seq_printf(p, "%-18s %d\n", "iir height", aidev->ispbuf.iir_height);
+	if (aidev->exealgo == AIRMS) {
+		image_width = aidev->rmsbuf.image_width;
+		image_height = aidev->rmsbuf.image_height;
+	} else {
+		image_width = aidev->ispbuf.iir_width;
+		image_height = aidev->ispbuf.iir_height;
+	}
+	seq_printf(p, "%-18s %d\n", "image width", image_width);
+	seq_printf(p, "%-18s %d\n", "image height", image_height);
 
 	spin_lock_irqsave(&hw_dev->hw_lock, flags);
 	idx_buf_len = rkaiisp_get_idxbuf_len(aidev);
