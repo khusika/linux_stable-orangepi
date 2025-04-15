@@ -13,3 +13,15 @@
 	model = "Rockchip RV1126B-P EVB V14 Board";
 	compatible = "rockchip,rv1126bp-evb-v14", "rockchip,rv1126b";
 };
+
+&fspi0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <75000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
