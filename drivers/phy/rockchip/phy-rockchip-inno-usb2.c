@@ -4808,7 +4808,21 @@ static struct platform_driver rockchip_usb2phy_driver = {
 		.of_match_table = rockchip_usb2phy_dt_match,
 	},
 };
+#ifdef CONFIG_INITCALL_ASYNC
+static int __init rockchip_usb2phy_driver_init(void)
+{
+	return platform_driver_register(&rockchip_usb2phy_driver);
+}
+fs_initcall(rockchip_usb2phy_driver_init);
+
+static void __exit rockchip_usb2phy_driver_exit(void)
+{
+	platform_driver_unregister(&rockchip_usb2phy_driver);
+}
+module_exit(rockchip_usb2phy_driver_exit);
+#else
 module_platform_driver(rockchip_usb2phy_driver);
+#endif
 
 MODULE_AUTHOR("Frank Wang <frank.wang@rock-chips.com>");
 MODULE_DESCRIPTION("Rockchip USB2.0 PHY driver");
