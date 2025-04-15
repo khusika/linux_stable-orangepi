@@ -1604,7 +1604,21 @@ static struct platform_driver rockchip_combphy_driver = {
 		.of_match_table = rockchip_combphy_of_match,
 	},
 };
+#ifdef CONFIG_INITCALL_ASYNC
+static int __init rockchip_combphy_driver_init(void)
+{
+	return platform_driver_register(&rockchip_combphy_driver);
+}
+fs_initcall(rockchip_combphy_driver_init);
+
+static void __exit rockchip_combphy_driver_exit(void)
+{
+	platform_driver_unregister(&rockchip_combphy_driver);
+}
+module_exit(rockchip_combphy_driver_exit);
+#else
 module_platform_driver(rockchip_combphy_driver);
+#endif
 
 MODULE_DESCRIPTION("Rockchip NANENG COMBPHY driver");
 MODULE_LICENSE("GPL v2");
