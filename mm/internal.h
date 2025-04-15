@@ -371,6 +371,11 @@ extern void memblock_free_pages(struct page *page, unsigned long pfn,
 					unsigned int order);
 #ifdef CONFIG_ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK
 extern void __init rk_free_pages_core(struct page *page, unsigned int order);
+extern unsigned long __init rk_deferred_init_pages(struct zone *zone,
+						   unsigned long pfn,
+						   unsigned long end_pfn);
+extern bool __meminit rk_defer_init_hpages(int nid, unsigned long zone_idx,
+				unsigned long pfn, unsigned long end_pfn);
 #endif
 extern void __free_pages_core(struct page *page, unsigned int order);
 extern void prep_compound_page(struct page *page, unsigned int order);

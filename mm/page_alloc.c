@@ -1822,6 +1822,31 @@ void __init rk_free_pages_core(struct page *page, unsigned int order)
 		totalhigh_pages_add(1 << order);
 #endif
 }
+
+unsigned long __init rk_deferred_init_pages(struct zone *zone,
+					    unsigned long pfn,
+					    unsigned long end_pfn)
+{
+	int nid = zone_to_nid(zone);
+	unsigned long nr_pages = 0;
+	int zid = zone_idx(zone);
+	struct page *page = NULL;
+
+	for (; pfn < end_pfn; pfn++) {
+		if (!page || pageblock_aligned(pfn))
+			page = pfn_to_page(pfn);
+		else
+			page++;
+
+		__init_single_page(page, pfn, zid, nid, true);
+		nr_pages++;
+
+		/* Call cond_resched() only once every 8 pages */
+		if ((nr_pages & 7) == 0)
+			cond_resched();
+	}
+	return (nr_pages);
+}
 #endif /* CONFIG_ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK */
 
 /*
@@ -6828,6 +6853,11 @@ void __meminit memmap_init_range(unsigned long size, int nid, unsigned long zone
 			start_pfn += altmap->reserve;
 		end_pfn = altmap->base_pfn + vmem_altmap_offset(altmap);
 	}
+#endif
+
+#ifdef CONFIG_ROCKCHIP_THUNDER_BOOT_DEFER_FREE_MEMBLOCK
+	if (rk_defer_init_hpages(nid, zone, start_pfn, end_pfn))
+		return;
 #endif
 
 #ifdef CONFIG_ROCKCHIP_THUNDER_BOOT
