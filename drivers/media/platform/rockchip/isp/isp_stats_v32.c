@@ -1164,6 +1164,9 @@ void rkisp_init_stats_vdev_v32(struct rkisp_isp_stats_vdev *stats_vdev)
 	} else {
 		stats_vdev->priv_ops = NULL;
 		stats_vdev->rd_stats_from_ddr = false;
+		rkisp_isp_stats_ops_tbl.stats_tb = NULL;
+		rkisp_isp_stats_ops_tbl.first_ddr_cfg = NULL;
+		rkisp_isp_stats_ops_tbl.next_ddr_cfg = NULL;
 	}
 	stats_vdev->ops = &rkisp_isp_stats_ops_tbl;
 }
