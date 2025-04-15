@@ -388,6 +388,9 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 		writel(val, base + RKFEC_WR_C_BASE);
 		val += out_uv_offset;
 		writel(val, base + RKFEC_WR_Y_BASE);
+
+		val = SW_FEC_WR_FBCE_HEAD_OFFSET(out_uv_offset);
+		writel(val, base + RKFEC_WR_FBCE_HEAD_OFFSET);
 	} else {
 		val += buf->buf_cfg.out_offs;
 		writel(val, base + RKFEC_WR_Y_BASE);

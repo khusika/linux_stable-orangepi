@@ -117,6 +117,9 @@
 #define FEC_WR_VIR_STRIDE_Y(x)          ((x) & 0x3fff)
 #define FEC_WR_VIR_STRIDE_C(x)          (((x) & 0x3fff) << 16)
 
+/* FEC_WR_FBCE_HEAD_OFFSET */
+#define SW_FEC_WR_FBCE_HEAD_OFFSET(x)   ((x) << 4)
+
 /* LUT SIZE */
 #define SW_LUT_SIZE(x)                  ((x) & 0x3fffff)
 
