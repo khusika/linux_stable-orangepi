@@ -15,7 +15,7 @@
 
 #include <soc/rockchip/rockchip_sip.h>
 
-#include "rockchip_dmc_timing.h"
+#include "../../devfreq/rockchip_dmc_timing.h"
 
 /*
  * DMCDBG share memory request 4KB for delivery parameter
@@ -74,10 +74,15 @@ struct dram_cap_info {
 
 struct dram_info {
 	unsigned int version;
-	char dramtype[10];
+	char dramtype[12];
 	unsigned int dramfreq;
 	unsigned int channel_num;
 	struct dram_cap_info ch[2];
+	/* Version 2, support dramid */
+	unsigned int dramid[3];
+	/* Version 3, support 4 channel */
+	unsigned int ext_channel_num;
+	struct dram_cap_info ext_ch[2];
 };
 
 static const char * const power_save_msg[] = {
@@ -192,9 +197,9 @@ static int dmcinfo_proc_show(struct seq_file *m, void *v)
 {
 	struct arm_smccc_res res;
 	struct dram_info *p_dram_info;
-	struct file *fp  = NULL;
-	char cur_freq[20] = {0};
-	char governor[20] = {0};
+	struct file *fp = NULL;
+	char cur_freq[20] = { 0 };
+	char governor[20] = { 0 };
 	loff_t pos;
 	u32 i;
 
@@ -205,6 +210,11 @@ static int dmcinfo_proc_show(struct seq_file *m, void *v)
 			   res.a0);
 		return -ENOMEM;
 	}
+	if (res.a1) {
+		seq_printf(m, "ddrdbg function get dram info error:%lx\n",
+			   res.a1);
+		return -EPERM;
+	}
 
 	if (!dmcdbg_data.inited_flag) {
 		seq_puts(m, "dmcdbg_data no int\n");
@@ -213,25 +223,28 @@ static int dmcinfo_proc_show(struct seq_file *m, void *v)
 	p_dram_info = (struct dram_info *)dmcdbg_data.share_memory;
 
 	/* dram type information */
-	seq_printf(m,
-		   "DramType:	%s\n"
-		   ,
-		   p_dram_info->dramtype
-		   );
-
+	seq_printf(m, "DramType:	%s\n", p_dram_info->dramtype);
+	if (p_dram_info->version >= 0x2) {
+		if ((strcmp(p_dram_info->dramtype, "LPDDR2") == 0) ||
+		    (strcmp(p_dram_info->dramtype, "LPDDR3") == 0) ||
+		    (strcmp(p_dram_info->dramtype, "LPDDR4") == 0) ||
+		    (strcmp(p_dram_info->dramtype, "LPDDR4X") == 0) ||
+		    (strcmp(p_dram_info->dramtype, "LPDDR5") == 0))
+			seq_printf(m,
+				   "Dram ID:	MR5=0x%x,MR6=0x%x,MR7=0x%x\n",
+				   p_dram_info->dramid[0],
+				   p_dram_info->dramid[1],
+				   p_dram_info->dramid[2]);
+		else
+			seq_puts(m, "Dram ID:	None\n");
+	}
 	/* dram capacity information */
-	seq_printf(m,
-		   "\n"
-		   "DramCapacity:\n"
-		   );
+	seq_printf(m, "\n"
+		      "DramCapacity:\n");
 
 	for (i = 0; i < p_dram_info->channel_num; i++) {
 		if (p_dram_info->channel_num == 2)
-			seq_printf(m,
-				   "Channel [%d]:\n"
-				   ,
-				   i
-				   );
+			seq_printf(m, "Channel [%d]:\n", i);
 
 		seq_printf(m,
 			   "CS Count:	%d\n"
@@ -241,8 +254,7 @@ static int dmcinfo_proc_show(struct seq_file *m, void *v)
 			   "CS0_Row:	%d\n"
 			   "CS1_Row:	%d\n"
 			   "DieBusWidth:	%d bit\n"
-			   "TotalSize:	%d MB\n"
-			   ,
+			   "TotalSize:	%d MB\n",
 			   p_dram_info->ch[i].rank,
 			   p_dram_info->ch[i].buswidth,
 			   p_dram_info->ch[i].col,
@@ -250,8 +262,30 @@ static int dmcinfo_proc_show(struct seq_file *m, void *v)
 			   p_dram_info->ch[i].cs0_row,
 			   p_dram_info->ch[i].cs1_row,
 			   p_dram_info->ch[i].die_buswidth,
-			   p_dram_info->ch[i].size
-			   );
+			   p_dram_info->ch[i].size);
+	}
+
+	if (p_dram_info->version >= 0x3) {
+		for (i = 0; i < p_dram_info->ext_channel_num; i++) {
+			seq_printf(m, "Channel [%d]:\n", i + 2);
+			seq_printf(m,
+				"CS Count:	%d\n"
+				"Bus Width:	%d bit\n"
+				"Column:		%d\n"
+				"Bank:		%d\n"
+				"CS0_Row:	%d\n"
+				"CS1_Row:	%d\n"
+				"DieBusWidth:	%d bit\n"
+				"TotalSize:	%d MB\n",
+				p_dram_info->ext_ch[i].rank,
+				p_dram_info->ext_ch[i].buswidth,
+				p_dram_info->ext_ch[i].col,
+				p_dram_info->ext_ch[i].bank,
+				p_dram_info->ext_ch[i].cs0_row,
+				p_dram_info->ext_ch[i].cs1_row,
+				p_dram_info->ext_ch[i].die_buswidth,
+				p_dram_info->ext_ch[i].size);
+		}
 	}
 
 	/* check devfreq/dmc device */
@@ -260,10 +294,8 @@ static int dmcinfo_proc_show(struct seq_file *m, void *v)
 		seq_printf(m,
 			   "\n"
 			   "devfreq/dmc:	Disable\n"
-			   "DramFreq:	%d\n"
-			   ,
-			   p_dram_info->dramfreq
-			   );
+			   "DramFreq:	%d\n",
+			   p_dram_info->dramfreq);
 	} else {
 		pos = 0;
 		kernel_read(fp, cur_freq, sizeof(cur_freq), &pos);
@@ -282,15 +314,11 @@ static int dmcinfo_proc_show(struct seq_file *m, void *v)
 			   "\n"
 			   "devfreq/dmc:	Enable\n"
 			   "governor:	%s\n"
-			   "cur_freq:	%s\n"
-			   ,
-			   governor,
-			   cur_freq
-			   );
+			   "cur_freq:	%s\n",
+			   governor, cur_freq);
 		seq_printf(m,
 			   "NOTE:\n"
-			   "more information about dmc can get from /sys/class/devfreq/dmc.\n"
-			   );
+			   "more information about dmc can get from /sys/class/devfreq/dmc.\n");
 	}
 
 	return 0;
@@ -301,11 +329,11 @@ static int dmcinfo_proc_open(struct inode *inode, struct file *file)
 	return single_open(file, dmcinfo_proc_show, NULL);
 }
 
-static const struct file_operations dmcinfo_proc_fops = {
-	.open		= dmcinfo_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
+static const struct proc_ops dmcinfo_proc_fops = {
+	.proc_open		= dmcinfo_proc_open,
+	.proc_read		= seq_read,
+	.proc_lseek		= seq_lseek,
+	.proc_release		= single_release,
 };
 
 static int proc_dmcinfo_init(void)
@@ -340,19 +368,15 @@ static int powersave_proc_show(struct seq_file *m, void *v)
 	}
 	p_power = (struct power_save_info *)dmcdbg_data.share_memory;
 
-	seq_printf(m,
-		   "low power information:\n"
-		   "\n"
-		   "[number]name: value\n"
-		   );
+	seq_printf(m, "low power information:\n"
+		      "\n"
+		      "[number]name: value\n");
 
 	p_uint = (unsigned int *)p_power;
 	for (i = 0; i < ARRAY_SIZE(power_save_msg); i++)
 		seq_printf(m,
-			   "[%d]%s: %d\n"
-			   ,
-			   i, power_save_msg[i], *(p_uint + i)
-			   );
+			   "[%d]%s: %d\n",
+			   i, power_save_msg[i], *(p_uint + i));
 
 	seq_printf(m,
 		   "\n"
@@ -364,8 +388,7 @@ static int powersave_proc_show(struct seq_file *m, void *v)
 		   "Support for setting multiple parameters at the same time.\n"
 		   "echo number=value,number=value,... > /proc/dmcdbg/powersave\n"
 		   "eg:\n"
-		   "  echo 0=1,1=32 > /proc/dmcdbg/powersave\n"
-		   );
+		   "  echo 0=1,1=32 > /proc/dmcdbg/powersave\n");
 
 	return 0;
 }
@@ -463,12 +486,12 @@ err:
 	return ret;
 }
 
-static const struct file_operations powersave_proc_fops = {
-	.open		= powersave_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-	.write		= powersave_proc_write,
+static const struct proc_ops powersave_proc_fops = {
+	.proc_open		= powersave_proc_open,
+	.proc_read		= seq_read,
+	.proc_lseek		= seq_lseek,
+	.proc_release		= single_release,
+	.proc_write		= powersave_proc_write,
 };
 
 static int proc_powersave_init(void)
@@ -502,48 +525,34 @@ static int drvodt_proc_show(struct seq_file *m, void *v)
 	}
 	p_drvodt = (struct drv_odt_info *)dmcdbg_data.share_memory;
 
-	seq_printf(m,
-		   "drv and odt information:\n"
-		   "\n"
-		   "[number]name: value (ohm)\n"
-	);
+	seq_printf(m, "drv and odt information:\n"
+		      "\n"
+		      "[number]name: value (ohm)\n");
 
 	p_uint = (unsigned int *)p_drvodt;
 	for (i = 0; i < ARRAY_SIZE(drv_odt_msg); i++) {
 		if (*(p_uint + (i * 3)) == DRV_ODT_UNKNOWN)
 			seq_printf(m,
-				   "[%2d]%s: NULL (unknown) %c\n"
-				   ,
+				   "[%2d]%s: NULL (unknown) %c\n",
 				   i, drv_odt_msg[i],
-				   (*(p_uint + (i * 3) + 2) ==
-				    DRV_ODT_SUSPEND_FIX) ? '\0' : '*'
-			);
+				   (*(p_uint + (i * 3) + 2) == DRV_ODT_SUSPEND_FIX) ? '\0' : '*');
 		else if (*(p_uint + (i * 3) + 1) == DRV_ODT_UNKNOWN)
 			seq_printf(m,
-				   "[%2d]%s: %d (unknown) %c\n"
-				   ,
+				   "[%2d]%s: %d (unknown) %c\n",
 				   i, drv_odt_msg[i], *(p_uint + (i * 3)),
-				   (*(p_uint + (i * 3) + 2) ==
-				    DRV_ODT_SUSPEND_FIX) ? '\0' : '*'
-			);
+				   (*(p_uint + (i * 3) + 2) == DRV_ODT_SUSPEND_FIX) ? '\0' : '*');
 		else if (i < (ARRAY_SIZE(drv_odt_msg) - 2))
 			seq_printf(m,
-				   "[%2d]%s: %d (%d ohm) %c\n"
-				   ,
+				   "[%2d]%s: %d (%d ohm) %c\n",
 				   i, drv_odt_msg[i], *(p_uint + (i * 3)),
 				   *(p_uint + (i * 3) + 1),
-				   (*(p_uint + (i * 3) + 2) ==
-				    DRV_ODT_SUSPEND_FIX) ? '\0' : '*'
-			);
+				   (*(p_uint + (i * 3) + 2) == DRV_ODT_SUSPEND_FIX) ? '\0' : '*');
 		else
 			seq_printf(m,
-				   "[%2d]%s: %d (%d %%) %c\n"
-				   ,
+				   "[%2d]%s: %d (%d %%) %c\n",
 				   i, drv_odt_msg[i], *(p_uint + (i * 3)),
 				   *(p_uint + (i * 3) + 1),
-				   (*(p_uint + (i * 3) + 2) ==
-				    DRV_ODT_SUSPEND_FIX) ? '\0' : '*'
-			);
+				   (*(p_uint + (i * 3) + 2) == DRV_ODT_SUSPEND_FIX) ? '\0' : '*');
 	}
 
 	seq_printf(m,
@@ -558,8 +567,7 @@ static int drvodt_proc_show(struct seq_file *m, void *v)
 		   "eg: set soc side ca drv up and down to 20\n"
 		   "  echo 6=20,7=20 > /proc/dmcdbg/drvodt\n"
 		   "Note: Please update both up and down at the same time.\n"
-		   "      (*) mean unsupported setting value\n"
-	);
+		   "      (*) mean unsupported setting value\n");
 
 	return 0;
 }
@@ -657,12 +665,12 @@ err:
 	return ret;
 }
 
-static const struct file_operations drvodt_proc_fops = {
-	.open		= drvodt_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-	.write		= drvodt_proc_write,
+static const struct proc_ops drvodt_proc_fops = {
+	.proc_open		= drvodt_proc_open,
+	.proc_read		= seq_read,
+	.proc_lseek		= seq_lseek,
+	.proc_release		= single_release,
+	.proc_write		= drvodt_proc_write,
 };
 
 static int proc_drvodt_init(void)
@@ -694,28 +702,20 @@ static int skew_proc_show(struct seq_file *m, void *v)
 		return -EPERM;
 	}
 
-	seq_printf(m,
-		   "de-skew information:\n"
-		   "\n"
-		   "[group_number]name: value\n"
-	);
+	seq_printf(m, "de-skew information:\n"
+		      "\n"
+		      "[group_number]name: value\n");
 
 	for (group = 0; group < dmcdbg_data.skew_group_num; group++) {
 		if (dmcdbg_data.skew_group[group].note != NULL)
-			seq_printf(m,
-				"%s\n"
-				,
-				dmcdbg_data.skew_group[group].note
-			);
+			seq_printf(m, "%s\n",
+				   dmcdbg_data.skew_group[group].note);
 		p_uint = (unsigned int *)dmcdbg_data.skew_group[group].p_skew_info;
 		for (i = 0; i < dmcdbg_data.skew_group[group].skew_num; i++)
-			seq_printf(m,
-				"[%c%d_%d]%s: %d\n"
-				,
-				(i < 10) ? ' ' : '\0', group, i,
-				dmcdbg_data.skew_group[group].p_skew_timing[i],
-				*(p_uint + i)
-			);
+			seq_printf(m, "[%c%d_%d]%s: %d\n",
+				   (i < 10) ? ' ' : '\0', group, i,
+				   dmcdbg_data.skew_group[group].p_skew_timing[i],
+				   *(p_uint + i));
 	}
 
 	seq_printf(m,
@@ -728,8 +728,7 @@ static int skew_proc_show(struct seq_file *m, void *v)
 		   "Support for setting multiple parameters simultaneously.\n"
 		   "echo group_number=value,group_number=value,... > /proc/dmcdbg/deskew\n"
 		   "eg:\n"
-		   "  echo 0_1=8,1_2=8 > /proc/dmcdbg/deskew\n"
-	);
+		   "  echo 0_1=8,1_2=8 > /proc/dmcdbg/deskew\n");
 
 	return 0;
 }
@@ -838,12 +837,12 @@ err:
 	return ret;
 }
 
-static const struct file_operations skew_proc_fops = {
-	.open		= skew_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
-	.write		= skew_proc_write,
+static const struct proc_ops skew_proc_fops = {
+	.proc_open		= skew_proc_open,
+	.proc_read		= seq_read,
+	.proc_lseek		= seq_lseek,
+	.proc_release		= single_release,
+	.proc_write		= skew_proc_write,
 };
 
 static int proc_skew_init(void)
@@ -876,18 +875,13 @@ static int regsinfo_proc_show(struct seq_file *m, void *v)
 	}
 	p_regsinfo = (struct registers_info *)dmcdbg_data.share_memory;
 
-	seq_printf(m,
-		   "registers base address information:\n"
-		   "\n"
-	);
+	seq_printf(m, "registers base address information:\n"
+		      "\n");
 
 	for (i = 0; i < p_regsinfo->regs_num; i++) {
-		seq_printf(m,
-			   "%s=0x%x\n"
-			   ,
+		seq_printf(m, "%s=0x%x\n",
 			   p_regsinfo->regs[i].regs_name,
-			   p_regsinfo->regs[i].regs_addr
-			   );
+			   p_regsinfo->regs[i].regs_addr);
 	}
 
 	return 0;
@@ -898,12 +892,62 @@ static int regsinfo_proc_open(struct inode *inode, struct file *file)
 	return single_open(file, regsinfo_proc_show, NULL);
 }
 
-static const struct file_operations regsinfo_proc_fops = {
-	.open		= regsinfo_proc_open,
-	.read		= seq_read,
-	.llseek		= seq_lseek,
-	.release	= single_release,
+static const struct proc_ops regsinfo_proc_fops = {
+	.proc_open		= regsinfo_proc_open,
+	.proc_read		= seq_read,
+	.proc_lseek		= seq_lseek,
+	.proc_release	= single_release,
 };
+
+static int rk_dmcdbg_sip_smc_match_ver(struct platform_device *pdev,
+				       u32 match_ver)
+{
+	struct arm_smccc_res res;
+
+	/* check ddr_debug_func version */
+	res = sip_smc_dram(0, DDRDBG_FUNC_GET_VERSION,
+			   ROCKCHIP_SIP_CONFIG_DRAM_DEBUG);
+	dev_notice(&pdev->dev, "current ATF ddr_debug_func version 0x%lx.\n",
+		   res.a1);
+	/*
+	 * [15:8] major version, [7:0] minor version
+	 * major version must match both kernel dmcdbg and ATF ddr_debug_func.
+	 */
+	if (res.a0 || res.a1 < match_ver || ((res.a1 & 0xff00) != (match_ver & 0xff00))) {
+		dev_err(&pdev->dev,
+			"version invalid, need update to 0x%x or newer, the major version unmatch!\n",
+			match_ver);
+
+		return -ENXIO;
+	}
+
+	return 0;
+}
+
+static int proc_dmcdbg_init(struct platform_device *pdev)
+{
+	struct arm_smccc_res res;
+
+	/* request share memory for pass parameter */
+	res = sip_smc_request_share_mem(DMCDBG_PAGE_NUMS,
+					SHARE_PAGE_TYPE_DDRDBG);
+	if (res.a0 != 0) {
+		dev_err(&pdev->dev, "request share mem error!\n");
+		return -ENOMEM;
+	}
+
+	dmcdbg_data.share_memory = (void __iomem *)res.a1;
+	dmcdbg_data.inited_flag = 1;
+
+	/* create parent dir in /proc */
+	proc_dmcdbg_dir = proc_mkdir(PROC_DMCDBG_DIR_NAME, NULL);
+	if (!proc_dmcdbg_dir) {
+		dev_err(&pdev->dev, "create proc dir error!\n");
+		return -ENOENT;
+	}
+
+	return 0;
+}
 
 static int proc_regsinfo_init(void)
 {
@@ -965,45 +1009,40 @@ static void rv1126_get_skew_parameter(void)
 	dmcdbg_data.skew_group[4].note = "(cs1_b_skew)";
 }
 
+static __maybe_unused int px30_dmcdbg_init(struct platform_device *pdev,
+					   struct rockchip_dmcdbg *dmcdbg)
+{
+	u32 version = 0x101;
+	int ret;
+
+	ret = rk_dmcdbg_sip_smc_match_ver(pdev, version);
+	if (ret)
+		return ret;
+
+	ret = proc_dmcdbg_init(pdev);
+	if (ret)
+		return ret;
+
+	proc_dmcinfo_init();
+
+	return 0;
+}
+
 static __maybe_unused int rv1126_dmcdbg_init(struct platform_device *pdev,
 					     struct rockchip_dmcdbg *dmcdbg)
 {
-	struct arm_smccc_res res;
+	u32 version = 0x102;
+	int ret;
 
-	/* check ddr_debug_func version */
-	res = sip_smc_dram(0, DDRDBG_FUNC_GET_VERSION,
-			   ROCKCHIP_SIP_CONFIG_DRAM_DEBUG);
-	dev_notice(&pdev->dev, "current ATF ddr_debug_func version 0x%lx.\n",
-		   res.a1);
-	/*
-	 * [15:8] major version, [7:0] minor version
-	 * major version must match both kernel dmcdbg and ATF ddr_debug_func.
-	 */
-	if (res.a0 || res.a1 < 0x101 || ((res.a1 & 0xff00) != 0x100)) {
-		dev_err(&pdev->dev,
-			"version invalid,need update,the major version unmatch!\n");
-		return -ENXIO;
-	}
+	ret = rk_dmcdbg_sip_smc_match_ver(pdev, version);
+	if (ret)
+		return ret;
 
-	/* request share memory for pass parameter */
-	res = sip_smc_request_share_mem(DMCDBG_PAGE_NUMS,
-					SHARE_PAGE_TYPE_DDRDBG);
-	if (res.a0 != 0) {
-		dev_err(&pdev->dev, "request share mem error\n");
-		return -ENOMEM;
-	}
-
-	dmcdbg_data.share_memory = (void __iomem *)res.a1;
-	dmcdbg_data.inited_flag = 1;
+	ret = proc_dmcdbg_init(pdev);
+	if (ret)
+		return ret;
 
 	rv1126_get_skew_parameter();
-
-	/* create parent dir in /proc */
-	proc_dmcdbg_dir = proc_mkdir(PROC_DMCDBG_DIR_NAME, NULL);
-	if (!proc_dmcdbg_dir) {
-		dev_err(&pdev->dev, "create proc dir error!");
-		return -ENOENT;
-	}
 
 	proc_dmcinfo_init();
 	proc_powersave_init();
@@ -1014,7 +1053,21 @@ static __maybe_unused int rv1126_dmcdbg_init(struct platform_device *pdev,
 }
 
 static const struct of_device_id rockchip_dmcdbg_of_match[] = {
-	{ .compatible = "rockchip,rv1126-dmcdbg", .data = rv1126_dmcdbg_init},
+#ifdef CONFIG_CPU_PX30
+	{ .compatible = "rockchip,px30-dmcdbg", .data = px30_dmcdbg_init },
+#endif
+#ifdef CONFIG_CPU_RV1126
+	{ .compatible = "rockchip,rv1126-dmcdbg", .data = rv1126_dmcdbg_init },
+#endif
+#ifdef CONFIG_CPU_RK3568
+	{ .compatible = "rockchip,rk3568-dmcdbg", .data = px30_dmcdbg_init },
+#endif
+#ifdef CONFIG_CPU_RK3576
+	{ .compatible = "rockchip,rk3576-dmcdbg", .data = px30_dmcdbg_init },
+#endif
+#ifdef CONFIG_CPU_RK3588
+	{ .compatible = "rockchip,rk3588-dmcdbg", .data = px30_dmcdbg_init },
+#endif
 	{ },
 };
 MODULE_DEVICE_TABLE(of, rockchip_dmcdbg_of_match);
@@ -1023,7 +1076,6 @@ static int rockchip_dmcdbg_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct rockchip_dmcdbg *data;
-	const struct of_device_id *match;
 	int (*init)(struct platform_device *pdev,
 		    struct rockchip_dmcdbg *data);
 	int ret = 0;
@@ -1035,20 +1087,28 @@ static int rockchip_dmcdbg_probe(struct platform_device *pdev)
 	data->dev = dev;
 
 	/* match soc chip init */
-	match = of_match_node(rockchip_dmcdbg_of_match, pdev->dev.of_node);
-	if (match) {
-		init = match->data;
-		if (init) {
-			if (init(pdev, data))
-				return -EINVAL;
-		}
+	init = device_get_match_data(&pdev->dev);
+	if (init) {
+		if (init(pdev, data))
+			return -EINVAL;
 	}
 
 	return ret;
 }
 
+static int rockchip_dmcdbg_remove(struct platform_device *pdev)
+{
+	remove_proc_subtree(PROC_DMCDBG_DIR_NAME, NULL);
+
+	dmcdbg_data.inited_flag = 0;
+	dmcdbg_data.share_memory = NULL;
+
+	return 0;
+}
+
 static struct platform_driver rockchip_dmcdbg_driver = {
 	.probe	= rockchip_dmcdbg_probe,
+	.remove = rockchip_dmcdbg_remove,
 	.driver = {
 		.name	= "rockchip,dmcdbg",
 		.of_match_table = rockchip_dmcdbg_of_match,
