@@ -32,8 +32,8 @@ static void offline_fec_show_hw(struct seq_file *p, struct rkfec_hw_dev *hw)
 	};
 
 	static const char * const lut_density[] = {
-		"16x8",
 		"32x16",
+		"16x8",
 		"4x4"
 	};
 
@@ -86,7 +86,7 @@ static int offline_fec_show(struct seq_file *p, void *v)
 	seq_printf(p, "%-10s Version:v%02x.%02x.%02x\n", ofl->v4l2_dev.name,
 		   RKFEC_DRIVER_VERSION >> 16,
 		   (RKFEC_DRIVER_VERSION & 0xff00) >> 8,
-		   RKFEC_DRIVER_VERSION & 0x00ff);
+		   RKFEC_DRIVER_VERSION & 0xff);
 	for (i = 0; i < ofl->hw->clks_num; i++) {
 		seq_printf(p, "%-10s %ld\n", ofl->hw->match_data->clks[i],
 			   clk_get_rate(ofl->hw->clks[i]));

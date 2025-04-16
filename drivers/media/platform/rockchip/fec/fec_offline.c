@@ -13,9 +13,13 @@ int rkfec_debug;
 module_param_named(debug, rkfec_debug, int, 0644);
 MODULE_PARM_DESC(debug, "Debug level (0-6)");
 
-int rkfec_stdfps = 30;
+static int rkfec_stdfps = 30;
 module_param_named(standardfps, rkfec_stdfps, int, 0644);
 MODULE_PARM_DESC(standardfps, "standard fps");
+
+static int rkfec_cache_linesize = 2;
+module_param_named(cache_linesize, rkfec_cache_linesize, int, 0644);
+MODULE_PARM_DESC(cache_linesize, "Cache linesize (0-3)");
 
 #if IS_LINUX_VERSION_AT_LEAST_6_1
 	#define GET_SG_TABLE(mem_ops, off_buf) mem_ops->cookie(&(off_buf)->vb, (off_buf)->mem)
@@ -443,8 +447,10 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 
 	writel(0, base + RKFEC_CLK_DIS);
 
+	// cache
 	writel(0x1c, base + RKFEC_CACHE_MAX_READS);
-	writel(0x27, base + RKFEC_CACHE_CTRL);
+	val = SW_CACHE_LINESIZE(rkfec_cache_linesize) | 0x7;
+	writel(val, base + RKFEC_CACHE_CTRL);
 
 	//update
 	writel(SYS_FEC_FORCE_UPD, base + RKFEC_UPD);

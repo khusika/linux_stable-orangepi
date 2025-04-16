@@ -123,6 +123,13 @@
 /* LUT SIZE */
 #define SW_LUT_SIZE(x)                  ((x) & 0x3fffff)
 
+/* FEC_CACHE_CTRL */
+#define SW_CACHE_LINESIZE(x)		((x & 0x3) << 4)
+#define SW_CACHE_FORCE_BSP(x)		((x & 0x1) << 12)
+#define SW_REPLACE_STRATEGY(x)		((x & 0x1) << 9)
+#define SW_CACHELINE_EN(x)		((x & 0x1) << 13)
+#define SW_CACHE_BYPASS_EN(x)		((x & 0x1) << 6)
+
 /* FEC_INT_EN */
 #define PBUF_BD_CRS_P                   BIT(0)
 #define FEC_STOP_IRQ                    BIT(1)
