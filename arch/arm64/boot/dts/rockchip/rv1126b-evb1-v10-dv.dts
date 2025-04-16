@@ -36,13 +36,13 @@
 
 &spi0 {
 	status = "okay";
-	max-freq = <24000000>;
+	max-freq = <20000000>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi0m2_clk_pins &spi0m2_csn0_pins &inv_int1>;
 	icm42670: icm42670@0 {
 		compatible = "invensense,icm42670";
 		reg = <0x0>;
-		spi-max-frequency = <24000000>;
+		spi-max-frequency = <20000000>;
 		spi-cpha;
 		spi-cpol;
 		//vdd-supply = <&vcc_3v3_s0>;
