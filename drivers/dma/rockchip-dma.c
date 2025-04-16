@@ -1353,7 +1353,21 @@ static struct platform_driver rk_pdma_driver = {
 	.remove		= rk_dma_remove,
 };
 
+#ifdef CONFIG_ROCKCHIP_THUNDER_BOOT
+static int __init rk_pdma_driver_init(void)
+{
+	return platform_driver_register(&rk_pdma_driver);
+}
+arch_initcall_sync(rk_pdma_driver_init);
+
+static void __exit rk_pdma_driver_exit(void)
+{
+	platform_driver_unregister(&rk_pdma_driver);
+}
+module_exit(rk_pdma_driver_exit);
+#else
 module_platform_driver(rk_pdma_driver);
+#endif
 
 MODULE_DESCRIPTION("Rockchip DMA Driver");
 MODULE_AUTHOR("Sugar.Zhang@rock-chips.com");
