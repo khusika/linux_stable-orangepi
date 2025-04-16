@@ -166,6 +166,11 @@ static struct pvtpll_table rv1126b_enc_pvtpll_table[] = {
 	ROCKCHIP_PVTPLL(550000000, 0, 72),
 };
 
+static struct pvtpll_table rv1126b_isp_pvtpll_table[] = {
+	/* rate_hz, ring_se, length */
+	ROCKCHIP_PVTPLL(490000000, 0, 100),
+};
+
 static struct pvtpll_table rv1126b_npu_pvtpll_table[] = {
 	/* rate_hz, ring_se, length, volt_sel_thr */
 	ROCKCHIP_PVTPLL_VOLT_SEL(1000000000, 0, 12, 7),
@@ -670,6 +675,15 @@ static const struct rockchip_clock_pvtpll_info rv1126b_enc_pvtpll_data = {
 	.pvtpll_calibrate = rv1103b_pvtpll_calibrate,
 };
 
+static const struct rockchip_clock_pvtpll_info rv1126b_isp_pvtpll_data = {
+	.config = rv1103b_pvtpll_configs,
+	.table_size = ARRAY_SIZE(rv1126b_isp_pvtpll_table),
+	.table = rv1126b_isp_pvtpll_table,
+	.calibrate_length_step = 8,
+	.calibrate_freq_per_step = 20,
+	.pvtpll_calibrate = rv1103b_pvtpll_calibrate,
+};
+
 static const struct rockchip_clock_pvtpll_info rv1126b_npu_pvtpll_data = {
 	.config = rv1126b_npu_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_npu_pvtpll_table),
@@ -716,6 +730,10 @@ static const struct of_device_id rockchip_clock_pvtpll_match[] = {
 	{
 		.compatible = "rockchip,rv1126b-enc-pvtpll",
 		.data = (void *)&rv1126b_enc_pvtpll_data,
+	},
+	{
+		.compatible = "rockchip,rv1126b-isp-pvtpll",
+		.data = (void *)&rv1126b_isp_pvtpll_data,
 	},
 	{
 		.compatible = "rockchip,rv1126b-npu-pvtpll",
