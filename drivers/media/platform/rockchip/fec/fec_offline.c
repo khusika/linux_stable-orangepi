@@ -21,6 +21,10 @@ static int rkfec_cache_linesize = 2;
 module_param_named(cache_linesize, rkfec_cache_linesize, int, 0644);
 MODULE_PARM_DESC(cache_linesize, "Cache linesize (0-3)");
 
+static int rkfec_user_debug;
+module_param_named(user_debug, rkfec_user_debug, int, 0644);
+MODULE_PARM_DESC(user_debug, "Debug level (0-6)");
+
 #if IS_LINUX_VERSION_AT_LEAST_6_1
 	#define GET_SG_TABLE(mem_ops, off_buf) mem_ops->cookie(&(off_buf)->vb, (off_buf)->mem)
 #else
