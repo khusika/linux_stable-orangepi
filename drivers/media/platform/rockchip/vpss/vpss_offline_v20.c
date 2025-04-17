@@ -1727,11 +1727,15 @@ static int rkvpss_ofl_run(struct rkvpss_offline_dev *ofl,
 		if (!hw->is_ofl_ch[i])
 			continue;
 		mask |= (RKVPSS_ISP2VPSS_CHN0_SEL(3) << i * 2);
-		if (hw->is_ofl_cmsc)
-			mask |= RKVPSS_ISP2VPSS_ONLINE2_CMSC_EN;
 		if (cfg->output[i].enable)
 			val |= (RKVPSS_ISP2VPSS_CHN0_SEL(1) << i * 2);
 	}
+	if (hw->is_ofl_cmsc) {
+		val |= RKVPSS_ISP2VPSS_ONLINE2_CMSC_EN;
+		mask |= RKVPSS_ISP2VPSS_ONLINE2_CMSC_EN;
+	}
+	val |= RKVPSS_ISP2VPSS_ONLINE2;
+	mask |= RKVPSS_ISP2VPSS_ONLINE2;
 	rkvpss_hw_set_bits(hw, RKVPSS_VPSS_ONLINE, mask, val);
 
 	update = 0;
