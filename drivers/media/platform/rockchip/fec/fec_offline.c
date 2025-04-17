@@ -273,8 +273,13 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	u32 val;
 	u32 in_w = buf->in_width, in_h = buf->in_height;
 	u32 out_w = buf->out_width, out_h = buf->out_height;
+	/* Calculate virtual width in bytes */
 	u32 in_stride, out_stride_y, out_stride_uv;
+	/* Calculate uv offset in bytes */
 	u32 in_uv_offset, out_uv_offset;
+	/* Calculate byte offset based on pixel offset */
+	u32 in_y_start = 0, in_uv_start = 0, out_y_start = 0, out_uv_start = 0;
+	u32 y_base, c_base;
 	void __iomem *base = ofl->hw->base_addr;
 	int ret = -EINVAL;
 	ktime_t t = 0;
@@ -288,6 +293,11 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 		 buf->in_fourcc >> 16, buf->in_fourcc >> 24,
 		 buf->out_fourcc, buf->out_fourcc >> 8,
 		 buf->out_fourcc >> 16, buf->out_fourcc >> 24);
+
+	v4l2_dbg(3, rkfec_debug, &ofl->v4l2_dev,
+		 "in: stride %d, offset %d, out: stride %d, offset %d\n",
+		 buf->buf_cfg.in_stride, buf->buf_cfg.in_offs,
+		 buf->buf_cfg.out_stride, buf->buf_cfg.out_offs);
 
 	if (hw->fec_ver == RKFEC_V20) {
 		if (hw->soft_reset)
@@ -310,14 +320,18 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	case V4L2_PIX_FMT_NV12:
 		in_fmt = SW_FEC_RD_FMT(1);
 		rd_mode = SW_FEC_RD_MODE(0);
-		in_stride = (buf->buf_cfg.in_stride + 15) / 16 * 16;
+		in_stride = ALIGN(buf->buf_cfg.in_stride, 16);
 		in_uv_offset = in_stride * in_h;
+		in_y_start = buf->buf_cfg.in_offs;
+		in_uv_start = in_y_start;
 		break;
 	case V4L2_PIX_FMT_TILE420:
 		in_fmt = SW_FEC_RD_FMT(0);
 		rd_mode = SW_FEC_RD_MODE(1);
-		in_stride = (buf->buf_cfg.in_stride * 6 + 15) / 16 * 16;
+		in_stride = ALIGN(buf->buf_cfg.in_stride * 6, 16);
 		in_uv_offset = in_stride * in_h;
+		in_y_start = buf->buf_cfg.in_offs * 6;
+		in_uv_start = in_y_start;
 		break;
 	default:
 		v4l2_err(&ofl->v4l2_dev,
@@ -331,16 +345,20 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	case V4L2_PIX_FMT_NV12:
 		out_fmt = SW_FEC_WR_FMT(1);
 		wr_mode = SW_FEC_WR_MODE(0);
-		out_stride_y = (buf->buf_cfg.out_stride + 15) / 16 * 16;
+		out_stride_y = ALIGN(buf->buf_cfg.out_stride, 16);
 		out_stride_uv = out_stride_y;
 		out_uv_offset = out_stride_y * out_h;
+		out_y_start = buf->buf_cfg.out_offs;
+		out_uv_start = out_y_start;
 		break;
 	case V4L2_PIX_FMT_TILE420:
 		out_fmt = SW_FEC_WR_FMT(0);
 		wr_mode = SW_FEC_WR_MODE(1);
-		out_stride_y = (buf->buf_cfg.out_stride * 6 + 15) / 16 * 16;
+		out_stride_y = ALIGN(buf->buf_cfg.out_stride * 6, 16);
 		out_stride_uv = out_stride_y;
 		out_uv_offset = out_stride_y * out_h;
+		out_y_start = buf->buf_cfg.out_offs * 6;
+		out_uv_start = out_y_start;
 		break;
 	case V4L2_PIX_FMT_FBC0:
 		out_fmt = SW_FEC_WR_FMT(0);
@@ -349,13 +367,24 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 		out_stride_uv = (buf->buf_cfg.out_stride + 63) / 64 * 16;
 		// Head stride is c channel
 		out_uv_offset = out_stride_uv * out_h / 4;
+		out_y_start = buf->buf_cfg.out_offs / 64 * 384;
+		out_uv_start = buf->buf_cfg.out_offs / 64 * 16;
 		break;
 	case V4L2_PIX_FMT_QUAD:
 		out_fmt = SW_FEC_WR_FMT(0);
 		wr_mode = SW_FEC_WR_MODE(3);
-		out_stride_y = (buf->buf_cfg.out_stride * 3 + 15) / 16 * 16;
+		out_stride_y = ALIGN(buf->buf_cfg.out_stride * 3, 16);
 		out_stride_uv = out_stride_y;
 		out_uv_offset = out_stride_y * out_h;
+
+		if (buf->buf_cfg.out_offs > 0) {
+			v4l2_err(&ofl->v4l2_dev,
+				 "Offset is not supported in %c%c%c%c\n",
+				 buf->out_fourcc, buf->out_fourcc >> 8,
+				 buf->out_fourcc >> 16, buf->out_fourcc >> 24);
+			out_y_start = 0;
+			out_uv_start = 0;
+		}
 		break;
 	default:
 		v4l2_err(&ofl->v4l2_dev, "no support out format:%c%c%c%c\n",
@@ -372,11 +401,10 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	sg_talbe = GET_SG_TABLE(mem_ops, off_buf);
 	if (!sg_talbe)
 		goto free_buf;
-	val = sg_dma_address(sg_talbe->sgl);
-	val += buf->buf_cfg.in_offs;
-	writel(val, base + RKFEC_RD_Y_BASE);
-	val += in_uv_offset;
-	writel(val, base + RKFEC_RD_C_BASE);
+	y_base = sg_dma_address(sg_talbe->sgl);
+	c_base = y_base + in_uv_offset;
+	writel(y_base + in_y_start, base + RKFEC_RD_Y_BASE);
+	writel(c_base + in_uv_start, base + RKFEC_RD_C_BASE);
 
 	/* output picture buf */
 	off_buf = buf_add(file, buf->buf_cfg.out_pic_fd, buf->buf_cfg.out_size);
@@ -386,21 +414,21 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	sg_talbe = GET_SG_TABLE(mem_ops, off_buf);
 	if (!sg_talbe)
 		goto free_buf;
-	val = sg_dma_address(sg_talbe->sgl);
 	if (buf->out_fourcc == V4L2_PIX_FMT_FBC0) {
-		val += buf->buf_cfg.out_offs;
-		writel(val, base + RKFEC_WR_C_BASE);
-		val += out_uv_offset;
-		writel(val, base + RKFEC_WR_Y_BASE);
+		c_base = sg_dma_address(sg_talbe->sgl);
+		y_base = c_base + out_uv_offset;
 
-		val = SW_FEC_WR_FBCE_HEAD_OFFSET(out_uv_offset);
-		writel(val, base + RKFEC_WR_FBCE_HEAD_OFFSET);
+		if (buf->buf_cfg.out_offs > 0)
+			writel((out_uv_offset + out_y_start)  << 4,
+			       base + RKFEC_WR_FBCE_HEAD_OFFSET);
+		else
+			writel(out_uv_offset << 4, base + RKFEC_WR_FBCE_HEAD_OFFSET);
 	} else {
-		val += buf->buf_cfg.out_offs;
-		writel(val, base + RKFEC_WR_Y_BASE);
-		val += out_uv_offset;
-		writel(val, base + RKFEC_WR_C_BASE);
+		y_base = sg_dma_address(sg_talbe->sgl);
+		c_base = y_base + out_uv_offset;
 	}
+	writel(y_base + out_y_start, base + RKFEC_WR_Y_BASE);
+	writel(c_base + out_uv_start, base + RKFEC_WR_C_BASE);
 
 	/* lut buf */
 	off_buf = buf_add(file, buf->buf_cfg.lut_fd, buf->buf_cfg.lut_size);
@@ -465,14 +493,16 @@ static int fec_running(struct file *file, struct rkfec_in_out *buf)
 	ofl->in_fmt.width = in_w;
 	ofl->in_fmt.height = in_h;
 	ofl->in_fmt.pixelformat = buf->in_fourcc;
-	ofl->in_fmt.bytesperline = buf->buf_cfg.in_stride;
+	ofl->in_fmt.bytesperline = in_stride;
 	ofl->in_fmt.sizeimage = buf->buf_cfg.in_size;
+	ofl->in_fmt.offset = buf->buf_cfg.in_offs;
 
 	ofl->out_fmt.width = out_w;
 	ofl->out_fmt.height = out_h;
 	ofl->out_fmt.pixelformat = buf->out_fourcc;
-	ofl->out_fmt.bytesperline = buf->buf_cfg.out_stride;
+	ofl->out_fmt.bytesperline = out_stride_y;
 	ofl->out_fmt.sizeimage = buf->buf_cfg.out_size;
+	ofl->out_fmt.offset = buf->buf_cfg.out_offs;
 
 	ret = wait_for_completion_timeout(&ofl->cmpl, msecs_to_jiffies(300));
 	if (!ret) {

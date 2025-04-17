@@ -37,13 +37,21 @@ static void offline_fec_show_hw(struct seq_file *p, struct rkfec_hw_dev *hw)
 		"4x4"
 	};
 
+	static const char * const cacheline[] = {
+		"64B",
+		"64B",
+		"128B",
+		"128B"
+	};
+
 	if (hw->dev->power.usage_count.counter <= 0) {
 		seq_printf(p, "\n%s\n", "HW close");
 		return;
 	}
 
 	val = readl(hw->base_addr + RKFEC_CTRL);
-	seq_printf(p, "%-10s RD_fmt:%s RD_mode:%s WR_fmt:%s WR_mode:%s WR_fbce:%s (0x%x)\n", "CTRL",
+	seq_printf(p, "%-10s RD_fmt:%s RD_mode:%s WR_fmt:%s WR_mode:%s WR_fbce_unc:%s (0x%x)\n",
+		   "CTRL",
 		   val & BIT(2) ? "semi" : "interleave",
 		   (val >> 4) & 0x3 ? "semi" : "rast",
 		   val & BIT(8) ? "semi" : "interleave", wr_mode[val >> 9],
@@ -75,6 +83,9 @@ static void offline_fec_show_hw(struct seq_file *p, struct rkfec_hw_dev *hw)
 
 	val = readl(hw->base_addr + RKFEC_STATUS1);
 	seq_printf(p, "%-10s 0x%x\n", "STATUS1", val & 0x3FFFFF);
+
+	val = readl(hw->base_addr + RKFEC_CACHE_CTRL);
+	seq_printf(p, "%-10s %s\n", "Cacheline",  cacheline[(val >> 4) & 0x3]);
 }
 
 static int offline_fec_show(struct seq_file *p, void *v)
@@ -110,7 +121,7 @@ static int offline_fec_show(struct seq_file *p, void *v)
 		   ofl->debug.frameloss,
 		   ofl->debug.frame_timeout_cnt);
 
-	seq_printf(p, "%-10s Format:%c%c%c%c Size:%dx%d Sizeimage(%d) (frame:%d rate:%dms frameloss:%d\n",
+	seq_printf(p, "%-10s Format:%c%c%c%c Size:%dx%d Offset(%d) Sizeimage(%d) (frame:%d rate:%dms frameloss:%d\n",
 		   "Output",
 		   ofl->out_fmt.pixelformat,
 		   ofl->out_fmt.pixelformat >> 8,
@@ -118,6 +129,7 @@ static int offline_fec_show(struct seq_file *p, void *v)
 		   ofl->out_fmt.pixelformat >> 24,
 		   ofl->out_fmt.width,
 		   ofl->out_fmt.height,
+		   ofl->out_fmt.offset,
 		   ofl->out_fmt.sizeimage,
 		   ofl->curr_frame.fe_seq,
 		   (u32)(ofl->curr_frame.fe_timestamp - ofl->prev_frame.fe_timestamp) / 1000 / 1000,
