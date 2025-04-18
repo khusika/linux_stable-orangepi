@@ -1992,6 +1992,13 @@ static void rkvpss_stop_streaming(struct vb2_queue *queue)
 	destroy_buf_queue(stream, VB2_BUF_STATE_ERROR);
 	rkvpss_pipeline_close(dev);
 	tasklet_disable(&stream->buf_done_tasklet);
+
+	if (hw->dvbm_refcnt <= 0 && hw->dvbm_flag != DVBM_OFFLINE) {
+		v4l2_dbg(2, rkvpss_debug, &dev->v4l2_dev, "%s: clear vpss2enc_sel\n", __func__);
+		rkvpss_hw_clear_bits(hw, RKVPSS_VPSS_CTRL, RKVPSS_VPSS2ENC_SEL);
+		hw->dvbm_refcnt = 0;
+	}
+
 	v4l2_dbg(1, rkvpss_debug, &dev->v4l2_dev,
 		 "%s %s id:%d exit\n", __func__,
 		 node->vdev.name, stream->id);
@@ -2103,7 +2110,10 @@ static int rkvpss_start_streaming(struct vb2_queue *queue, unsigned int count)
 		goto pipe_close;
 	}
 	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0)
-		rkvpss_dvbm_init(stream);
+		if (rkvpss_dvbm_init(stream) != 0) {
+			v4l2_err(&dev->v4l2_dev, "dvbm init failed\n");
+			goto stop_stream;
+		}
 	ret = rkvpss_pipeline_stream(dev, true);
 	if (ret < 0)
 		goto stop_stream;

@@ -51,6 +51,12 @@ enum {
 	ROCKIT_DVBM_START,
 };
 
+enum {
+	DVBM_DEINIT = 0,
+	DVBM_ONLINE = 1,
+	DVBM_OFFLINE = 2,
+};
+
 enum rkvpss_fmt_pix_type {
 	FMT_YUV,
 	FMT_RGB,
