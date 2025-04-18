@@ -342,12 +342,14 @@ static int avsp_rcs_run(struct file *file, struct rkavsp_rcs_in_out *buf)
 		writel(val, base + AVSP_RCS_WR_C_BASE);
 		break;
 	case AVSP_MODE_FBCE:
-		out_offs = rcs_wr_stride_c * in_h;
 		c_addr = val + (rcs_out_start_offset / 64) * 16;
 		writel(c_addr, base + AVSP_RCS_WR_C_BASE);
-		val += ((rcs_out_start_offset / 64) * 384);
+		out_offs = rcs_wr_stride_c * in_h + ((rcs_out_start_offset / 64) * 384);
 		val += out_offs;
 		writel(val, base + AVSP_RCS_WR_Y_BASE);
+
+		val = out_offs;
+		writel(val << 4, base + AVSP_RCS_WR_FBCE_HEAD_OFFSET);
 		break;
 	default:
 		val += (rcs_out_start_offset * 6);
