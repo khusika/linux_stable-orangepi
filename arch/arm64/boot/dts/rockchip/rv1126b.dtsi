@@ -896,6 +896,7 @@
 
 	rockchip_system_monitor: rockchip-system-monitor {
 		compatible = "rockchip,system-monitor";
+		rockchip,thermal-zone = "cpu-thermal";
 	};
 
 	thermal_zones: thermal-zones {
