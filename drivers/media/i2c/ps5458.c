@@ -42,7 +42,7 @@
 					 /PS5458_BITS_PER_SAMPLE)
 #define PS5458_XVCLK_FREQ		24000000
 
-#define CHIP_ID				0x1654
+#define CHIP_ID				0x5416
 #define PS5458_REG_CHIP_ID		0x0000
 
 #define PS5458_REG_CTRL_MODE		0x0008
@@ -1938,12 +1938,12 @@ static int ps5458_check_sensor_id(struct ps5458 *ps5458,
 
 	ret = ps5458_read_reg(client, PS5458_REG_CHIP_ID,
 			       PS5458_REG_VALUE_16BIT, &id);
-	if (id != CHIP_ID) {
-		dev_err(dev, "Unexpected sensor id(%06x), ret(%d)\n", id, ret);
+	if (__cpu_to_be16(id) != CHIP_ID) {
+		dev_err(dev, "Unexpected sensor id(%04x), ret(%d)\n", __cpu_to_be16(id), ret);
 		return -ENODEV;
 	}
 
-	dev_info(dev, "Detected OV%06x sensor\n", CHIP_ID);
+	dev_info(dev, "Detected PS%04x sensor\n", CHIP_ID);
 
 	return 0;
 }
