@@ -4302,6 +4302,31 @@ static int rkcif_dvp_get_input_yuv_order(struct rkcif_stream *stream)
 	return mask;
 }
 
+static int rkcif_dvp_get_input_yuv_order_rk3576(struct rkcif_stream *stream)
+{
+	unsigned int mask;
+	const struct cif_input_fmt *fmt = stream->cif_fmt_in;
+
+	switch (fmt->mbus_code) {
+	case MEDIA_BUS_FMT_UYVY8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_UYVY;
+		break;
+	case MEDIA_BUS_FMT_VYUY8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_VYUY;
+		break;
+	case MEDIA_BUS_FMT_YUYV8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_YUYV;
+		break;
+	case MEDIA_BUS_FMT_YVYU8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_YVYU;
+		break;
+	default:
+		mask = CSI_YUV_INPUT_ORDER_UYVY;
+		break;
+	}
+	return mask;
+}
+
 static int rkcif_csi_get_output_type_mask(struct rkcif_stream *stream)
 {
 	unsigned int mask;
@@ -7834,11 +7859,12 @@ static int rkcif_stream_start(struct rkcif_stream *stream, unsigned int mode)
 			val &= ~CIF_HIGH_ALIGN_RK3588;
 	} else {
 		out_fmt_mask = rkcif_dvp_get_output_type_mask_rk3576(stream);
+		in_fmt_yuv_order = rkcif_dvp_get_input_yuv_order_rk3576(stream);
 		val = vsync_pol | href_pol
 			| inputmode
 			| yc_swap
 			| out_fmt_mask
-			| stream->cif_fmt_in->dvp_fmt_val
+			| in_fmt_yuv_order
 			| multi_id_en
 			| xfer_mode
 			| multi_id_sel | multi_id_mode
