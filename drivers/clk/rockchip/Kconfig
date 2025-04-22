@@ -189,7 +189,7 @@ config ROCKCHIP_CLK_OUT
 
 config ROCKCHIP_CLK_PVTM
 	bool "Rockchip Clk Pvtm"
-	depends on !CPU_RV1126 && !CPU_RV1106 && !CPU_RV1103B
+	depends on CLK_RK3368
 	default y
 	help
 	  Say y here to enable clk pvtm.
