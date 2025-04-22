@@ -102,7 +102,7 @@ static int buf_alloc(struct file *file, struct rkfec_buf *info)
 		return -ENOMEM;
 #if IS_LINUX_VERSION_AT_LEAST_6_1
 	init_vb2(ofl, buf);
-	mem = ops->alloc(&buf->vb, hw->dev, info->size);
+	mem = ops->alloc(&buf->vb, hw->dev, size);
 #else
 	mem = ops->alloc(hw->dev, DMA_ATTR_NO_KERNEL_MAPPING, size,
 			 DMA_BIDIRECTIONAL, GFP_KERNEL | GFP_DMA32);
@@ -141,7 +141,7 @@ static int buf_alloc(struct file *file, struct rkfec_buf *info)
 	list_add_tail(&buf->list, &ofl->list);
 	mutex_unlock(&hw->dev_lock);
 	v4l2_dbg(1, rkfec_debug, &ofl->v4l2_dev, "%s file:%p, fd:%d dbuf:%p size %d\n",
-		 __func__, file, fd, dbuf, info->size);
+		 __func__, file, fd, dbuf, size);
 	return 0;
 
 err_dmabuf_fd:
