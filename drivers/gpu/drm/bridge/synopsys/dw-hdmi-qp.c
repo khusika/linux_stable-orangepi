@@ -2755,8 +2755,15 @@ static int dw_hdmi_connector_get_modes(struct drm_connector *connector)
 		}
 	}
 
-	if (hdmi->panel)
+	if (hdmi->panel) {
+		hdmi->support_hdmi = true;
+		hdmi->sink_is_hdmi = true;
+		hdmi->sink_has_audio = true;
+		info->hdmi.scdc.supported = true;
+		info->hdmi.scdc.scrambling.supported = true;
+		info->max_tmds_clock = HDMI20_MAX_TMDSCLK_KHZ;
 		return drm_panel_get_modes(hdmi->panel, connector);
+	}
 
 	if (hdmi->next_bridge && hdmi->next_bridge->ops & DRM_BRIDGE_OP_MODES)
 		return drm_bridge_get_modes(hdmi->next_bridge, connector);
@@ -2826,6 +2833,7 @@ static int dw_hdmi_connector_get_modes(struct drm_connector *connector)
 		kfree(drm_edid);
 	} else {
 		hdmi->support_hdmi = true;
+		hdmi->sink_is_hdmi = true;
 		hdmi->sink_has_audio = true;
 
 		if (hdmi->plat_data->split_mode) {
@@ -2855,6 +2863,9 @@ static int dw_hdmi_connector_get_modes(struct drm_connector *connector)
 		info->edid_hdmi_ycbcr444_dc_modes = 0;
 		info->hdmi.y420_dc_modes = 0;
 		info->color_formats = 0;
+		info->hdmi.scdc.supported = true;
+		info->hdmi.scdc.scrambling.supported = true;
+		info->max_tmds_clock = HDMI20_MAX_TMDSCLK_KHZ;
 
 		dev_info(hdmi->dev, "failed to get edid\n");
 	}
