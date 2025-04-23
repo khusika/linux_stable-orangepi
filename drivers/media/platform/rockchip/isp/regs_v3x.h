@@ -3191,6 +3191,8 @@
 /* BAY3D */
 #define ISP32_BAY3D_BWSAVING(a)		(((a) & 0x1) << 13)
 
+#define ISP35_BAY3D_1ST_IIR_RD		BIT(16)
+
 /* GIC */
 
 /* LDCH */

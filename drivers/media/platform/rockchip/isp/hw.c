@@ -445,6 +445,8 @@ void rkisp_hw_reg_restore(struct rkisp_hw_dev *dev)
 			*reg &= ~ISP39_W3A_FORCE_UPD;
 			reg = reg_buf + ISP35_AIAWB_CTRL0;
 			*reg &= ~ISP35_AIAWB_SELF_UPD;
+			reg = reg_buf + ISP33_BAY3D_CTRL0;
+			*reg &= ~ISP35_BAY3D_1ST_IIR_RD;
 		}
 		reg = reg_buf + ISP_CTRL;
 		*reg &= ~(CIF_ISP_CTRL_ISP_ENABLE |
@@ -455,9 +457,14 @@ void rkisp_hw_reg_restore(struct rkisp_hw_dev *dev)
 		reg = reg_buf + CSI2RX_CTRL0;
 		*reg &= ~SW_CSI2RX_EN;
 		for (j = 0; j < RKISP_ISP_SW_REG_SIZE; j += 4) {
+			/* skip useless reg */
+			reg = reg_buf + j;
+			if (*reg == 0xdead00)
+				continue;
 			/* skip table RAM */
 			if ((j > ISP3X_LSC_CTRL && j < ISP3X_LSC_XGRAD_01) ||
-			    (j > ISP32_CAC_OFFSET && j < ISP3X_CAC_RO_CNT && dev->isp_ver != ISP_V33) ||
+			    (j > ISP32_CAC_OFFSET && j < ISP3X_CAC_RO_CNT &&
+			     dev->isp_ver != ISP_V33 && dev->isp_ver != ISP_V35) ||
 			    (j > ISP3X_3DLUT_UPDATE && j < ISP3X_GAIN_BASE) ||
 			    (j == 0x4840 || j == 0x4a80 || j == 0x4b40 || j == 0x5660) ||
 			    (dev->isp_ver == ISP_V39 &&
