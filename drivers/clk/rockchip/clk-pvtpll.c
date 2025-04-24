@@ -152,9 +152,9 @@ static struct pvtpll_table rv1126b_aisp_pvtpll_table[] = {
 
 static struct pvtpll_table rv1126b_core_pvtpll_table[] = {
 	/* rate_hz, ring_sel, length */
-	ROCKCHIP_PVTPLL_VOLT_SEL(1608000000, 0, 30, 7),
-	ROCKCHIP_PVTPLL_VOLT_SEL(1512000000, 0, 30, 5),
-	ROCKCHIP_PVTPLL_VOLT_SEL(1416000000, 0, 34, 4),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1608000000, 0, 30, 5),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1512000000, 0, 30, 3),
+	ROCKCHIP_PVTPLL_VOLT_SEL(1416000000, 0, 34, 3),
 	ROCKCHIP_PVTPLL_VOLT_SEL(1296000000, 0, 38, 3),
 	ROCKCHIP_PVTPLL_VOLT_SEL(1200000000, 0, 38, 3),
 	ROCKCHIP_PVTPLL_VOLT_SEL(1008000000, 0, 52, 3),
@@ -163,7 +163,8 @@ static struct pvtpll_table rv1126b_core_pvtpll_table[] = {
 
 static struct pvtpll_table rv1126b_enc_pvtpll_table[] = {
 	/* rate_hz, ring_se, length */
-	ROCKCHIP_PVTPLL(550000000, 0, 72),
+	ROCKCHIP_PVTPLL(550000000, 0, 88),
+	ROCKCHIP_PVTPLL(480000000, 0, 88),
 };
 
 static struct pvtpll_table rv1126b_isp_pvtpll_table[] = {
@@ -174,9 +175,9 @@ static struct pvtpll_table rv1126b_isp_pvtpll_table[] = {
 static struct pvtpll_table rv1126b_npu_pvtpll_table[] = {
 	/* rate_hz, ring_se, length, volt_sel_thr */
 	ROCKCHIP_PVTPLL_VOLT_SEL(1000000000, 0, 12, 5),
-	ROCKCHIP_PVTPLL_VOLT_SEL(950000000, 0, 12, 3),
-	ROCKCHIP_PVTPLL_VOLT_SEL(900000000, 0, 14, 2),
-	ROCKCHIP_PVTPLL_VOLT_SEL(800000000, 0, 16, 2),
+	ROCKCHIP_PVTPLL_VOLT_SEL(950000000, 0, 12, 2),
+	ROCKCHIP_PVTPLL_VOLT_SEL(900000000, 0, 14, 1),
+	ROCKCHIP_PVTPLL_VOLT_SEL(800000000, 0, 18, 1),
 	ROCKCHIP_PVTPLL_VOLT_SEL(700000000, 0, 36, 3),
 };
 
@@ -593,6 +594,13 @@ static int rv1103b_pvtpll_calibrate(struct rockchip_clock_pvtpll *pvtpll)
 		ret = regmap_read(pvtpll->regmap, RV1103B_PVTPLL_GCK_CNT_AVG, &rate);
 		if (ret)
 			return ret;
+	}
+
+	/* update pvtpll table */
+	if (length > length_ori) {
+		delta = length - length_ori;
+		for (i = 0; i < pvtpll->info->table_size; i++)
+			pvtpll->info->table[i].length += delta;
 	}
 
 	return 0;
