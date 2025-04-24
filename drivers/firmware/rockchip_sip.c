@@ -223,7 +223,7 @@ struct dram_addrmap_info *sip_smc_get_dram_map(void)
 		return NULL;
 	}
 	m = (struct dram_addrmap_info *)res.a1;
-	memset(m, 0x0, sizeof(*m));
+	memset_io(m, 0x0, sizeof(*m));
 
 	res = sip_smc_dram(SHARE_PAGE_TYPE_DDR_ADDRMAP, 0,
 			   ROCKCHIP_SIP_CONFIG_DRAM_ADDRMAP_GET);
