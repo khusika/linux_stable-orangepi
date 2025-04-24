@@ -175,6 +175,8 @@ static int sditf_get_set_fmt(struct v4l2_subdev *sd,
 	const struct cif_output_fmt *out_fmt;
 	int ret = -EINVAL;
 	bool is_uncompact = false;
+	int i = 0;
+	int stream_cnt = 0;
 
 	if (!cif_dev->terminal_sensor.sd)
 		rkcif_update_sensor_info(&cif_dev->stream[0]);
@@ -215,36 +217,22 @@ static int sditf_get_set_fmt(struct v4l2_subdev *sd,
 			"%s, width %d, height %d, hdr mode %d\n",
 			__func__, fmt->format.width, fmt->format.height, priv->hdr_cfg.hdr_mode);
 		if (priv->hdr_cfg.hdr_mode == NO_HDR ||
-		    priv->hdr_cfg.hdr_mode == HDR_COMPR) {
-			rkcif_set_fmt(&cif_dev->stream[0], &pixm, false);
-		} else if (priv->hdr_cfg.hdr_mode == HDR_X2) {
-			if (priv->mode.rdbk_mode == RKISP_VICAP_ONLINE &&
-			    priv->toisp_inf.link_mode == TOISP_UNITE) {
+		    priv->hdr_cfg.hdr_mode == HDR_COMPR)
+			stream_cnt = 1;
+		else if (priv->hdr_cfg.hdr_mode == HDR_X2)
+			stream_cnt = 2;
+		else if (priv->hdr_cfg.hdr_mode == HDR_X3)
+			stream_cnt = 3;
+		for (i = 0; i < stream_cnt; i++) {
+			if (priv->toisp_inf.link_mode == TOISP_UNITE) {
 				if (is_uncompact) {
-					cif_dev->stream[0].is_compact = false;
-					cif_dev->stream[0].is_high_align = true;
+					cif_dev->stream[i].is_compact = false;
+					cif_dev->stream[i].is_high_align = true;
 				} else {
-					cif_dev->stream[0].is_compact = true;
+					cif_dev->stream[i].is_compact = true;
 				}
 			}
-			rkcif_set_fmt(&cif_dev->stream[0], &pixm, false);
-			rkcif_set_fmt(&cif_dev->stream[1], &pixm, false);
-		} else if (priv->hdr_cfg.hdr_mode == HDR_X3) {
-			if (priv->mode.rdbk_mode == RKISP_VICAP_ONLINE &&
-			    priv->toisp_inf.link_mode == TOISP_UNITE) {
-				if (is_uncompact) {
-					cif_dev->stream[0].is_compact = false;
-					cif_dev->stream[0].is_high_align = true;
-					cif_dev->stream[1].is_compact = false;
-					cif_dev->stream[1].is_high_align = true;
-				} else {
-					cif_dev->stream[0].is_compact = true;
-					cif_dev->stream[1].is_compact = true;
-				}
-			}
-			rkcif_set_fmt(&cif_dev->stream[0], &pixm, false);
-			rkcif_set_fmt(&cif_dev->stream[1], &pixm, false);
-			rkcif_set_fmt(&cif_dev->stream[2], &pixm, false);
+			rkcif_set_fmt(&cif_dev->stream[i], &pixm, false);
 		}
 	} else {
 		if (priv->sensor_sd) {
