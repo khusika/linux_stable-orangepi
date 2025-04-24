@@ -2557,8 +2557,8 @@ static const struct rk_gmac_ops rv1126_ops = {
 #define RV1126B_RK_MACPHY_DISABLE		0
 #define RV1126B_RK_MACPHY_ENABLE		BIT(31)
 
-#define RV1126B_RK_MACPHY_EXTCLK_SEL_OUTPUT	0
-#define RV1126B_RK_MACPHY_EXTCLK_SEL_INPUT	BIT(8)
+#define RV1126B_RK_MACPHY_EXTCLK_SEL_INPUT	0
+#define RV1126B_RK_MACPHY_EXTCLK_SEL_OUTPUT	BIT(8)
 
 #define RV1126B_RK_MACPHY_CLK_24M		0
 #define RV1126B_RK_MACPHY_CLK_50M		BIT(11)
@@ -2686,23 +2686,18 @@ static void rv1126b_integrated_phy_power(struct rk_priv_data *priv, bool up)
 			value = RV1126B_RK_MACPHY_CLK_50M;
 		else
 			value = RV1126B_RK_MACPHY_CLK_24M;
-
 		value |= priv->clock_input ? RV1126B_RK_MACPHY_EXTCLK_SEL_INPUT :
 					     RV1126B_RK_MACPHY_EXTCLK_SEL_OUTPUT;
-
 		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON2, value);
 
 		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON0,
 			     RV1126B_RK_MACPHY_PHY_ID | RV1126B_RK_MACPHY_PHY_ADDR);
+
 		value = RV1126B_RK_MACPHY_PHY_REVISION | RV1126B_RK_MACPHY_PHY_MODEL |
 			RV1126B_RK_MACPHY_ENABLE;
 		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1, value);
-		usleep_range(200, 220);
-		reset_control_deassert(priv->phy_reset);
-		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
-			     RV1126B_RK_MACPHY_DISABLE);
 		usleep_range(100, 120);
-		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1, value);
+		reset_control_deassert(priv->phy_reset);
 	} else {
 		regmap_write(priv->grf, RV1126B_VI_GRF_RK_MACPHY_CON1,
 			     RV1126B_RK_MACPHY_DISABLE);
