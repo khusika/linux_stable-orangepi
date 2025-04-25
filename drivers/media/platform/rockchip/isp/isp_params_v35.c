@@ -2205,7 +2205,7 @@ isp_aiawb_config(struct rkisp_isp_params_vdev *params_vdev,
 	value = ISP_PACK_2SHORT(arg->mr00, arg->mr01);
 	isp3_param_write(params_vdev, value, ISP35_AIAWB_MATRIX_ROT0, id);
 	value = ISP_PACK_2SHORT(arg->mr10, arg->mr11);
-	isp3_param_write(params_vdev, value, ISP35_AIAWB_MATRIX_ROT0, id);
+	isp3_param_write(params_vdev, value, ISP35_AIAWB_MATRIX_ROT1, id);
 }
 
 static void
