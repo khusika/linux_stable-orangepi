@@ -13,6 +13,7 @@
 #include <linux/mii.h>
 #include <linux/netdevice.h>
 #include <linux/platform_device.h>
+#include <linux/property.h>
 #include <linux/phy.h>
 
 #define INTERNAL_FEPHY_ID			0x06808101
@@ -58,6 +59,7 @@ enum {
 
 struct rockchip_fephy_priv {
 	struct phy_device *phydev;
+	unsigned int clk_rate;
 	int old_link;
 	int wol_irq;
 };
@@ -91,6 +93,7 @@ static int rockchip_fephy_bank_write(struct phy_device *phydev, u8 bank,
 
 static int rockchip_fephy_config_init(struct phy_device *phydev)
 {
+	struct rockchip_fephy_priv *priv = phydev->priv;
 	int ret;
 
 	/* LED Control, default:0x7f */
@@ -107,6 +110,23 @@ static int rockchip_fephy_config_init(struct phy_device *phydev)
 	ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0x18, 0xc);
 	if (ret)
 		return ret;
+
+	if (priv->clk_rate == 24000000) {
+		int sel;
+
+		/* pll cp cur sel */
+		sel = rockchip_fephy_bank_read(phydev, BANK_AFE, 0x3);
+		if (sel < 0)
+			return sel;
+		ret = rockchip_fephy_bank_write(phydev, BANK_AFE, 0x3, sel | 0x2);
+		if (ret)
+			return ret;
+
+		/* pll lpf res sel */
+		ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0x1a, 0x6);
+		if (ret)
+			return ret;
+	}
 
 	return ret;
 }
@@ -210,6 +230,9 @@ static int rockchip_fephy_probe(struct phy_device *phydev)
 		return -ENOMEM;
 
 	phydev->priv = priv;
+	if (device_property_read_u32(&phydev->mdio.dev, "clock-frequency", &priv->clk_rate))
+		priv->clk_rate = 24000000;
+
 	priv->wol_irq = platform_get_irq_byname_optional(to_platform_device(&phydev->mdio.dev),
 							 "wol_irq");
 	if (priv->wol_irq == -EPROBE_DEFER)
