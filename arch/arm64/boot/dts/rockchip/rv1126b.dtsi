@@ -209,6 +209,7 @@
 		pvtpll_isp: pvtpll-isp@21c60000 {
 			compatible = "rockchip,rv1126b-isp-pvtpll";
 			reg = <0x21c60000 0x100>;
+			rockchip,cru = <&cru>;
 			#clock-cells = <0>;
 			clock-output-names = "clk_isp_pvtpll";
 			assigned-clocks = <&pvtpll_isp>;
@@ -227,6 +228,7 @@
 		pvtpll_aisp: pvtpll-aisp@21fc0000 {
 			compatible = "rockchip,rv1126b-aisp-pvtpll";
 			reg = <0x21fc0000 0x100>;
+			rockchip,cru = <&cru>;
 			#clock-cells = <0>;
 			clock-output-names = "clk_vcp_pvtpll";
 			assigned-clocks = <&pvtpll_aisp>;
