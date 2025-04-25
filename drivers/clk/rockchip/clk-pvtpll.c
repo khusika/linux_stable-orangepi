@@ -33,10 +33,10 @@
 #define RV1103B_PVTPLL_MAX_LENGTH		0x1ff
 #define RV1103B_PVTPLL_GCK_CNT_AVG		0x54
 
-#define RV1126B_NPUCRU_NPU_CLKSEL_CON0		0x90300
-#define RV1126B_CLK_NPU_PVTPLL			BIT(0)
-#define RV1126B_CLK_NPU_PVTPLL_SRC_SEL_OFFSET	0
-#define RV1126B_CLK_NPU_PVTPLL_SRC_SEL_MASK	0x1
+#define RV1126B_PVTPLL_NORMAL_MODE		0x1
+#define RV1126B_PVTPLL_SLOW_MODE		0
+#define RV1126B_PVTPLL_MODE_SHIFT		0
+#define RV1126B_PVTPLL_MODE_MASK		0x1
 
 #define RK3506_GRF_CORE_PVTPLL_CON0_L		0x00
 #define RK3506_GRF_CORE_PVTPLL_CON0_H		0x04
@@ -59,6 +59,7 @@ struct pvtpll_table {
 };
 
 struct rockchip_clock_pvtpll_info {
+	const struct clk_ops *clk_ops;
 	unsigned int table_size;
 	struct pvtpll_table *table;
 	unsigned int jm_table_size;
@@ -66,6 +67,8 @@ struct rockchip_clock_pvtpll_info {
 	unsigned int pvtpll_adjust_factor;
 	unsigned int calibrate_length_step;
 	unsigned int calibrate_freq_per_step;
+	unsigned int mode_offset;
+	bool is_always_on;
 	int (*config)(struct rockchip_clock_pvtpll *pvtpll,
 		      struct pvtpll_table *table);
 	int (*pvtpll_calibrate)(struct rockchip_clock_pvtpll *pvtpll);
@@ -249,26 +252,22 @@ static int rv1103b_pvtpll_configs(struct rockchip_clock_pvtpll *pvtpll,
 	return ret;
 }
 
-static int rv1126b_npu_pvtpll_configs(struct rockchip_clock_pvtpll *pvtpll,
+static int rv1126b_pvtpll_configs(struct rockchip_clock_pvtpll *pvtpll,
 				  struct pvtpll_table *table)
 {
 	u32 val;
 	int ret = 0;
 
-	ret = regmap_read(pvtpll->regmap_cru, RV1126B_NPUCRU_NPU_CLKSEL_CON0, &val);
+	ret = rv1103b_pvtpll_configs(pvtpll, table);
 	if (ret)
 		return ret;
 
-	if (table->rate == pvtpll->cur_rate && (val & RV1126B_CLK_NPU_PVTPLL))
+	if (!pvtpll->regmap_cru)
 		return 0;
 
-	val = HIWORD_UPDATE(RV1126B_CLK_NPU_PVTPLL, RV1126B_CLK_NPU_PVTPLL_SRC_SEL_MASK,
-			    RV1126B_CLK_NPU_PVTPLL_SRC_SEL_OFFSET);
-	ret = regmap_write(pvtpll->regmap_cru, RV1126B_NPUCRU_NPU_CLKSEL_CON0, val);
-	if (ret)
-		return ret;
-
-	return rv1103b_pvtpll_configs(pvtpll, table);
+	val = HIWORD_UPDATE(RV1126B_PVTPLL_NORMAL_MODE, RV1126B_PVTPLL_MODE_MASK,
+			    RV1126B_PVTPLL_MODE_SHIFT);
+	return regmap_write(pvtpll->regmap_cru, pvtpll->info->mode_offset, val);
 }
 
 static int rk3506_pvtpll_configs(struct rockchip_clock_pvtpll *pvtpll,
@@ -362,31 +361,75 @@ static long rockchip_clock_pvtpll_round_rate(struct clk_hw *hw, unsigned long ra
 	return rate;
 }
 
-static int clk_gate_enable(struct clk_hw *hw)
+static int rv1126b_pvtpll_enable(struct clk_hw *hw)
 {
 	struct rockchip_clock_pvtpll *pvtpll;
 	struct pvtpll_table *table;
-	int ret = 0;
+	u32 val = 0;
 
 	pvtpll = container_of(hw, struct rockchip_clock_pvtpll, hw);
-
-	if (!pvtpll || !pvtpll->regmap_cru)
-		return 0;
-
 	table = rockchip_get_pvtpll_settings(pvtpll, pvtpll->cur_rate);
 	if (!table)
 		return 0;
 
-	ret = pvtpll->info->config(pvtpll, table);
+	regmap_read(pvtpll->regmap, RV1103B_PVTPLL_GCK_CFG, &val);
+	if (!(val & RV1103B_GCK_EN))
+		return pvtpll->info->config(pvtpll, table);
 
-	return ret;
+	return 0;
+}
+
+static void rv1126b_pvtpll_disable(struct clk_hw *hw)
+{
+	struct rockchip_clock_pvtpll *pvtpll;
+	u32 val;
+	int ret;
+
+	pvtpll = container_of(hw, struct rockchip_clock_pvtpll, hw);
+	if (!pvtpll->regmap_cru)
+		return;
+
+	val = HIWORD_UPDATE(RV1126B_PVTPLL_SLOW_MODE, RV1126B_PVTPLL_MODE_MASK,
+			    RV1126B_PVTPLL_MODE_SHIFT);
+	ret = regmap_write(pvtpll->regmap_cru,  pvtpll->info->mode_offset, val);
+	if (ret)
+		return;
+	regmap_write(pvtpll->regmap, RV1103B_PVTPLL_GCK_CFG, RV1103B_GCK_EN << 16);
+}
+
+static int rv1126b_pvtpll_is_enabled(struct clk_hw *hw)
+{
+	struct rockchip_clock_pvtpll *pvtpll;
+	u32 val = 0;
+
+	pvtpll = container_of(hw, struct rockchip_clock_pvtpll, hw);
+	regmap_read(pvtpll->regmap, RV1103B_PVTPLL_GCK_CFG, &val);
+
+	return (val & RV1103B_GCK_EN);
 }
 
 static const struct clk_ops clock_pvtpll_ops = {
 	.recalc_rate = rockchip_clock_pvtpll_recalc_rate,
 	.round_rate = rockchip_clock_pvtpll_round_rate,
 	.set_rate = rockchip_clock_pvtpll_set_rate,
-	.enable = clk_gate_enable,
+};
+
+static const struct clk_ops rv1126b_pvtpll_ops = {
+	.recalc_rate = rockchip_clock_pvtpll_recalc_rate,
+	.round_rate = rockchip_clock_pvtpll_round_rate,
+	.set_rate = rockchip_clock_pvtpll_set_rate,
+	.enable = rv1126b_pvtpll_enable,
+	.disable = rv1126b_pvtpll_disable,
+	.is_enabled = rv1126b_pvtpll_is_enabled,
+};
+
+/* Remove is_enabled for fixing clk_summary issue */
+static const struct clk_ops rv1126b_npu_pvtpll_ops = {
+	.recalc_rate = rockchip_clock_pvtpll_recalc_rate,
+	.round_rate = rockchip_clock_pvtpll_round_rate,
+	.set_rate = rockchip_clock_pvtpll_set_rate,
+	.enable = rv1126b_pvtpll_enable,
+	.disable = rv1126b_pvtpll_disable,
 };
 
 static int clock_pvtpll_regitstor(struct device *dev,
@@ -398,7 +441,10 @@ static int clock_pvtpll_regitstor(struct device *dev,
 	init.num_parents = 0;
 	init.flags = CLK_GET_RATE_NOCACHE;
 	init.name = "pvtpll";
-	init.ops = &clock_pvtpll_ops;
+	if (pvtpll->info->clk_ops)
+		init.ops = pvtpll->info->clk_ops;
+	else
+		init.ops = &clock_pvtpll_ops;
 
 	pvtpll->hw.init = &init;
 
@@ -658,46 +704,56 @@ static const struct rockchip_clock_pvtpll_info rv1103b_npu_pvtpll_data = {
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_aisp_pvtpll_data = {
-	.config = rv1103b_pvtpll_configs,
+	.clk_ops = &rv1126b_pvtpll_ops,
+	.config = rv1126b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_aisp_pvtpll_table),
 	.table = rv1126b_aisp_pvtpll_table,
 	.calibrate_length_step = 4,
 	.calibrate_freq_per_step = 20,
 	.pvtpll_calibrate = rv1103b_pvtpll_calibrate,
+	.mode_offset = 0xb0300,
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_core_pvtpll_data = {
-	.config = rv1103b_pvtpll_configs,
+	.config = rv1126b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_core_pvtpll_table),
 	.table = rv1126b_core_pvtpll_table,
 	.pvtpll_adjust_factor = 4,
 	.pvtpll_volt_sel_adjust = pvtpll_volt_sel_adjust_linear,
+	.mode_offset = 0x30300,
+	.is_always_on = true,
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_enc_pvtpll_data = {
-	.config = rv1103b_pvtpll_configs,
+	.config = rv1126b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_enc_pvtpll_table),
 	.table = rv1126b_enc_pvtpll_table,
 	.calibrate_length_step = 8,
 	.calibrate_freq_per_step = 20,
 	.pvtpll_calibrate = rv1103b_pvtpll_calibrate,
+	.mode_offset = 0x80300,
+	.is_always_on = true,
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_isp_pvtpll_data = {
-	.config = rv1103b_pvtpll_configs,
+	.clk_ops = &rv1126b_pvtpll_ops,
+	.config = rv1126b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_isp_pvtpll_table),
 	.table = rv1126b_isp_pvtpll_table,
 	.calibrate_length_step = 8,
 	.calibrate_freq_per_step = 20,
 	.pvtpll_calibrate = rv1103b_pvtpll_calibrate,
+	.mode_offset = 0x70300,
 };
 
 static const struct rockchip_clock_pvtpll_info rv1126b_npu_pvtpll_data = {
-	.config = rv1126b_npu_pvtpll_configs,
+	.clk_ops = &rv1126b_npu_pvtpll_ops,
+	.config = rv1126b_pvtpll_configs,
 	.table_size = ARRAY_SIZE(rv1126b_npu_pvtpll_table),
 	.table = rv1126b_npu_pvtpll_table,
 	.pvtpll_adjust_factor = 6,
 	.pvtpll_volt_sel_adjust = pvtpll_volt_sel_adjust_linear,
+	.mode_offset = 0x90300,
 };
 
 static const struct rockchip_clock_pvtpll_info rk3506_core_pvtpll_data = {
@@ -826,13 +882,14 @@ static int rockchip_clock_pvtpll_resume(struct device *dev)
 	struct rockchip_clock_pvtpll *pvtpll = dev_get_drvdata(dev);
 	struct pvtpll_table *table;
 
+	if (!pvtpll->info->is_always_on)
+		return 0;
+
 	table = rockchip_get_pvtpll_settings(pvtpll, pvtpll->cur_rate);
 	if (!table)
 		return 0;
 
-	pvtpll->info->config(pvtpll, table);
-
-	return 0;
+	return pvtpll->info->config(pvtpll, table);
 }
 
 static DEFINE_SIMPLE_DEV_PM_OPS(rockchip_clock_pvtpll_pm_ops, NULL,
