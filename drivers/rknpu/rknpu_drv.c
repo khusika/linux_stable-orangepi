@@ -1451,6 +1451,7 @@ static int rknpu_probe(struct platform_device *pdev)
 	rknpu_dev->heap = rk_dma_heap_find("rk-dma-heap-cma");
 	if (!rknpu_dev->heap) {
 		LOG_DEV_ERROR(dev, "failed to find cma heap\n");
+		misc_deregister(&rknpu_dev->miscdev);
 		return -ENOMEM;
 	}
 	rk_dma_heap_set_dev(dev);
