@@ -380,9 +380,9 @@ static int rk_dsm_hw_params(struct snd_pcm_substream *substream,
 		snd_soc_component_get_drvdata(dai->component);
 	unsigned int srt = 0, val = 0;
 
-	rk_dsm_set_clk(rd, substream, params_rate(params));
-
 	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		rk_dsm_set_clk(rd, substream, params_rate(params));
+
 		switch (params_rate(params)) {
 		case 8000:
 		case 11025:
@@ -460,6 +460,9 @@ static int rk_dsm_pcm_startup(struct snd_pcm_substream *substream,
 	struct rk_dsm_priv *rd =
 		snd_soc_component_get_drvdata(dai->component);
 
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		return 0;
+
 	/* Recover DAC Volumes */
 	regmap_write(rd->regmap, DACVOLL0, rd->vols.vol_l);
 	regmap_write(rd->regmap, DACVOLR0, rd->vols.vol_r);
@@ -488,6 +491,9 @@ static void rk_dsm_pcm_shutdown(struct snd_pcm_substream *substream,
 {
 	struct rk_dsm_priv *rd =
 		snd_soc_component_get_drvdata(dai->component);
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		return;
 
 	gpiod_set_value(rd->pa_ctl, 0);
 
@@ -518,6 +524,9 @@ static int rk_dsm_pcm_trigger(struct snd_pcm_substream *substream,
 {
 	struct rk_dsm_priv *rd =
 		snd_soc_component_get_drvdata(dai->component);
+
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+		return 0;
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
