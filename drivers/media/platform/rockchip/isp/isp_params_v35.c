@@ -347,7 +347,7 @@ isp_bls_config(struct rkisp_isp_params_vdev *params_vdev,
 	}
 
 	new_control = isp3_param_read(params_vdev, ISP3X_BLS_CTRL, id);
-	new_control &= (ISP_BLS_ENA | ISP32_BLS_BLS2_EN);
+	new_control &= (ISP_BLS_ENA | ISP32_BLS_BLS2_EN | ISP35_BLS_BLS3_EN);
 	if (arg->bls1_en)
 		new_control |= ISP_BLS_BLS1_EN;
 
