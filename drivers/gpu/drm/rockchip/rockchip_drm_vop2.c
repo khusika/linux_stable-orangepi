@@ -13047,8 +13047,8 @@ static void vop2_post_sharp_config(struct drm_crtc *crtc)
 	vcstate->sharp_en = true;
 }
 
-static void vop3_get_csc_paramter_from_bcsh(struct rockchip_crtc_state *vcstate,
-					    struct post_csc *csc_info)
+static void vop3_get_csc_info_from_bcsh(struct rockchip_crtc_state *vcstate,
+					struct post_csc *csc_info)
 {
 	csc_info->r_gain = 256;
 	csc_info->g_gain = 256;
@@ -13137,7 +13137,7 @@ static void vop2_cfg_update(struct drm_crtc *crtc,
 		if (vp->csc_info.csc_enable) {
 			vop3_post_csc_config(crtc, &vp->acm_info, &vp->csc_info);
 		} else {
-			vop3_get_csc_paramter_from_bcsh(vcstate, &default_csc_info);
+			vop3_get_csc_info_from_bcsh(vcstate, &default_csc_info);
 			vop3_post_csc_config(crtc, &vp->acm_info, &default_csc_info);
 		}
 	}
