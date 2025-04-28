@@ -1769,6 +1769,44 @@ static int rkcif_dvp_get_input_yuv_order(struct vehicle_cfg *cfg)
 	return mask;
 }
 
+static int rkcif_dvp_get_input_yuv_order_rk3576(struct vehicle_cfg *cfg)
+{
+	unsigned int mask;
+
+	switch (cfg->mbus_code) {
+	case MEDIA_BUS_FMT_UYVY8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_UYVY;
+		break;
+	case MEDIA_BUS_FMT_VYUY8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_VYUY;
+		break;
+	case MEDIA_BUS_FMT_YUYV8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_YUYV;
+		break;
+	case MEDIA_BUS_FMT_YVYU8_2X8:
+		mask = CSI_YUV_INPUT_ORDER_YVYU;
+		break;
+	default:
+		mask = CSI_YUV_INPUT_ORDER_UYVY;
+		break;
+	}
+	return mask;
+}
+
+static u32 rkcif_determine_input_mode(struct vehicle_cif *cif)
+{
+	struct vehicle_cfg *cfg = &cif->cif_cfg;
+	u32 mode = cfg->input_mode << 2;
+
+	if (cif->chip_id == CHIP_RK3568_VEHICLE_CIF &&
+	   cfg->input_mode == CIF_INPUT_MODE_BT1120_YUV)
+		mode = INPUT_MODE_BT1120;
+	if (cif->chip_id == CHIP_RK3576_VEHICLE_CIF)
+		mode = mode << 2;
+
+	return mode;
+}
+
 static int cif_stream_setup(struct vehicle_cif *cif)
 {
 	struct vehicle_cfg *cfg = &cif->cif_cfg;
@@ -1791,27 +1829,36 @@ static int cif_stream_setup(struct vehicle_cif *cif)
 	else
 		rkvehicle_cif_cfg_dvp_clk_sampling_edge(cif, RKCIF_CLK_FALLING);
 
-	inputmode = cfg->input_format<<2; //INPUT_MODE_YUV or INPUT_MODE_BT656_YUV422
+	inputmode = rkcif_determine_input_mode(cif); //INPUT_MODE_YUV or INPUT_MODE_BT656_YUV422
 	//YUV_INPUT_ORDER_UYVY, MEDIA_BUS_FMT_UYVY8_2X8, CCIR_INPUT_ORDER_ODD
-	input_format = (cfg->yuv_order<<5) | YUV_INPUT_422 | (cfg->field_order<<9);
+
+	input_format = (cfg->yuv_order << 5) | YUV_INPUT_422 | (cfg->field_order << 9);
 	if (cfg->output_format == CIF_OUTPUT_FORMAT_420)
 		output_format = YUV_OUTPUT_420 | UV_STORAGE_ORDER_UVUV;
 	else
 		output_format = YUV_OUTPUT_422 | UV_STORAGE_ORDER_UVUV;
 
 	if (cif->chip_id == CHIP_RK3568_VEHICLE_CIF) {
-		val = cfg->vsync | (cfg->href<<1) | inputmode | mipimode
+		val = cfg->vsync | (cfg->href << 1) | inputmode | mipimode
 		   | input_format | output_format
 		   | xfer_mode | yc_swap | multi_id_en
 		   | multi_id_sel | multi_id_mode | bt1120_edge_mode;
-	} else {
+	} else if (cif->chip_id == CHIP_RK3588_VEHICLE_CIF) {
 		out_fmt_mask = (CSI_WRDDR_TYPE_YUV420SP_RK3588 << 11) |
 				(CSI_YUV_OUTPUT_ORDER_UYVY << 1);
 		in_fmt_yuv_order = rkcif_dvp_get_input_yuv_order(cfg);
-		val = cfg->vsync | (cfg->href<<1) | inputmode
+		val = cfg->vsync | (cfg->href << 1) | inputmode
 		   | in_fmt_yuv_order | out_fmt_mask
 		   | yc_swap | multi_id_en | multi_id_sel
 		   | sav_detect | multi_id_mode | bt1120_edge_mode;
+	} else {
+		out_fmt_mask = (CSI_WRDDR_TYPE_YUV420SP_RK3588 << 15) |
+				CSI_YUV_OUTPUT_ORDER_UYVY;
+		in_fmt_yuv_order = rkcif_dvp_get_input_yuv_order_rk3576(cfg);
+		val = cfg->vsync | (cfg->href << 1) | inputmode
+		   | in_fmt_yuv_order | out_fmt_mask
+		   | yc_swap | multi_id_en | multi_id_sel
+		   | multi_id_mode | (bt1120_edge_mode >> 8);
 	}
 
 	if (cif->chip_id >= CHIP_RK3576_VEHICLE_CIF)
