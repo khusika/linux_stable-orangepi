@@ -1258,36 +1258,16 @@ isp_rawawb_config(struct rkisp_isp_params_vdev *params_vdev,
 	u32 width = out_crop->width, height = out_crop->height;
 	u32 value, val, mask, h_size, v_size, h_offs, v_offs;
 
+	/* bug no base on bayer pattern */
+	isp3_param_write(params_vdev, pval->r, ISP32_BLS2_A_FIXED, id);
+	isp3_param_write(params_vdev, pval->gr, ISP32_BLS2_B_FIXED, id);
+	isp3_param_write(params_vdev, pval->gb, ISP32_BLS2_C_FIXED, id);
+	isp3_param_write(params_vdev, pval->b, ISP32_BLS2_D_FIXED, id);
+
 	value = isp3_param_read(params_vdev, ISP3X_BLS_CTRL, id);
 	value &= ~ISP32_BLS_BLS2_EN;
 	if (arg->bls2_en)
 		value |= ISP32_BLS_BLS2_EN;
-	switch (params_vdev->raw_type) {
-	case RAW_BGGR:
-		isp3_param_write(params_vdev, pval->r, ISP32_BLS2_D_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP32_BLS2_C_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP32_BLS2_B_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP32_BLS2_A_FIXED, id);
-		break;
-	case RAW_GBRG:
-		isp3_param_write(params_vdev, pval->r, ISP32_BLS2_C_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP32_BLS2_D_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP32_BLS2_A_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP32_BLS2_B_FIXED, id);
-		break;
-	case RAW_GRBG:
-		isp3_param_write(params_vdev, pval->r, ISP32_BLS2_B_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP32_BLS2_A_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP32_BLS2_D_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP32_BLS2_C_FIXED, id);
-		break;
-	case RAW_RGGB:
-	default:
-		isp3_param_write(params_vdev, pval->r, ISP32_BLS2_A_FIXED, id);
-		isp3_param_write(params_vdev, pval->gr, ISP32_BLS2_B_FIXED, id);
-		isp3_param_write(params_vdev, pval->gb, ISP32_BLS2_C_FIXED, id);
-		isp3_param_write(params_vdev, pval->b, ISP32_BLS2_D_FIXED, id);
-	}
 	isp3_param_write(params_vdev, value, ISP3X_BLS_CTRL, id);
 
 	value = arg->in_overexposure_threshold << 16 |
@@ -2122,32 +2102,12 @@ isp_aiawb_config(struct rkisp_isp_params_vdev *params_vdev,
 	const struct isp2x_bls_fixed_val *pval = &arg->bls3_val;
 	u32 value;
 
-	switch (params_vdev->raw_type) {
-	case RAW_BGGR:
-		value = ISP_PACK_2SHORT(pval->b, pval->gb);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_AB_FIXED, id);
-		value = ISP_PACK_2SHORT(pval->gr, pval->r);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_CD_FIXED, id);
-		break;
-	case RAW_GBRG:
-		value = ISP_PACK_2SHORT(pval->gb, pval->b);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_AB_FIXED, id);
-		value = ISP_PACK_2SHORT(pval->r, pval->gr);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_CD_FIXED, id);
-		break;
-	case RAW_GRBG:
-		value = ISP_PACK_2SHORT(pval->gr, pval->r);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_AB_FIXED, id);
-		value = ISP_PACK_2SHORT(pval->b, pval->gb);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_CD_FIXED, id);
-		break;
-	case RAW_RGGB:
-	default:
-		value = ISP_PACK_2SHORT(pval->r, pval->gr);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_AB_FIXED, id);
-		value = ISP_PACK_2SHORT(pval->gb, pval->b);
-		isp3_param_write(params_vdev, value, ISP35_BLS3_CD_FIXED, id);
-	}
+	/* bug no base on bayer pattern */
+	value = ISP_PACK_2SHORT(pval->r, pval->gr);
+	isp3_param_write(params_vdev, value, ISP35_BLS3_AB_FIXED, id);
+	value = ISP_PACK_2SHORT(pval->gb, pval->b);
+	isp3_param_write(params_vdev, value, ISP35_BLS3_CD_FIXED, id);
+
 	value = isp3_param_read(params_vdev, ISP3X_BLS_CTRL, id);
 	value &= ~ISP35_BLS_BLS3_EN;
 	if (arg->bls3_en)
