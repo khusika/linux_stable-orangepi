@@ -1839,6 +1839,26 @@ static int cif_stream_setup(struct vehicle_cif *cif)
 		output_format = YUV_OUTPUT_422 | UV_STORAGE_ORDER_UVUV;
 
 	if (cif->chip_id == CHIP_RK3568_VEHICLE_CIF) {
+		if (cfg->input_format == CIF_INPUT_FORMAT_PAL ||
+		   cfg->input_format == CIF_INPUT_FORMAT_NTSC)
+			xfer_mode = BT1120_TRANSMIT_INTERFACE;
+		else
+			xfer_mode = BT1120_TRANSMIT_PROGRESS;
+	} else if (cif->chip_id == CHIP_RK3588_VEHICLE_CIF) {
+		if (cfg->input_format == CIF_INPUT_FORMAT_PAL ||
+		   cfg->input_format == CIF_INPUT_FORMAT_NTSC)
+			xfer_mode = BT1120_TRANSMIT_INTERFACE_RK3588;
+		else
+			xfer_mode = BT1120_TRANSMIT_PROGRESS_RK3588;
+	} else {
+		if (cfg->input_format == CIF_INPUT_FORMAT_PAL ||
+		   cfg->input_format == CIF_INPUT_FORMAT_NTSC)
+			xfer_mode = BT1120_TRANSMIT_INTERFACE_RK3576;
+		else
+			xfer_mode = BT1120_TRANSMIT_PROGRESS_RK3576;
+	}
+
+	if (cif->chip_id == CHIP_RK3568_VEHICLE_CIF) {
 		val = cfg->vsync | (cfg->href << 1) | inputmode | mipimode
 		   | input_format | output_format
 		   | xfer_mode | yc_swap | multi_id_en
@@ -1848,7 +1868,7 @@ static int cif_stream_setup(struct vehicle_cif *cif)
 				(CSI_YUV_OUTPUT_ORDER_UYVY << 1);
 		in_fmt_yuv_order = rkcif_dvp_get_input_yuv_order(cfg);
 		val = cfg->vsync | (cfg->href << 1) | inputmode
-		   | in_fmt_yuv_order | out_fmt_mask
+		   | in_fmt_yuv_order | out_fmt_mask | xfer_mode
 		   | yc_swap | multi_id_en | multi_id_sel
 		   | sav_detect | multi_id_mode | bt1120_edge_mode;
 	} else {
@@ -1856,7 +1876,7 @@ static int cif_stream_setup(struct vehicle_cif *cif)
 				CSI_YUV_OUTPUT_ORDER_UYVY;
 		in_fmt_yuv_order = rkcif_dvp_get_input_yuv_order_rk3576(cfg);
 		val = cfg->vsync | (cfg->href << 1) | inputmode
-		   | in_fmt_yuv_order | out_fmt_mask
+		   | in_fmt_yuv_order | out_fmt_mask | xfer_mode
 		   | yc_swap | multi_id_en | multi_id_sel
 		   | multi_id_mode | (bt1120_edge_mode >> 8);
 	}
