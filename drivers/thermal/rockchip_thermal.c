@@ -343,9 +343,7 @@ struct rockchip_thermal_data {
 #define RV1126B_UNLOCK_VALUE_MASK		(0xff << 16)
 #define RV1126B_UNLOCK_TRIGGER			BIT(8)
 #define RV1126B_UNLOCK_TRIGGER_MASK		(BIT(8) << 16)
-#define RV1126B_DEF_WIDTH			0x00010001
-#define RV1126B_TARGET_WIDTH			24000
-#define RV1126B_DEF_BIAS			32
+#define RV1126B_MAX_BIAS			0x7f
 #define RV1126B_BIAS_MASK			(0x7f << 16)
 #define RV1126B_SW_CTRL				0x8028
 #define RV1126B_SW_CTRL_MASK			(0x8078 << 16)
@@ -1690,19 +1688,16 @@ static void rv1126b_tsadc_phy_init(struct device *dev, struct regmap *grf,
 				   void __iomem *reg, struct phy_config *phy_cfg)
 {
 	u32 val = 0;
-	u32 width = 0;
 
 	if (!phy_cfg->bias) {
-		phy_cfg->bias = RV1126B_DEF_BIAS;
-		regmap_read(grf, RV1126B_GRF_TSADC_ST1, &val);
-		if (val && val != RV1126B_DEF_WIDTH) {
-			width = (val & 0x0000ffff) + ((val & 0xffff0000) >> 16);
-			phy_cfg->bias = width * RV1126B_DEF_BIAS / RV1126B_TARGET_WIDTH;
-		}
-		dev_info(dev, "width=0x%x, bias=0x%x\n", val, phy_cfg->bias);
+		regmap_read(grf, RV1126B_GRF_TSADC_CON6, &val);
+		phy_cfg->bias = val & RV1126B_MAX_BIAS;
+	} else {
+		regmap_write(grf, RV1126B_GRF_TSADC_CON6,
+			     phy_cfg->bias | RV1126B_BIAS_MASK);
 	}
-	regmap_write(grf, RV1126B_GRF_TSADC_CON6,
-		     phy_cfg->bias | RV1126B_BIAS_MASK);
+	regmap_read(grf, RV1126B_GRF_TSADC_ST1, &val);
+	dev_info(dev, "width=0x%x, bias=0x%x\n", val, phy_cfg->bias);
 	regmap_write(grf, RV1126B_GRF_TSADC_CON6,
 		     RV1126B_CH_EN | RV1126B_CH_EN_MASK);
 	regmap_write(grf, RV1126B_GRF_TSADC_CON0,
@@ -1836,7 +1831,6 @@ static const struct rockchip_tsadc_chip rv1126_tsadc_data = {
 static const struct rockchip_tsadc_chip rv1126b_tsadc_data = {
 	.chn_id = {0, 1}, /* cpu, npu */
 	.chn_num = 2, /* two channels for tsadc */
-	.conversion_time = 2000, /* us */
 	.tshut_mode = TSHUT_MODE_CRU, /* default TSHUT via CRU */
 	.tshut_polarity = TSHUT_LOW_ACTIVE, /* default TSHUT LOW ACTIVE */
 	.tshut_temp = 95000,
