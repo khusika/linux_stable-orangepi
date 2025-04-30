@@ -914,6 +914,7 @@ struct vop2_win_regs {
 
 struct vop2_video_port_regs {
 	struct vop_reg cfg_done;
+	struct vop_reg sys_cfg_done;
 	struct vop_reg overlay_mode;
 	struct vop_reg dsp_background;
 	struct vop_reg port_mux;
@@ -1234,6 +1235,7 @@ struct vop2_win_data {
 	uint8_t axi_uv_id;
 	uint8_t possible_vp_mask;
 	uint8_t dci_rid_id;
+	uint8_t reg_done_bit;
 
 	uint32_t base;
 	enum drm_plane_type type;
@@ -1464,6 +1466,7 @@ struct vop_data {
 struct vop2_ctrl {
 	struct vop_reg cfg_done_en;
 	struct vop_reg wb_cfg_done;
+	struct vop_reg win_cfg_done;
 	struct vop_reg auto_gating_en;
 	struct vop_reg aclk_pre_auto_gating_en;
 	struct vop_reg dma_finish_mode;

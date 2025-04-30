@@ -458,6 +458,7 @@ struct vop2_win {
 	uint8_t axi_uv_id;
 	uint8_t scale_engine_num;
 	uint8_t possible_vp_mask;
+	uint8_t reg_done_bit;
 	enum drm_plane_type type;
 	unsigned int max_upscale_factor;
 	unsigned int max_downscale_factor;
@@ -782,6 +783,11 @@ struct vop2_video_port {
 	 */
 	struct drm_property *plane_mask_prop;
 	/**
+	 * @reserved_plane_mask_prop: reserved plane mask interaction with userspace
+	 */
+	struct drm_property *reserved_plane_mask_prop;
+
+	/**
 	 * @feature_prop: crtc feature interaction with userspace
 	 */
 	struct drm_property *feature_prop;
@@ -835,6 +841,12 @@ struct vop2_video_port {
 	 */
 	int primary_plane_phy_id;
 
+	/**
+	 * @reserved_plane_phy_id: reserved plane is used by third party OS,
+	 * reserved plane is always on the top of overlay.
+	 */
+	int reserved_plane_phy_id;
+
 	struct post_acm acm_info;
 	struct post_csc csc_info;
 
@@ -872,6 +884,11 @@ struct vop2_video_port {
 	 * we configure whether sharp is disabled in dts
 	 */
 	bool sharp_disabled;
+
+	/**
+	 * @win_cfg_done_bits: control reg done bit for each win
+	 */
+	u32 win_cfg_done_bits;
 };
 
 struct vop2_extend_pll {
@@ -956,6 +973,7 @@ struct vop2 {
 	unsigned long aclk_current_freq;
 	enum rockchip_drm_vop_aclk_mode aclk_mode;
 	bool merge_irq;
+	bool enable_reserved_plane;
 
 	const struct vop2_data *data;
 	/* Number of win that registered as plane,
@@ -1929,8 +1947,15 @@ static inline void rk3588_vop2_cfg_done(struct drm_crtc *crtc)
 		val |= BIT(vp_data->splice_vp_id) | (BIT(vp_data->splice_vp_id) << 16);
 
 	rockchip_drm_dbg(vop2->dev, VOP_DEBUG_CFG_DONE, "cfg_done: 0x%x\n", val);
+	if (vp->reserved_plane_phy_id != ROCKCHIP_VOP2_PHY_ID_INVALID) {
+		val = vp->win_cfg_done_bits;
+		VOP_CTRL_SET(vop2, win_cfg_done, val);
+		VOP_CTRL_SET(vop2, wb_cfg_done, 1);
+		VOP_MODULE_SET(vop2, vp, sys_cfg_done, 1);
+	} else {
+		vop2_writel(vop2, 0, val);
+	}
 
-	vop2_writel(vop2, 0, val);
 }
 
 static inline void vop2_wb_cfg_done(struct vop2_video_port *vp)
@@ -2201,6 +2226,8 @@ static void vop2_win_multi_area_disable(struct vop2_win *parent)
 static void vop2_win_disable(struct vop2_win *win, bool skip_splice_win)
 {
 	struct vop2 *vop2 = win->vop2;
+	struct vop2_video_port *vp = NULL;
+	uint32_t vp_id;
 
 	/* Disable the right splice win */
 	if (win->splice_win && !skip_splice_win) {
@@ -2257,6 +2284,15 @@ static void vop2_win_disable(struct vop2_win *win, bool skip_splice_win)
 				win->pd->vp_mask &= ~win->vp_mask;
 			}
 		}
+
+		vp_id = ffs(win->vp_mask) - 1;
+		if (vp_id >= ROCKCHIP_MAX_CRTC) {
+			DRM_ERROR("Unsupported vp_id: %d\n", vp_id);
+			return;
+		}
+		vp = &vop2->vps[vp_id];
+		if (vp->reserved_plane_phy_id != ROCKCHIP_VOP2_PHY_ID_INVALID)
+			vp->win_cfg_done_bits |= BIT(win->reg_done_bit);
 	}
 
 	if (win->left_win && win->splice_mode_right) {
@@ -7122,6 +7158,7 @@ static void vop2_win_atomic_update(struct vop2_win *win, struct drm_rect *src, s
 		VOP_CLUSTER_SET(vop2, win, frm_reset_en, 1);
 		VOP_CLUSTER_SET(vop2, win, dma_stride_4k_disable, 1);
 	}
+	vp->win_cfg_done_bits |= BIT(win->reg_done_bit);
 	spin_unlock(&vop2->reg_lock);
 }
 
@@ -12142,10 +12179,18 @@ static void vop3_setup_layer_sel_for_vp(struct vop2_video_port *vp,
 	struct vop2_win *win;
 	u32 layer_sel = 0;
 	u8 layer_sel_id;
-	u8 layer_sel_none = 0xff;
+	u8 layer_sel_none = 0xf;
 	int i;
+	int nr_layers = vop2->data->nr_layers;
 
-	for (i = 0; i < vop2->data->nr_layers; i++) {
+	if (vp->reserved_plane_phy_id != ROCKCHIP_VOP2_PHY_ID_INVALID) {
+		/* set reserved layer at the top layer */
+		nr_layers -= 1;
+		win = vop2_find_win_by_phys_id(vop2, vp->reserved_plane_phy_id);
+		layer_sel = win->layer_sel_id[vp->id] << nr_layers * 4;
+	}
+
+	for (i = 0; i < nr_layers; i++) {
 		layer_sel_id = layer_sel_none;
 		if (i < vp->nr_layers) {
 			zpos = &vop2_zpos[i];
@@ -13476,6 +13521,7 @@ static void vop2_crtc_atomic_flush(struct drm_crtc *crtc, struct drm_atomic_stat
 	spin_lock_irqsave(&vop2->irq_lock, flags);
 	vop2_wb_commit(crtc);
 	vop2_cfg_done(crtc);
+	vp->win_cfg_done_bits = 0;
 
 	if (vp->mcu_timing.mcu_pix_total)
 		VOP_MODULE_SET(vop2, vp, mcu_hold_mode, 0);
@@ -13764,6 +13810,11 @@ static int vop2_crtc_atomic_get_property(struct drm_crtc *crtc,
 		return 0;
 	}
 
+	if (property == vp->reserved_plane_mask_prop) {
+		*val = BIT(vp->reserved_plane_phy_id);
+		return 0;
+	}
+
 	if (property == vp->hdr_ext_data_prop) {
 		*val = vcstate->hdr_ext_data ? vcstate->hdr_ext_data->base.id : 0;
 		return 0;
@@ -13805,6 +13856,7 @@ static int vop2_crtc_atomic_set_property(struct drm_crtc *crtc,
 	struct drm_mode_config *mode_config = &drm_dev->mode_config;
 	struct vop2_video_port *vp = to_vop2_video_port(crtc);
 	struct vop2 *vop2 = vp->vop2;
+	const struct vop2_data *vop2_data = vop2->data;
 	bool replaced = false;
 	int ret;
 
@@ -13891,6 +13943,14 @@ static int vop2_crtc_atomic_set_property(struct drm_crtc *crtc,
 
 	if (property == vp->min_refresh_rate_prop) {
 		vcstate->min_refresh_rate = val;
+		return 0;
+	}
+
+	if (property == vp->reserved_plane_mask_prop) {
+		if (!val || hweight32(val) > 1 || !(val & vop2_data->plane_mask_base))
+			vp->reserved_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
+		else
+			vp->reserved_plane_phy_id = ilog2(val);
 		return 0;
 	}
 
@@ -14798,6 +14858,38 @@ static int vop2_gamma_init(struct vop2 *vop2)
 	return 0;
 }
 
+static int vop2_crtc_create_reserved_plane_mask_property(struct vop2 *vop2,
+							 struct drm_crtc *crtc)
+{
+	struct drm_property *prop;
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+
+	static const struct drm_prop_enum_list props[] = {
+		{ ROCKCHIP_VOP2_CLUSTER0, "Cluster0" },
+		{ ROCKCHIP_VOP2_CLUSTER1, "Cluster1" },
+		{ ROCKCHIP_VOP2_ESMART0, "Esmart0" },
+		{ ROCKCHIP_VOP2_ESMART1, "Esmart1" },
+		{ ROCKCHIP_VOP2_SMART0, "Smart0" },
+		{ ROCKCHIP_VOP2_SMART1, "Smart1" },
+		{ ROCKCHIP_VOP2_CLUSTER2, "Cluster2" },
+		{ ROCKCHIP_VOP2_CLUSTER3, "Cluster3" },
+		{ ROCKCHIP_VOP2_ESMART2, "Esmart2" },
+		{ ROCKCHIP_VOP2_ESMART3, "Esmart3" },
+	};
+
+	prop = drm_property_create_bitmask(vop2->drm_dev, 0, "RESERVED_PLANE_MASK",
+					   props, ARRAY_SIZE(props), 0xffffffff);
+	if (!prop) {
+		DRM_DEV_ERROR(vop2->dev, "create reserved_plane_mask prop for vp%d failed\n", vp->id);
+		return -ENOMEM;
+	}
+
+	vp->reserved_plane_mask_prop = prop;
+	drm_object_attach_property(&crtc->base, vp->reserved_plane_mask_prop, BIT(vp->reserved_plane_phy_id));
+
+	return 0;
+}
+
 static int vop2_crtc_create_plane_mask_property(struct vop2 *vop2,
 						struct drm_crtc *crtc,
 						uint32_t plane_mask)
@@ -15246,6 +15338,10 @@ static int vop2_create_crtc(struct vop2 *vop2, uint8_t enabled_vp_mask)
 		 */
 		if (plane_mask && !is_vop3(vop2))
 			vop2_crtc_create_plane_mask_property(vop2, crtc, plane_mask);
+
+		if (vp->reserved_plane_phy_id != ROCKCHIP_VOP2_PHY_ID_INVALID)
+			vop2_crtc_create_reserved_plane_mask_property(vop2, crtc);
+
 		vop2_crtc_create_feature_property(vop2, crtc);
 		vop2_crtc_create_vrr_property(vop2, crtc);
 
@@ -15477,6 +15573,7 @@ static int vop2_win_init(struct vop2 *vop2)
 		win->axi_yrgb_id = win_data->axi_yrgb_id;
 		win->axi_uv_id = win_data->axi_uv_id;
 		win->possible_vp_mask = win_data->possible_vp_mask;
+		win->reg_done_bit = win_data->reg_done_bit;
 
 		if (win_data->pd_id)
 			win->pd = vop2_find_pd_by_id(vop2, win_data->pd_id);
@@ -16316,6 +16413,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 		for_each_child_of_node(vop_out_node, child) {
 			u32 plane_mask = 0;
 			u32 primary_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
+			u32 reserved_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
 			u32 vp_id = 0;
 			u32 val = 0;
 
@@ -16330,7 +16428,12 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 				vop2->vps[vp_id].primary_plane_phy_id = primary_plane_phy_id;
 			else
 				vop2->vps[vp_id].primary_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
-
+			if (!of_property_read_u32(child, "rockchip,reserved-plane", &reserved_plane_phy_id)) {
+				vop2->vps[vp_id].reserved_plane_phy_id = reserved_plane_phy_id;
+				vop2->enable_reserved_plane = true;
+			} else {
+				vop2->vps[vp_id].reserved_plane_phy_id = ROCKCHIP_VOP2_PHY_ID_INVALID;
+			}
 			vop2->vps[vp_id].xmirror_en = of_property_read_bool(child, "xmirror-enable");
 
 			ret = of_clk_set_defaults(child, false);
