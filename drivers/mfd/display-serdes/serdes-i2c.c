@@ -446,6 +446,8 @@ static int serdes_i2c_probe(struct i2c_client *client,
 		SERDES_DBG_MFD("%s: use_reg_check_work=%d\n", __func__, serdes->use_reg_check_work);
 	}
 
+	serdes_create_debugfs(serdes);
+
 	dev_info(dev, "serdes %s serdes_i2c_probe successful version %s\n",
 		 serdes->chip_data->name, MFD_SERDES_DISPLAY_VERSION);
 
@@ -472,6 +474,8 @@ static void serdes_i2c_remove(struct i2c_client *client)
 		cancel_delayed_work_sync(&serdes->mfd_delay_work);
 		destroy_workqueue(serdes->mfd_wq);
 	}
+
+	serdes_destroy_debugfs(serdes);
 }
 
 static int serdes_i2c_prepare(struct device *dev)
@@ -584,12 +588,24 @@ static int __init serdes_i2c_init(void)
 	int ret;
 
 	ret = i2c_add_driver(&serdes_i2c_driver);
-	if (ret != 0)
+	if (ret != 0) {
 		pr_err("Failed to register serdes I2C driver: %d\n", ret);
+		return ret;
+	}
 
-	return ret;
+	serdes_debugfs_init();
+
+	return 0;
 }
+
+static void __exit serdes_i2c_exit(void)
+{
+	i2c_del_driver(&serdes_i2c_driver);
+	serdes_debugfs_exit();
+}
+
 subsys_initcall(serdes_i2c_init);
+module_exit(serdes_i2c_exit);
 
 MODULE_AUTHOR("Luo Wei <lw@rock-chips.com>");
 MODULE_DESCRIPTION("display i2c interface for different serdes");
