@@ -253,10 +253,6 @@ int rkvpss_rockit_buf_queue(struct rockit_rkvpss_cfg *input_cfg)
 
 	list_add_tail(&vpssrk_buf->vpss_buffer.queue, &stream->buf_queue);
 	spin_unlock_irqrestore(&stream->vbq_lock, lock_flags);
-
-	if (stream->is_pause)
-		stream->ops->update_mi(stream);
-
 	return 0;
 }
 

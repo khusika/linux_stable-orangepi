@@ -854,8 +854,7 @@ static void stream_frame_start(struct rkvpss_stream *stream, u32 irq)
 		rkvpss_stream_scale(stream, true, !irq);
 		rkvpss_stream_crop(stream, true, !irq);
 	}
-	if (!irq && !stream->curr_buf &&
-	    !stream->dev->hw_dev->is_single)
+	if (stream->is_pause)
 		stream->ops->update_mi(stream);
 
 	if (dev->stream_vdev.wrap_line && stream->id == RKVPSS_OUTPUT_CH0) {
@@ -949,11 +948,13 @@ static void scl_update_mi(struct rkvpss_stream *stream)
 	}
 
 	v4l2_dbg(2, rkvpss_debug, &dev->v4l2_dev,
-		 "%s id:%d unite_index:%d Y:0x%x UV:0x%x | Y_SHD:0x%x\n",
-		__func__, stream->id, dev->unite_index,
+		 "%s id:%d idx:%d buf:%p pause:%d Y:%x UV:%x ctrl:%x | SHD(Y:%x ctrl:%x)\n",
+		__func__, stream->id, dev->unite_index, stream->curr_buf, stream->is_pause,
 		rkvpss_idx_read(dev, stream->config->mi.y_base, dev->unite_index),
 		rkvpss_idx_read(dev, stream->config->mi.uv_base, dev->unite_index),
-		rkvpss_hw_read(dev->hw_dev, stream->config->mi.y_shd));
+		rkvpss_idx_read(dev, stream->config->mi.ctrl, dev->unite_index),
+		rkvpss_hw_read(dev->hw_dev, stream->config->mi.y_shd),
+		rkvpss_hw_read(dev->hw_dev, stream->config->mi.ctrl_shd));
 }
 
 static void scl_config_mi(struct rkvpss_stream *stream)
@@ -1100,8 +1101,10 @@ static void scl_enable_mi(struct rkvpss_stream *stream)
 	val = RKVPSS_ONLINE2_CHN_FORCE_UPD | RKVPSS_CFG_GEN_UPD;
 	rkvpss_unite_write(dev, RKVPSS_VPSS_UPDATE, val);
 	v4l2_dbg(2, rkvpss_debug, &dev->v4l2_dev,
-		 "%s id:%d\n", __func__,
-		 stream->id);
+		 "%s id:%d 0x%x:0x%x 0x%x:0x%x\n",
+		 __func__, stream->id,
+		 RKVPSS_VPSS_ONLINE, rkvpss_idx_read(dev, RKVPSS_VPSS_ONLINE, dev->unite_index),
+		 RKVPSS_VPSS_ONLINE_SHD, rkvpss_hw_read(dev->hw_dev, RKVPSS_VPSS_ONLINE_SHD));
 }
 
 static void scl_disable_mi(struct rkvpss_stream *stream)
@@ -1136,8 +1139,10 @@ static void scl_disable_mi(struct rkvpss_stream *stream)
 	val = RKVPSS_ONLINE2_CHN_FORCE_UPD | RKVPSS_CFG_GEN_UPD;
 	rkvpss_unite_write(dev, RKVPSS_VPSS_UPDATE, val);
 	v4l2_dbg(2, rkvpss_debug, &dev->v4l2_dev,
-		 "%s id:%d\n", __func__,
-		 stream->id);
+		 "%s id:%d 0x%x:0x%x 0x%x:0x%x\n",
+		 __func__, stream->id,
+		 RKVPSS_VPSS_ONLINE, rkvpss_idx_read(dev, RKVPSS_VPSS_ONLINE, dev->unite_index),
+		 RKVPSS_VPSS_ONLINE_SHD, rkvpss_hw_read(dev->hw_dev, RKVPSS_VPSS_ONLINE_SHD));
 }
 
 static struct streams_ops scl_stream_ops = {
@@ -1359,9 +1364,6 @@ static void rkvpss_buf_queue(struct vb2_buffer *vb)
 	spin_lock_irqsave(&stream->vbq_lock, lock_flags);
 	list_add_tail(&vpssbuf->queue, &stream->buf_queue);
 	spin_unlock_irqrestore(&stream->vbq_lock, lock_flags);
-	if (dev->hw_dev->is_single &&
-	    stream->streaming && !stream->curr_buf)
-		stream->ops->update_mi(stream);
 }
 
 static void destroy_buf_queue(struct rkvpss_stream *stream,
