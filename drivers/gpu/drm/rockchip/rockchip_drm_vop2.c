@@ -15633,7 +15633,7 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 	struct vop2_video_port *vp;
 	struct vop2_win *win;
 	char *full_plane, *current_plane;
-	u32 full_plane_mask = 0, plane_mask = 0;
+	u32 full_plane_mask = 0, plane_mask = 0, plane_mask_base = 0;
 	u32 phys_id;
 	u32 nr_planes;
 	int primary_plane_id;
@@ -15645,8 +15645,6 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 	 * VP.
 	 */
 	for (i = 0; i < vop2_data->nr_vps; i++) {
-		if (vop2_skip_shared_vp(vop2, i))
-			continue;
 		vp = &vop2->vps[i];
 		plane_mask = vp->plane_mask;
 		primary_plane_id = vp->primary_plane_phy_id;
@@ -15701,8 +15699,13 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 	if (is_vop3(vop2) && !full_plane_mask)
 		return true;
 
-	if (full_plane_mask != vop2_data->plane_mask_base) {
-		full_plane = vop2_plane_mask_to_string(vop2_data->plane_mask_base);
+	if (vop2->shared_mode_res.shared_mode)
+		plane_mask_base = vop2->shared_mode_res.plane_mask;
+	else
+		plane_mask_base = vop2_data->plane_mask_base;
+
+	if (full_plane_mask != plane_mask_base) {
+		full_plane = vop2_plane_mask_to_string(plane_mask_base);
 		current_plane = vop2_plane_mask_to_string(plane_mask);
 		DRM_WARN("all windows should be assigned, full plane mask: %s[0x%x], current plane mask: %s[0x%x]\n",
 			 full_plane, vop2_data->plane_mask_base, current_plane, plane_mask);
