@@ -1786,8 +1786,6 @@ static int rkvpss_ofl_run(struct rkvpss_offline_dev *ofl,
 	if (!ret) {
 		v4l2_err(&ofl->v4l2_dev, "working timeout\n");
 		ret = -EAGAIN;
-		if (cfg->input.dmabuf)
-			rkvpss_soft_reset(ofl->hw);
 	} else {
 		ret = 0;
 	}
