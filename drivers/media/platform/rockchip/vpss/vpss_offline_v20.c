@@ -1766,8 +1766,9 @@ static int rkvpss_ofl_run(struct rkvpss_offline_dev *ofl,
 	rkvpss_hw_set_bits(hw, RKVPSS_VPSS_CTRL, mask, val);
 
 	//1126b add RKVPSS_MIR_FORCE_UPD
-	update |= RKVPSS_CHN_FORCE_UPD | RKVPSS_CFG_GEN_UPD | RKVPSS_MIR_GEN_UPD |
-		  RKVPSS_MIR_FORCE_UPD;
+	update |= RKVPSS_CHN_FORCE_UPD | RKVPSS_CFG_GEN_UPD;
+	if (hw->is_ofl_cmsc)
+		update |= RKVPSS_MIR_GEN_UPD | RKVPSS_MIR_FORCE_UPD;
 	if (is_wrap(cfg))
 		update |= RKVPSS_CFG_FORCE_UPD;
 
