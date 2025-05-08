@@ -1556,6 +1556,14 @@ static int write_config(struct rkvpss_offline_dev *ofl,
 			mask = RKVPSS2X_SW_MI_WR_FBCE_SEL(3);
 			val = RKVPSS2X_SW_MI_WR_FBCE_SEL(i + 1);
 			rkvpss_hw_set_bits(hw, RKVPSS2X_MI_WR_FBCE_CTRL, mask, val);
+
+			if (cfg->output[i].aspt.enable) {
+				w = cfg->output[i].aspt.width;
+				h = cfg->output[i].aspt.height;
+			} else {
+				w = cfg->output[i].scl_width;
+				h = cfg->output[i].scl_height;
+			}
 			rkvpss_hw_write(hw, RKVPSS2X_MI_WR_FBCE_SIZE,
 					RKVPSS2X_SW_WR_FBCE_SIZE(w, h));
 			rkvpss_hw_write(hw, RKVPSS2X_MI_WR_FBCE_OFFSET,
