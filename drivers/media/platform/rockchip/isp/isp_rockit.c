@@ -154,8 +154,10 @@ int rkisp_rockit_buf_queue(struct rockit_cfg *input_rockit_cfg)
 			return PTR_ERR(sgt);
 		}
 		isprk_buf->vaddr = NULL;
-		if (dma_buf_vmap(input_rockit_cfg->buf, &map) == 0)
-			isprk_buf->vaddr = map.vaddr;
+		/* default vmap two for iqtool to get image, rkisp_buf_dbg to vmap all */
+		if (i < 2 || rkisp_buf_dbg)
+			if (dma_buf_vmap(input_rockit_cfg->buf, &map) == 0)
+				isprk_buf->vaddr = map.vaddr;
 		if (rkisp_buf_dbg) {
 			u64 *data = isprk_buf->vaddr;
 
