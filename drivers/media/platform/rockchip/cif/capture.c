@@ -1013,6 +1013,8 @@ cif_input_fmt *rkcif_get_input_fmt(struct rkcif_device *dev, struct v4l2_rect *r
 			csi_info->vc = pad_id;
 		if (ch_info.data_type > 0)
 			csi_info->data_type = ch_info.data_type;
+		else
+			csi_info->data_type = 0;
 		if (ch_info.data_bit > 0)
 			csi_info->data_bit = ch_info.data_bit;
 		if (ch_info.field == 0)
