@@ -2491,6 +2491,7 @@ static int rkisp_isp_start(struct rkisp_device *dev)
 {
 	struct rkisp_hw_dev *hw = dev->hw_dev;
 	u32 val, upd = CIF_ISP_CTRL_ISP_CFG_UPD;
+	bool is_direct = false;
 
 	v4l2_dbg(1, rkisp_debug, &dev->v4l2_dev,
 		 "%s refcnt:%d link_num:%d unite_div:%d\n", __func__,
@@ -2525,9 +2526,13 @@ static int rkisp_isp_start(struct rkisp_device *dev)
 	       CIF_ISP_CTRL_ISP_INFORM_ENABLE | CIF_ISP_CTRL_ISP_CFG_UPD_PERMANENT;
 	if (dev->isp_ver == ISP_V20)
 		val |= NOC_HURRY_PRIORITY(2) | NOC_HURRY_W_MODE(2) | NOC_HURRY_R_MODE(1);
-	if (atomic_read(&hw->refcnt) == 1)
+	if (atomic_read(&hw->refcnt) == 1) {
 		hw->cur_dev_id = dev->dev_id;
-	rkisp_unite_write(dev, CIF_ISP_CTRL, val, false);
+		/* isp20 and isp21 csi2rx need isp force */
+		if (dev->isp_ver < ISP_V30)
+			is_direct = true;
+	}
+	rkisp_unite_write(dev, CIF_ISP_CTRL, val, is_direct);
 	rkisp_clear_reg_cache_bits(dev, CIF_ISP_CTRL, upd);
 
 	dev->isp_err_cnt = 0;
