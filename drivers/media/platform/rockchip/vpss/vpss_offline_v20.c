@@ -846,7 +846,9 @@ static int read_config(struct rkvpss_offline_dev *ofl,
 	case V4L2_PIX_FMT_NV16:
 		if (cfg->input.stride < ALIGN(cfg->input.width, 16))
 			cfg->input.stride = ALIGN(cfg->input.width, 16);
-		in_c_offs = cfg->input.stride * cfg->input.height;
+		in_c_offs = cfg->input.ver_stride ?
+				cfg->input.stride * cfg->input.ver_stride :
+				cfg->input.stride * cfg->input.height;
 		in_size = cfg->input.stride * cfg->input.height * 2;
 		in_ctrl |= RKVPSS_MI_RD_INPUT_422SP;
 		unite_off = 8;
@@ -854,7 +856,9 @@ static int read_config(struct rkvpss_offline_dev *ofl,
 	case V4L2_PIX_FMT_NV12:
 		if (cfg->input.stride < ALIGN(cfg->input.width, 16))
 			cfg->input.stride = ALIGN(cfg->input.width, 16);
-		in_c_offs = cfg->input.stride * cfg->input.height;
+		in_c_offs = cfg->input.ver_stride ?
+				cfg->input.stride * cfg->input.ver_stride :
+				cfg->input.stride * cfg->input.height;
 		in_size = cfg->input.stride * cfg->input.height * 3 / 2;
 		in_ctrl |= RKVPSS_MI_RD_INPUT_420SP;
 		unite_off = 8;
@@ -862,7 +866,9 @@ static int read_config(struct rkvpss_offline_dev *ofl,
 	case V4L2_PIX_FMT_NV61:
 		if (cfg->input.stride < ALIGN(cfg->input.width, 16))
 			cfg->input.stride = ALIGN(cfg->input.width, 16);
-		in_c_offs = cfg->input.stride * cfg->input.height;
+		in_c_offs = cfg->input.ver_stride ?
+				cfg->input.stride * cfg->input.ver_stride :
+				cfg->input.stride * cfg->input.height;
 		in_size = cfg->input.stride * cfg->input.height * 2;
 		in_ctrl |= RKVPSS_MI_RD_INPUT_422SP | RKVPSS_MI_RD_UV_SWAP;
 		unite_off = 8;
@@ -870,7 +876,9 @@ static int read_config(struct rkvpss_offline_dev *ofl,
 	case V4L2_PIX_FMT_NV21:
 		if (cfg->input.stride < ALIGN(cfg->input.width, 16))
 			cfg->input.stride = ALIGN(cfg->input.width, 16);
-		in_c_offs = cfg->input.stride * cfg->input.height;
+		in_c_offs = cfg->input.ver_stride ?
+				cfg->input.stride * cfg->input.ver_stride :
+				cfg->input.stride * cfg->input.height;
 		in_size = cfg->input.stride * cfg->input.height * 3 / 2;
 		in_ctrl |= RKVPSS_MI_RD_INPUT_420SP | RKVPSS_MI_RD_UV_SWAP;
 		unite_off = 8;
@@ -2274,9 +2282,9 @@ int rkvpss_prepare_run(struct rkvpss_offline_dev *ofl,
 		t = ktime_get();
 
 		v4l2_info(&ofl->v4l2_dev,
-			  "%s dev_id:%d seq:%d mirror:%d input:%dx%d buffd:%d format:%c%c%c%c stride:%d rotate:%d\n",
+			  "%s dev_id:%d seq:%d mirror:%d input:%dx%d [%dx%d] buffd:%d format:%c%c%c%c stride:%d rotate:%d\n",
 			  __func__, cfg->dev_id, cfg->sequence, cfg->mirror,
-			  cfg->input.width, cfg->input.height, cfg->input.buf_fd,
+			  cfg->input.width, cfg->input.height, cfg->input.stride, cfg->input.ver_stride, cfg->input.buf_fd,
 			  cfg->input.format, cfg->input.format >> 8,
 			  cfg->input.format >> 16, cfg->input.format >> 24,
 			  cfg->input.stride, cfg->input.rotate);

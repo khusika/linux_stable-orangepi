@@ -244,6 +244,7 @@ struct rkvpss_module_sel {
  * height: height of input image, range: 32~3504(rk3576) 32~3072(rv1126b)
  * stride: virtual width of input image, 16 align. auto calculate according to width and
  *         format if 0.
+ * ver_stride: virtual height of input image.
  * format: V4L2_PIX_FMT_NV12/V4L2_PIX_FMT_NV16/V4L2_PIX_FMT_RGB565/V4L2_PIX_FMT_RGB24/
  *         V4L2_PIX_FMT_XBGR32/
  *         V4L2_PIX_FMT_NV61/V4L2_PIX_FMT_NV21/V4L2_PIX_FMT_RGB565X/V4L2_PIX_FMT_BGR24/
@@ -259,6 +260,7 @@ struct rkvpss_input_cfg {
 	int width;
 	int height;
 	int stride;
+	int ver_stride;
 	int format;
 	int buf_fd;
 	int rotate;
