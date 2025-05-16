@@ -26,14 +26,6 @@
 		reset-gpios = <&gpio0 RK_PB2 GPIO_ACTIVE_LOW>;
 	};
 
-	vcc_mipi: vcc-mipi {
-		compatible = "regulator-fixed";
-		regulator-name = "vcc_mipi";
-		gpio = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
-		enable-active-high;
-		regulator-boot-on;
-	};
-
 	vcc5v0_sys: vcc5v0-sys {
 		compatible = "regulator-fixed";
 		regulator-name = "vcc5v0_sys";
@@ -71,6 +63,39 @@
 		pinctrl-0 = <&vcc5v0_host_en>;
 	};
 
+	vcc_mipi: vcc-mipi {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc_mipi";
+		gpio = <&gpio0 RK_PC6 GPIO_ACTIVE_HIGH>;
+		enable-active-high;
+		regulator-boot-on;
+	};
+
+	vcc_sd: vcc-sd {
+		compatible = "regulator-fixed";
+		gpio = <&gpio0 RK_PB0 GPIO_ACTIVE_LOW>;
+		regulator-name = "vcc_sd";
+		regulator-min-microvolt = <3300000>;
+		regulator-max-microvolt = <3300000>;
+		enable-active-low;
+		regulator-boot-on;	// The legacy U-Boot GPIO driver needs this to set correct SDMMC0_PWREN value
+		vin-supply = <&vcc12v_dcin>;
+	};
+
+	vccio_sd: vccio-sd {
+		compatible = "regulator-gpio";
+		regulator-boot-on;
+		regulator-name = "vccio_sd";
+		regulator-min-microvolt = <1800000>;
+		regulator-max-microvolt = <3300000>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&sdmmc_volt>;
+		gpios = <&gpio0 RK_PA6 GPIO_ACTIVE_HIGH>;
+		vin-supply = <&vcc5v0_sys>;
+		states = <1800000 0x0
+			  3300000 0x1>;
+	};
+
 	vdd_npu: vdd-npu {
 		compatible = "pwm-regulator";
 		pwms = <&pwm0_8ch_0 0 25000 1>;
@@ -105,8 +130,30 @@
 	};
 };
 
+&acdcdig_dsm {
+	status = "okay";
+	pa-ctl-gpios = <&gpio0 RK_PA4 GPIO_ACTIVE_HIGH>;
+	pinctrl-0 = <&dsm_aud_rn_pins &dsm_aud_rp_pins>;
+};
+
+&acodec_sound {
+	status = "okay";
+};
+
+&audio_codec {
+	status = "okay";
+};
+
 &backlight {
 	pwms = <&pwm0_8ch_3 0 25000 0>;
+};
+
+&can0 {
+	assigned-clocks = <&cru CLK_CAN0>;
+	assigned-clock-rates = <200000000>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&can0m1_pins>;
+	status = "okay";
 };
 
 &cpu0 {
@@ -137,6 +184,25 @@
 	rockchip,default-sample-phase = <90>;
 	no-sdio;
 	no-sd;
+	status = "okay";
+};
+
+&fspi0 {
+	status = "okay";
+
+	flash@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		spi-max-frequency = <75000000>;
+		spi-rx-bus-width = <4>;
+		spi-tx-bus-width = <1>;
+	};
+};
+
+&gmac {
+	phy-mode = "rmii";
+	clock_in_out = "input";
+	phy-handle = <&rmii_phy>;
 	status = "okay";
 };
 
@@ -267,6 +333,19 @@
 	};
 };
 
+&mdio {
+	rmii_phy: ethernet-phy@2 {
+		compatible = "ethernet-phy-id0680.8101", "ethernet-phy-ieee802.3-c22";
+		reg = <2>;
+		clocks = <&cru CLK_MACPHY>;
+		clock-frequency = <50000000>;
+		resets = <&cru SRST_RESETN_MACPHY>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&fephym1_pins>;
+		phy-is-integrated;
+	};
+};
+
 &mipi_dphy {
 	status = "okay";
 };
@@ -281,6 +360,13 @@
 	sdio-pwrseq {
 		wifi_enable_h: wifi-enable-h {
 			rockchip,pins = <0 RK_PB2 RK_FUNC_GPIO &pcfg_pull_none>;
+		};
+	};
+
+	sdmmc {
+		/omit-if-no-ref/
+		sdmmc_volt: sdmmc-volt {
+			rockchip,pins = <0 RK_PA6 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 
@@ -319,7 +405,58 @@
 	rknpu-supply = <&vdd_npu>;
 };
 
+&rockchip_suspend {
+	status = "okay";
+
+	rockchip,sleep-mode-config = <
+		(0
+		| RKPM_SLP_ARMOFF_LOGOFF
+		| RKPM_SLP_PMU_PMUALIVE_32K
+		| RKPM_SLP_PMU_DIS_OSC
+		| RKPM_SLP_32K_EXT
+		)
+	>;
+
+	rockchip,sleep-pin-config = <
+		(0
+		| RKPM_SLEEP_PIN2_EN
+		)
+		(0
+		)
+	>;
+};
+
 &route_dsi {
+	status = "okay";
+};
+
+&rtc {
+	rockchip,rtc-suspend-bypass;
+	status = "okay";
+};
+
+&sai2 {
+	rockchip,sai-rx-route = <1 0 2 3>;
+	status = "okay";
+	/delete-property/ pinctrl-names;
+	/delete-property/ pinctrl-0;
+};
+
+&saradc0 {
+	vref-supply = <&vcc_1v8>;
+};
+
+&sdmmc0 {
+	max-frequency = <200000000>;
+	no-sdio;
+	no-mmc;
+	bus-width = <4>;
+	cap-mmc-highspeed;
+	cap-sd-highspeed;
+	disable-wp;
+	sd-uhs-sdr104;
+	vmmc-supply = <&vcc_sd>;
+	vqmmc-supply = <&vccio_sd>;
 	status = "okay";
 };
 
