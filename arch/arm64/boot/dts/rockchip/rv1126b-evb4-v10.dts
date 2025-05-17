@@ -176,6 +176,36 @@
 	power-supply = <&vcc_mipi>;
 };
 
+&dsmc {
+	clock-frequency = <100000000>;
+	status = "disabled";
+	slave {
+		rockchip,dqs-dll = <0x20 0x20
+				    0x20 0x20
+				    0x20 0x20
+				    0x20 0x20>;
+		rockchip,ranges = <0x0 0x10000000 0x0 0x2000000>;
+	};
+};
+
+&dsmc_slave {
+	status = "disabled";
+	lb-slave {
+		dsmc_lb_slave0: lb-slave0 {
+			rockchip,int-en = <0x0>;
+			status = "okay";
+			dsmc_p0_region: region {
+				dsmc_p0_region0: region0 {
+					status = "okay";
+				};
+				dsmc_p0_region3: region3 {
+					status = "okay";
+				};
+			};
+		};
+	};
+};
+
 &emmc {
 	bus-width = <8>;
 	cap-mmc-highspeed;
