@@ -5856,6 +5856,8 @@ static int vop2_cluster_two_win_mode_check(struct drm_plane_state *pstate)
 	struct vop2_win *main_win = vop2_find_win_by_phys_id(vop2, win->phys_id);
 	struct drm_plane_state *main_pstate;
 	int actual_w = drm_rect_width(&pstate->src) >> 16;
+	struct drm_framebuffer *fb = pstate->fb;
+	u8 block_w = IS_ROCKCHIP_RFBC_MOD(fb->modifier) ? 64 : fb->modifier & AFBC_FORMAT_MOD_BLOCK_SIZE_32x8 ? 32 : 16;
 	int xoffset;
 
 	if (pstate->fb->modifier == DRM_FORMAT_MOD_LINEAR)
@@ -5890,9 +5892,9 @@ static int vop2_cluster_two_win_mode_check(struct drm_plane_state *pstate)
 		xoffset = main_pstate->src.x1 >> 16;
 	actual_w = drm_rect_width(&main_pstate->src) >> 16;
 
-	if ((actual_w + xoffset % 16) > 2048) {
-		DRM_ERROR("%s act_w(%d) + xoffset(%d) / 16  << 2048 in two win mode\n",
-				  main_win->name, actual_w, xoffset);
+	if ((actual_w + xoffset % block_w) > 2048) {
+		DRM_ERROR("%s act_w(%d) + xoffset(%d) %% %d > 2048 in two win mode\n",
+				  main_win->name, actual_w, xoffset, block_w);
 		return -EINVAL;
 	}
 
