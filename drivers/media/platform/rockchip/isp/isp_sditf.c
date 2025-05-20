@@ -189,6 +189,9 @@ static long rkisp_sditf_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 		else
 			*(unsigned int *)arg = 0;
 		break;
+	case RKISP_VPSS_GET_ISP_WORKING:
+		*(int *)arg = sditf->isp->hw_dev->is_runing;
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 	}
