@@ -1319,13 +1319,36 @@ static const char *const loader_protect_clocks[] __initconst = {
 static struct clk **loader_clocks;
 static int __init rockchip_clocks_loader_protect(void)
 {
+	struct device_node *np, *route_np, *route_child_np;
 	int nclocks = ARRAY_SIZE(loader_protect_clocks);
 	struct clk *clk;
 	int i;
+	int ret = 0;
+
+	/* Check for available route nodes and enable protect only when node is available. */
+	np = of_find_compatible_node(NULL, NULL, "rockchip,display-subsystem");
+	if (!np || !of_device_is_available(np)) {
+		ret = -ENODEV;
+		goto err_np;
+	}
+
+	route_np = of_get_child_by_name(np, "route");
+	if (!route_np) {
+		ret = -ENODEV;
+		goto err_route_np;
+	}
+
+	route_child_np = of_get_next_available_child(route_np, NULL);
+	if (!route_child_np) {
+		ret = -ENODEV;
+		goto err_route_child_np;
+	}
 
 	loader_clocks = kcalloc(nclocks, sizeof(void *), GFP_KERNEL);
-	if (!loader_clocks)
-		return -ENOMEM;
+	if (!loader_clocks) {
+		ret = -ENOMEM;
+		goto err_route_child_np;
+	}
 
 	for (i = 0; i < nclocks; i++) {
 		clk = __clk_lookup(loader_protect_clocks[i]);
@@ -1336,7 +1359,14 @@ static int __init rockchip_clocks_loader_protect(void)
 		}
 	}
 
-	return 0;
+err_route_child_np:
+	of_node_put(route_child_np);
+err_route_np:
+	of_node_put(route_np);
+err_np:
+	of_node_put(np);
+
+	return ret;
 }
 arch_initcall_sync(rockchip_clocks_loader_protect);
 
