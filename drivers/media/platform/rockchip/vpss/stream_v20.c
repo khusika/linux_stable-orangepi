@@ -2094,7 +2094,8 @@ static int rkvpss_start_streaming(struct vb2_queue *queue, unsigned int count)
 		goto free_buf_queue;
 	}
 
-	rkvpss_pipeline_open(dev);
+	if (rkvpss_pipeline_open(dev) < 0)
+		goto free_buf_queue;
 
 	ret = rkvpss_stream_start(stream);
 	if (ret < 0) {

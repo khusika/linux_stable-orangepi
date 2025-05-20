@@ -78,9 +78,20 @@ void rkvpss_pipeline_default_fmt(struct rkvpss_device *dev)
 
 int rkvpss_pipeline_open(struct rkvpss_device *dev)
 {
+	int isp_working = 0;
+
 	if (atomic_inc_return(&dev->pipe_power_cnt) > 1)
 		return 0;
-
+	if (!atomic_read(&dev->hw_dev->refcnt)) {
+		v4l2_subdev_call(dev->remote_sd, core, ioctl,
+				 RKISP_VPSS_GET_ISP_WORKING, &isp_working);
+		if (isp_working) {
+			atomic_dec(&dev->pipe_power_cnt);
+			v4l2_err(&dev->v4l2_dev,
+				 "no support isp working then vpss start, make sure vpss stream on first\n");
+			return -EINVAL;
+		}
+	}
 	return 0;
 }
 
