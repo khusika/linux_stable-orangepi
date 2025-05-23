@@ -19,7 +19,7 @@
 #define INTERNAL_FEPHY_ID			0x06808101
 
 #define MII_INTERNAL_CTRL_STATUS		17
-#define SMI_ADDR_TSTCNTL			20
+#define SMI_ADDR_CFGCNTL			20
 #define SMI_ADDR_TSTREAD1			21
 #define SMI_ADDR_TSTREAD2			22
 #define SMI_ADDR_TSTWRITE			23
@@ -34,27 +34,27 @@
 #define MII_SPEED_10				BIT(2)
 #define MII_SPEED_100				BIT(3)
 
-#define TSTCNTL_WRITE_ADDR			0
-#define TSTCNTL_READ_ADDR			5
-#define TSTCNTL_BANK_SEL			11
-#define TSTCNTL_RD				(BIT(15) | BIT(10))
-#define TSTCNTL_WR				(BIT(14) | BIT(10))
+#define CFGCNTL_WRITE_ADDR			0
+#define CFGCNTL_READ_ADDR			5
+#define CFGCNTL_GROUP_SEL			11
+#define CFGCNTL_RD				(BIT(15) | BIT(10))
+#define CFGCNTL_WR				(BIT(14) | BIT(10))
 
-#define TSTCNTL_WRITE(bank, reg)		(TSTCNTL_WR | ((bank) << TSTCNTL_BANK_SEL) \
-						| ((reg) << TSTCNTL_WRITE_ADDR))
-#define TSTCNTL_READ(bank, reg)			(TSTCNTL_RD | ((bank) << TSTCNTL_BANK_SEL) \
-						| ((reg) << TSTCNTL_READ_ADDR))
+#define CFGCNTL_WRITE(group, reg)		(CFGCNTL_WR | ((group) << CFGCNTL_GROUP_SEL) \
+						| ((reg) << CFGCNTL_WRITE_ADDR))
+#define CFGCNTL_READ(group, reg)		(CFGCNTL_RD | ((group) << CFGCNTL_GROUP_SEL) \
+						| ((reg) << CFGCNTL_READ_ADDR))
 
 #define GAIN_PRE				GENMASK(5, 2)
 #define WR_ADDR_A7CFG				0x18
 
 enum {
-	BANK_DSP0 = 0,
-	BANK_WOL,
-	BANK_DSP0_READ,
-	BANK_BIST,
-	BANK_AFE,
-	BANK_DSP1
+	GROUP_CFG0 = 0,
+	GROUP_WOL,
+	GROUP_CFG0_READ,
+	GROUP_BIST,
+	GROUP_AFE,
+	GROUP_CFG1
 };
 
 struct rockchip_fephy_priv {
@@ -64,23 +64,23 @@ struct rockchip_fephy_priv {
 	int wol_irq;
 };
 
-static int rockchip_fephy_bank_read(struct phy_device *phydev, u8 bank, u32 reg)
+static int rockchip_fephy_group_read(struct phy_device *phydev, u8 group, u32 reg)
 {
 	int ret;
 
-	ret = phy_write(phydev, SMI_ADDR_TSTCNTL, TSTCNTL_READ(bank, reg));
+	ret = phy_write(phydev, SMI_ADDR_CFGCNTL, CFGCNTL_READ(group, reg));
 	if (ret)
 		return ret;
 
-	if (bank)
+	if (group)
 		return phy_read(phydev, SMI_ADDR_TSTREAD1);
 	else
 		return (phy_read(phydev, SMI_ADDR_TSTREAD1) |
 			(phy_read(phydev, SMI_ADDR_TSTREAD2) << 16));
 }
 
-static int rockchip_fephy_bank_write(struct phy_device *phydev, u8 bank,
-				     u32 reg, u16 val)
+static int rockchip_fephy_group_write(struct phy_device *phydev, u8 group,
+				      u32 reg, u16 val)
 {
 	int ret;
 
@@ -88,7 +88,7 @@ static int rockchip_fephy_bank_write(struct phy_device *phydev, u8 bank,
 	if (ret)
 		return ret;
 
-	return phy_write(phydev, SMI_ADDR_TSTCNTL, TSTCNTL_WRITE(bank, reg));
+	return phy_write(phydev, SMI_ADDR_CFGCNTL, CFGCNTL_WRITE(group, reg));
 }
 
 static int rockchip_fephy_config_init(struct phy_device *phydev)
@@ -102,12 +102,12 @@ static int rockchip_fephy_config_init(struct phy_device *phydev)
 		return ret;
 
 	/* off-energy level0 threshold */
-	ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0xa, 0x6664);
+	ret = rockchip_fephy_group_write(phydev, GROUP_CFG0, 0xa, 0x6664);
 	if (ret)
 		return ret;
 
 	/* 100M amplitude control */
-	ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0x18, 0xc);
+	ret = rockchip_fephy_group_write(phydev, GROUP_CFG0, 0x18, 0xc);
 	if (ret)
 		return ret;
 
@@ -115,15 +115,15 @@ static int rockchip_fephy_config_init(struct phy_device *phydev)
 		int sel;
 
 		/* pll cp cur sel */
-		sel = rockchip_fephy_bank_read(phydev, BANK_AFE, 0x3);
+		sel = rockchip_fephy_group_read(phydev, GROUP_AFE, 0x3);
 		if (sel < 0)
 			return sel;
-		ret = rockchip_fephy_bank_write(phydev, BANK_AFE, 0x3, sel | 0x2);
+		ret = rockchip_fephy_group_write(phydev, GROUP_AFE, 0x3, sel | 0x2);
 		if (ret)
 			return ret;
 
 		/* pll lpf res sel */
-		ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0x1a, 0x6);
+		ret = rockchip_fephy_group_write(phydev, GROUP_CFG0, 0x1a, 0x6);
 		if (ret)
 			return ret;
 	}
@@ -143,7 +143,7 @@ static void rockchip_feph_link_change_notify(struct phy_device *phydev)
 
 	if (priv->old_link && !phydev->link) {
 		priv->old_link = 0;
-		ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0xa, 0x6664);
+		ret = rockchip_fephy_group_write(phydev, GROUP_CFG0, 0xa, 0x6664);
 		if (ret)
 			return;
 	} else if (!priv->old_link && phydev->link) {
@@ -151,11 +151,11 @@ static void rockchip_feph_link_change_notify(struct phy_device *phydev)
 
 		priv->old_link = 1;
 		/* read gain level */
-		gain = rockchip_fephy_bank_read(phydev, BANK_DSP0, 0x0);
+		gain = rockchip_fephy_group_read(phydev, GROUP_CFG0, 0x0);
 		if (gain < 0)
 			return;
 		if (!(gain & GAIN_PRE)) {
-			ret = rockchip_fephy_bank_write(phydev, BANK_DSP0, 0xa, 0x6666);
+			ret = rockchip_fephy_group_write(phydev, GROUP_CFG0, 0xa, 0x6666);
 			if (ret)
 				return;
 		}
@@ -167,22 +167,22 @@ static int rockchip_fephy_wol_enable(struct phy_device *phydev)
 	struct net_device *ndev = phydev->attached_dev;
 	int ret;
 
-	ret = rockchip_fephy_bank_write(phydev, BANK_WOL, 0x0,
-					((u16)ndev->dev_addr[4] << 8) + ndev->dev_addr[5]);
+	ret = rockchip_fephy_group_write(phydev, GROUP_WOL, 0x0,
+					 ((u16)ndev->dev_addr[4] << 8) + ndev->dev_addr[5]);
 	if (ret)
 		return ret;
 
-	ret = rockchip_fephy_bank_write(phydev, BANK_WOL, 0x1,
-					((u16)ndev->dev_addr[2] << 8) + ndev->dev_addr[3]);
+	ret = rockchip_fephy_group_write(phydev, GROUP_WOL, 0x1,
+					 ((u16)ndev->dev_addr[2] << 8) + ndev->dev_addr[3]);
 	if (ret)
 		return ret;
 
-	ret = rockchip_fephy_bank_write(phydev, BANK_WOL, 0x2,
-					((u16)ndev->dev_addr[0] << 8) + ndev->dev_addr[1]);
+	ret = rockchip_fephy_group_write(phydev, GROUP_WOL, 0x2,
+					 ((u16)ndev->dev_addr[0] << 8) + ndev->dev_addr[1]);
 	if (ret)
 		return ret;
 
-	ret = rockchip_fephy_bank_write(phydev, BANK_WOL, 0x3, 0xf);
+	ret = rockchip_fephy_group_write(phydev, GROUP_WOL, 0x3, 0xf);
 	if (ret)
 		return ret;
 
@@ -198,7 +198,7 @@ static int rockchip_fephy_wol_disable(struct phy_device *phydev)
 {
 	int ret;
 
-	ret = rockchip_fephy_bank_write(phydev, BANK_WOL, 0x3, 0x0);
+	ret = rockchip_fephy_group_write(phydev, GROUP_WOL, 0x3, 0x0);
 	if (ret)
 		return ret;
 
