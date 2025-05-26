@@ -128,6 +128,11 @@
 	status = "okay";
 };
 
+&hynitron {
+	status = "okay";
+	power-supply = <&vcc3v3_lcd_n>;
+};
+
 &route_hdmi {
 	status = "disabled";
 	connect = <&vp0_out_hdmi>;
