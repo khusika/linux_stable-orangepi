@@ -5339,21 +5339,63 @@ static int ox03c10_set_hdrae(struct ox03c10 *ox03c10,
 		l_exp = 4;
 	if (s_exp < 1)
 		s_exp = 1;
-	if (s_exp > 35)
+	if (s_exp > 35 && ox03c10->cur_mode->exp_mode == EXP_HDR3_DCG_VS)
 		s_exp = 35;
-	if (l_again > 248) {
-		l_dgain = l_again * 1024 / 248;
+	if (l_again < 16) {
+		l_again = 16;
+	} else if (l_again <= 31) {
+	} else if (l_again <= 47) {
+		l_again = (l_again - 16) << 1;
+	} else if (l_again <= 63) {
+		l_again = (l_again - 32) << 2;
+	} else if (l_again <= 95) {
+		l_again = (l_again - 48) << 3;
+	} else if (l_again >= 248) {
+		l_dgain = div_u64(l_again * 1024, 248);
 		l_again = 248;
+	} else {
+		dev_err(&ox03c10->client->dev, "%s set l_gain val:0x%x not support",
+			__func__, l_again);
+		return -EINVAL;
 	}
-	if (m_again > 248) {
-		m_dgain = m_again * 1024 / 248;
+	if (m_again < 16) {
+		m_again = 16;
+	} else if (m_again <= 31) {
+	} else if (m_again <= 47) {
+		m_again = (m_again - 16) << 1;
+	} else if (m_again <= 63) {
+		m_again = (m_again - 32) << 2;
+	} else if (m_again <= 95) {
+		m_again = (m_again - 48) << 3;
+	} else if (m_again >= 248) {
+		m_dgain = div_u64(m_again * 1024, 248);
 		m_again = 248;
+	} else {
+		dev_err(&ox03c10->client->dev, "%s set m_gain val:0x%x not support",
+			__func__, m_again);
+		return -EINVAL;
 	}
-	if (s_again > 248) {
-		s_dgain = s_again * 1024 / 248;
+	if (s_again < 16) {
+		s_again = 16;
+	} else if (s_again <= 31) {
+	} else if (s_again <= 47) {
+		s_again = (s_again - 16) << 1;
+	} else if (s_again <= 63) {
+		s_again = (s_again - 32) << 2;
+	} else if (s_again <= 95) {
+		s_again = (s_again - 48) << 3;
+	} else if (s_again >= 248) {
+		s_dgain = div_u64(s_again * 1024, 248);
 		s_again = 248;
+	} else {
+		dev_err(&ox03c10->client->dev, "%s set s_gain val:0x%x not support",
+			__func__, s_again);
+		return -EINVAL;
 	}
 
+	dev_dbg(&ox03c10->client->dev,
+		"l_again 0x%x l_dgain 0x%x, m_again 0x%x m_dgain 0x%x, s_again 0x%x s_dgain 0x%x\n",
+		l_again, l_dgain, m_again, m_dgain, s_again, s_dgain);
 	ret |= ox03c10_write_reg(ox03c10->client, OX03C10_GROUP_UPDATE_ADDRESS,
 				 OX03C10_REG_VALUE_08BIT,
 				 OX03C10_GROUP_UPDATE_START_DATA);
@@ -5378,7 +5420,7 @@ static int ox03c10_set_hdrae(struct ox03c10 *ox03c10,
 	ret |= ox03c10_write_reg(ox03c10->client,
 				 OX03C10_REG_DGAIN_HCG_M,
 				 OX03C10_REG_VALUE_08BIT,
-				 (l_dgain >> 8) & 0xff);
+				 (l_dgain >> 2) & 0xff);
 	ret |= ox03c10_write_reg(ox03c10->client,
 				 OX03C10_REG_DGAIN_HCG_L,
 				 OX03C10_REG_VALUE_08BIT,
@@ -5400,7 +5442,7 @@ static int ox03c10_set_hdrae(struct ox03c10 *ox03c10,
 	ret |= ox03c10_write_reg(ox03c10->client,
 				 OX03C10_REG_DGAIN_LCG_M,
 				 OX03C10_REG_VALUE_08BIT,
-				 (m_dgain >> 8) & 0xff);
+				 (m_dgain >> 2) & 0xff);
 	ret |= ox03c10_write_reg(ox03c10->client,
 				 OX03C10_REG_DGAIN_LCG_L,
 				 OX03C10_REG_VALUE_08BIT,
@@ -5428,7 +5470,7 @@ static int ox03c10_set_hdrae(struct ox03c10 *ox03c10,
 		ret |= ox03c10_write_reg(ox03c10->client,
 					 OX03C10_REG_DGAIN_VS_M,
 					 OX03C10_REG_VALUE_08BIT,
-					 (s_dgain >> 8) & 0xff);
+					 (s_dgain >> 2) & 0xff);
 		ret |= ox03c10_write_reg(ox03c10->client,
 					 OX03C10_REG_DGAIN_VS_L,
 					 OX03C10_REG_VALUE_08BIT,
@@ -5455,7 +5497,7 @@ static int ox03c10_set_hdrae(struct ox03c10 *ox03c10,
 		ret |= ox03c10_write_reg(ox03c10->client,
 					 OX03C10_REG_DGAIN_SPD_M,
 					 OX03C10_REG_VALUE_08BIT,
-					 (s_dgain >> 8) & 0xff);
+					 (s_dgain >> 2) & 0xff);
 		ret |= ox03c10_write_reg(ox03c10->client,
 					 OX03C10_REG_DGAIN_SPD_L,
 					 OX03C10_REG_VALUE_08BIT,
@@ -5491,8 +5533,8 @@ static int ox03c10_get_dcg_and_spd_ratio(struct ox03c10 *ox03c10)
 		dev_err(dev, "get dcg ratio fail, ret %d, dcg ratio %d, %d\n",
 			ret, ox03c10->dcg_ratio.integer, ox03c10->dcg_ratio.decimal);
 	else
-		dev_info(dev, "get dcg ratio reg val %d, %d\n",
-			 ox03c10->dcg_ratio.integer, ox03c10->dcg_ratio.decimal);
+		dev_info(dev, "get dcg ratio reg val integer %d, dec 0x%x, div 0x%x\n",
+			 ox03c10->dcg_ratio.integer, ox03c10->dcg_ratio.decimal, ox03c10->dcg_ratio.div_coeff);
 
 	ox03c10->spd_ratio.integer = 0;
 	ox03c10->spd_ratio.decimal = val & 0x1ffff;
@@ -5503,8 +5545,8 @@ static int ox03c10_get_dcg_and_spd_ratio(struct ox03c10 *ox03c10)
 		dev_err(dev, "get spd ratio fail, ret %d, spd ratio %d, %d\n",
 			ret, ox03c10->spd_ratio.integer, ox03c10->spd_ratio.decimal);
 	else
-		dev_info(dev, "get spd ratio reg val %d, %d\n",
-			 ox03c10->spd_ratio.integer, ox03c10->spd_ratio.decimal);
+		dev_info(dev, "get spd ratio reg val integer %d, dec 0x%x div 0x%x\n",
+			 ox03c10->spd_ratio.integer, ox03c10->spd_ratio.decimal, ox03c10->spd_ratio.div_coeff);
 
 	ox03c10_write_reg(ox03c10->client, OX03C10_REG_CTRL_MODE,
 			  OX03C10_REG_VALUE_08BIT, OX03C10_MODE_SW_STANDBY);
@@ -6275,11 +6317,31 @@ static int ox03c10_set_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_ANALOGUE_GAIN:
 		if (ox03c10->cur_mode->hdr_mode != NO_HDR)
 			break;
+		/*
+		*[1, 1.9375, 16, 0, 1, 16, 31,
+		* 2, 3.875, 8, -16, 1, 32, 47,
+		* 4, 7.75, 4, -32, 1, 48, 63,
+		* 8, 15.5, 2,-48, 1, 64, 95,
+		* 15.5, 247.9375, 16, 0, 1, 248, 3967]
+		*/
 		// hcg real gain
-		again = ctrl->val;
-		if (again > 248) {
-			dgain = again * 1024 / 248;
+		if (ctrl->val < 16) {
+			again = 16;
+		} else if (ctrl->val <= 31) {
+			again = ctrl->val;
+		} else if (ctrl->val <= 47) {
+			again = (ctrl->val - 16) << 1;
+		} else if (ctrl->val <= 63) {
+			again = (ctrl->val - 32) << 2;
+		} else if (ctrl->val <= 95) {
+			again = (ctrl->val - 48) << 3;
+		} else if (ctrl->val >= 248) {
+			dgain = div_u64(ctrl->val * 1024, 248);
 			again = 248;
+		} else {
+			dev_err(&client->dev, "%s set gain val:0x%x not support",
+				__func__, ctrl->val);
+			break;
 		}
 		ret |= ox03c10_write_reg(ox03c10->client, OX03C10_GROUP_UPDATE_ADDRESS,
 				 OX03C10_REG_VALUE_08BIT,
