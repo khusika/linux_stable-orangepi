@@ -5341,6 +5341,7 @@ static int ox03c10_set_hdrae(struct ox03c10 *ox03c10,
 		s_exp = 1;
 	if (s_exp > 35 && ox03c10->cur_mode->exp_mode == EXP_HDR3_DCG_VS)
 		s_exp = 35;
+
 	if (l_again < 16) {
 		l_again = 16;
 	} else if (l_again <= 31) {
@@ -5720,6 +5721,8 @@ static long ox03c10_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	long ret = 0;
 	u32 stream = 0;
 	u32 *exp_mode;
+	struct rkmodule_wb_gain_info *wb_gain_info;
+	struct rkmodule_blc_info *blc_info;
 
 	switch (cmd) {
 	case RKMODULE_GET_MODULE_INFO:
@@ -5800,6 +5803,15 @@ static long ox03c10_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	case RKMODULE_SET_EXP_MODE:
 		ret = ox03c10_select_exp_mode(ox03c10, *(u32 *)arg);
 		break;
+	case RKMODULE_GET_WB_GAIN_INFO:
+		wb_gain_info = (struct rkmodule_wb_gain_info *)arg;
+		wb_gain_info->coarse_bit = 5;
+		wb_gain_info->fine_bit = 10;
+		break;
+	case RKMODULE_GET_BLC_INFO:
+		blc_info = (struct rkmodule_blc_info *)arg;
+		blc_info->bit_width = 10;
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
@@ -5824,6 +5836,8 @@ static long ox03c10_compat_ioctl32(struct v4l2_subdev *sd,
 	long ret;
 	u32 stream = 0;
 	u32 exp_mode;
+	struct rkmodule_wb_gain_info *wb_gain_info;
+	struct rkmodule_blc_info *blc_info;
 
 	switch (cmd) {
 	case RKMODULE_GET_MODULE_INFO:
@@ -5992,6 +6006,38 @@ static long ox03c10_compat_ioctl32(struct v4l2_subdev *sd,
 		if (copy_from_user(&exp_mode, up, sizeof(u32)))
 			return -EFAULT;
 		ret = ox03c10_ioctl(sd, cmd, &exp_mode);
+		break;
+	case RKMODULE_GET_WB_GAIN_INFO:
+		wb_gain_info = kzalloc(sizeof(*wb_gain_info), GFP_KERNEL);
+		if (!wb_gain_info) {
+			ret = -ENOMEM;
+			return ret;
+		}
+
+		ret = ox03c10_ioctl(sd, cmd, wb_gain_info);
+		if (!ret) {
+			if (copy_to_user(up, wb_gain_info, sizeof(*wb_gain_info))) {
+				kfree(wb_gain_info);
+				return -EFAULT;
+			}
+		}
+		kfree(wb_gain_info);
+		break;
+	case RKMODULE_GET_BLC_INFO:
+		blc_info = kzalloc(sizeof(*blc_info), GFP_KERNEL);
+		if (!blc_info) {
+			ret = -ENOMEM;
+			return ret;
+		}
+
+		ret = ox03c10_ioctl(sd, cmd, blc_info);
+		if (!ret) {
+			if (copy_to_user(up, blc_info, sizeof(*blc_info))) {
+				kfree(blc_info);
+				return -EFAULT;
+			}
+		}
+		kfree(blc_info);
 		break;
 	default:
 		ret = -ENOIOCTLCMD;
