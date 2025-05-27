@@ -915,20 +915,6 @@
 				};
 			};
 		};
-		npu_thermal: npu-thermal {
-			polling-delay-passive = <20>; /* milliseconds */
-			polling-delay = <1000>; /* milliseconds */
-			thermal-sensors = <&tsadc 1>;
-			trips {
-				bigcore_crit: bigcore-crit {
-					/* millicelsius */
-					temperature = <115000>;
-					/* millicelsius */
-					hysteresis = <2000>;
-					type = "critical";
-				};
-			};
-		};
 	};
 
 	timer {
