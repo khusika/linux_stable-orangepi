@@ -1350,6 +1350,12 @@ struct rk808_pin_info {
 	struct pinctrl_state *sleep;
 };
 
+struct rk808_pwrctrl {
+	struct gpio_desc *gpio;
+	bool req_pwrctrl_dvs;
+	bool act_low;
+};
+
 struct rk808 {
 	struct i2c_client		*i2c;
 	struct regmap_irq_chip_data	*irq_data;
@@ -1360,5 +1366,6 @@ struct rk808 {
 	const struct regmap_irq_chip	*regmap_irq_chip;
 	void				(*pm_pwroff_prep_fn)(void);
 	struct rk808_pin_info *pins;
+	struct rk808_pwrctrl pwrctrl;
 };
 #endif /* __LINUX_REGULATOR_RK808_H */
