@@ -588,6 +588,7 @@
 
 &sc850sl {
 	reset-gpios = <&gpio4 RK_PA7 GPIO_ACTIVE_HIGH>;
+	rockchip,camera-module-stb = <1>;
 };
 
 &sdmmc0 {
