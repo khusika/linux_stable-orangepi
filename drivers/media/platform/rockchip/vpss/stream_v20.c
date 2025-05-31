@@ -746,9 +746,9 @@ static struct stream_config scl5_config = {
 		.uv_offs_cnt = RKVPSS2X_MI_CHN5_WR_CB_OFFS_CNT,
 		.y_pic_width = RKVPSS2X_MI_CHN5_WR_Y_PIC_WIDTH,
 		.y_pic_size = RKVPSS2X_MI_CHN5_WR_Y_PIC_SIZE,
-		.ctrl_shd = RKVPSS2X_MI_CHN4_WR_CTRL_SHD,
-		.y_shd = RKVPSS2X_MI_CHN4_WR_Y_BASE_SHD,
-		.uv_shd = RKVPSS2X_MI_CHN4_WR_CB_BASE_SHD,
+		.ctrl_shd = RKVPSS2X_MI_CHN5_WR_CTRL_SHD,
+		.y_shd = RKVPSS2X_MI_CHN5_WR_Y_BASE_SHD,
+		.uv_shd = RKVPSS2X_MI_CHN5_WR_CB_BASE_SHD,
 	},
 };
 
@@ -887,7 +887,7 @@ static void scl_force_update(struct rkvpss_stream *stream)
 		val = RKVPSS2X_MI_CHN4_FORCE_UPD;
 		break;
 	case RKVPSS_OUTPUT_CH5:
-		val = RKVPSS2X_MI_CHN4_FORCE_UPD;
+		val = RKVPSS2X_MI_CHN5_FORCE_UPD;
 		break;
 	default:
 		return;
@@ -1129,7 +1129,7 @@ static void scl_disable_mi(struct rkvpss_stream *stream)
 		val = RKVPSS2X_ISP2VPSS_CHN4_SEL(3);
 		break;
 	case RKVPSS_OUTPUT_CH5:
-		val = RKVPSS2X_ISP2VPSS_CHN4_SEL(3);
+		val = RKVPSS2X_ISP2VPSS_CHN5_SEL(3);
 		break;
 	default:
 		return;
