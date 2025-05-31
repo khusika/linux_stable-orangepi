@@ -112,6 +112,7 @@ static inline int vpss_outchn_max(int version)
 }
 
 extern int rkvpss_debug;
+extern int rkvpss_buf_dbg;
 extern struct platform_driver rkvpss_plat_drv;
 extern int rkvpss_cfginfo_num;
 
