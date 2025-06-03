@@ -886,6 +886,13 @@ struct vop2_resource {
 	void __iomem *regs;
 };
 
+struct vop2_shared_mode_res {
+	uint32_t shared_mode;
+	uint32_t vp_mask;
+	uint32_t plane_mask;
+	uint32_t axi_id;
+};
+
 struct vop2_err_event {
 	u64 count;
 	unsigned long begin;
@@ -900,6 +907,7 @@ struct vop2 {
 	struct vop2_video_port vps[ROCKCHIP_MAX_CRTC];
 	struct vop2_wb wb;
 	struct drm_prop_enum_list *plane_name_list;
+	struct vop2_shared_mode_res shared_mode_res;
 	bool is_iommu_enabled;
 	bool is_iommu_needed;
 	bool is_enabled;
@@ -991,6 +999,8 @@ struct vop2 {
 	struct vop2_resource sharp_res;
 
 	int irq;
+
+	int virtual_irq;
 
 	/*
 	 * Some globle resource are shared between all
@@ -1222,6 +1232,17 @@ static inline bool is_vop3(struct vop2 *vop2)
 		return false;
 	else
 		return true;
+}
+
+static inline bool is_used_axi(struct vop2 *vop2, uint32_t axi_id)
+{
+	if (!vop2->shared_mode_res.shared_mode)
+		return true;
+
+	if (vop2->shared_mode_res.axi_id == axi_id)
+		return true;
+	else
+		return false;
 }
 
 static inline bool vop2_is_dovi_mode(struct vop2_video_port *vp)
@@ -3294,7 +3315,7 @@ static enum vop_csc_format vop2_convert_csc_mode(enum drm_color_encoding color_e
 		break;
 
 	default:
-		DRM_ERROR("Unsuport color_encoding:%d\n", color_encoding);
+		DRM_ERROR("Unsupported color_encoding:%d\n", color_encoding);
 	}
 
 	return csc_mode;
@@ -3484,6 +3505,23 @@ static void vop2_setup_csc_mode(struct vop2_video_port *vp,
 	}
 }
 
+static void vop2_axi_disable_irqs(struct vop2 *vop2)
+{
+	const struct vop2_data *vop2_data = vop2->data;
+	const struct vop_intr *intr;
+	uint32_t irqs = BUS_ERROR_INTR | MMU_EN_INTR | WB_UV_FIFO_FULL_INTR |
+				WB_YRGB_FIFO_FULL_INTR | WB_COMPLETE_INTR;
+	uint32_t i;
+
+	for (i = 0; i < vop2_data->nr_axi_intr; i++) {
+		if (is_used_axi(vop2, i) == false)
+			continue;
+		intr = &vop2_data->axi_intr[i];
+		VOP_INTR_SET_TYPE(vop2, intr, clear, irqs, 1);
+		VOP_INTR_SET_TYPE(vop2, intr, enable, irqs, 0);
+	}
+}
+
 static void vop2_axi_irqs_enable(struct vop2 *vop2)
 {
 	const struct vop2_data *vop2_data = vop2->data;
@@ -3492,6 +3530,8 @@ static void vop2_axi_irqs_enable(struct vop2 *vop2)
 	uint32_t i;
 
 	for (i = 0; i < vop2_data->nr_axi_intr; i++) {
+		if (is_used_axi(vop2, i) == false)
+			continue;
 		intr = &vop2_data->axi_intr[i];
 		VOP_INTR_SET_TYPE(vop2, intr, clear, irqs, 1);
 		VOP_INTR_SET_TYPE(vop2, intr, enable, irqs, 1);
@@ -4231,6 +4271,16 @@ static void vop2_attach_cubic_lut_prop(struct drm_crtc *crtc, unsigned int cubic
 	drm_object_attach_property(&crtc->base, private->cubic_lut_size_prop, cubic_lut_size);
 }
 
+static bool vop2_skip_shared_vp(struct vop2 *vop2, int id)
+{
+	return vop2->shared_mode_res.shared_mode && !(vop2->shared_mode_res.vp_mask & BIT(id));
+}
+
+static bool vop2_skip_shared_plane(struct vop2 *vop2, int id)
+{
+	return vop2->shared_mode_res.shared_mode && !(vop2->shared_mode_res.plane_mask & BIT(id));
+}
+
 static void vop2_cubic_lut_init(struct vop2 *vop2)
 {
 	const struct vop2_data *vop2_data = vop2->data;
@@ -4240,6 +4290,8 @@ static void vop2_cubic_lut_init(struct vop2 *vop2)
 	int i;
 
 	for (i = 0; i < vop2_data->nr_vps; i++) {
+		if (vop2_skip_shared_vp(vop2, i))
+			continue;
 		vp = &vop2->vps[i];
 		crtc = &vp->rockchip_crtc.crtc;
 		if (!crtc->dev)
@@ -4753,6 +4805,8 @@ static void vop2_power_domain_off_by_disabled_vp(struct vop2_power_domain *pd)
 		for (i = 0; i < win_num; i++) {
 			phys_id = ffs(module_id_mask) - 1;
 			module_id_mask &= ~BIT(phys_id);
+			if (vop2_skip_shared_plane(vop2, phys_id))
+				continue;
 			win = vop2_find_win_by_phys_id(vop2, phys_id);
 			vp_id = ffs(win->vp_mask) - 1;
 
@@ -4823,6 +4877,10 @@ static void vop2_power_domain_off_by_disabled_vp(struct vop2_power_domain *pd)
 static void vop2_power_off_all_pd(struct vop2 *vop2)
 {
 	struct vop2_power_domain *pd, *n;
+
+	/* VOP sub PD will be always on and controlled by SCP */
+	if (vop2->shared_mode_res.shared_mode)
+		return;
 
 	list_for_each_entry_safe_reverse(pd, n, &vop2->pd_list_head, list) {
 		if (vop2_power_domain_status(pd))
@@ -5248,6 +5306,9 @@ static void vop2_disable(struct drm_crtc *crtc)
 	if (--vop2->enable_count > 0)
 		return;
 
+	/* Disable axi irq when all vp is disabled */
+	vop2_axi_disable_irqs(vop2);
+
 	/*
 	 * Reset AXI to get a clean state, which is conducive to recovering
 	 * from exceptions when enable at next time(such as iommu page fault)
@@ -5672,6 +5733,19 @@ static void vop2_crtc_atomic_exit_psr(struct drm_crtc *crtc, struct drm_crtc_sta
 		vop2_crtc_wins_switch_for_psr(crtc, true);
 }
 
+static void vop2_crtc_disable_irqs(struct drm_crtc *crtc)
+{
+	struct vop2_video_port *vp = to_vop2_video_port(crtc);
+	struct vop2 *vop2 = vp->vop2;
+	const struct vop2_data *vop2_data = vop2->data;
+	const struct vop2_video_port_data *vp_data = &vop2_data->vp[vp->id];
+	const struct vop_intr *intr = vp_data->intr;
+	uint32_t irqs = POST_BUF_EMPTY_INTR | FS_FIELD_INTR | LINE_FLAG_INTR | LINE_FLAG1_INTR;
+
+	VOP_INTR_SET_TYPE(vop2, intr, clear, irqs, 1);
+	VOP_INTR_SET_TYPE(vop2, intr, enable, irqs, 0);
+}
+
 static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 				     struct drm_atomic_state *state)
 {
@@ -5817,6 +5891,7 @@ static void vop2_crtc_atomic_disable(struct drm_crtc *crtc,
 	vop2_dsp_hold_valid_irq_disable(crtc);
 
 	vop2_dovi_post_disable(crtc);
+	vop2_crtc_disable_irqs(crtc);
 	vop2_disable(crtc);
 
 	vop2->active_vp_mask &= ~BIT(vp->id);
@@ -14082,7 +14157,7 @@ static irqreturn_t vop2_isr(int irq, void *data)
 	size_t vp_max = min_t(size_t, vop2_data->nr_vps, ROCKCHIP_MAX_CRTC);
 	size_t axi_max = min_t(size_t, vop2_data->nr_axi_intr, VOP2_SYS_AXI_BUS_NUM);
 	uint32_t vp_irqs[ROCKCHIP_MAX_CRTC];
-	uint32_t axi_irqs[VOP2_SYS_AXI_BUS_NUM];
+	uint32_t axi_irqs[VOP2_SYS_AXI_BUS_NUM] = {0};
 	uint32_t active_irqs;
 	uint32_t wb_irqs;
 	unsigned long flags;
@@ -14117,8 +14192,11 @@ static irqreturn_t vop2_isr(int irq, void *data)
 	spin_lock_irqsave(&vop2->irq_lock, flags);
 	for (i = 0; i < vp_max; i++)
 		vp_irqs[i] = vop2_read_and_clear_active_vp_irqs(vop2, i);
-	for (i = 0; i < axi_max; i++)
+	for (i = 0; i < axi_max; i++) {
+		if (is_used_axi(vop2, i) == false)
+			continue;
 		axi_irqs[i] = vop2_read_and_clear_axi_irqs(vop2, i);
+	}
 	wb_irqs = vop2_read_and_clear_wb_irqs(vop2);
 	spin_unlock_irqrestore(&vop2->irq_lock, flags);
 
@@ -14190,6 +14268,8 @@ static irqreturn_t vop2_isr(int irq, void *data)
 	}
 
 	for (i = 0; i < axi_max; i++) {
+		if (is_used_axi(vop2, i) == false)
+			continue;
 		active_irqs = axi_irqs[i];
 
 		ERROR_HANDLER(BUS_ERROR);
@@ -14214,10 +14294,13 @@ static irqreturn_t vop3_sys_isr(int irq, void *data)
 	const struct vop2_data *vop2_data = vop2->data;
 	int ret = IRQ_NONE;
 	size_t axi_max = min_t(size_t, vop2_data->nr_axi_intr, VOP2_SYS_AXI_BUS_NUM);
-	uint32_t axi_irqs[VOP2_SYS_AXI_BUS_NUM];
+	uint32_t axi_irqs[VOP2_SYS_AXI_BUS_NUM] = {0};
 	uint32_t wb_irqs, active_irqs;
 	unsigned long flags;
 	int i = 0;
+
+	if (vop2->shared_mode_res.shared_mode == ROCKCHIP_VOP2_SHARED_MODE_PRIMARY)
+		irq_set_irqchip_state(vop2->virtual_irq, IRQCHIP_STATE_PENDING, true);
 
 #define SYS_ERROR_HANDLER(x) \
 	do { \
@@ -14246,8 +14329,11 @@ static irqreturn_t vop3_sys_isr(int irq, void *data)
 	 */
 	spin_lock_irqsave(&vop2->irq_lock, flags);
 	wb_irqs = vop2_read_and_clear_wb_irqs(vop2);
-	for (i = 0; i < axi_max; i++)
+	for (i = 0; i < axi_max; i++) {
+		if (is_used_axi(vop2, i) == false)
+			continue;
 		axi_irqs[i] = vop2_read_and_clear_axi_irqs(vop2, i);
+	}
 	spin_unlock_irqrestore(&vop2->irq_lock, flags);
 
 	if (wb_irqs) {
@@ -14258,6 +14344,8 @@ static irqreturn_t vop3_sys_isr(int irq, void *data)
 	}
 
 	for (i = 0; i < axi_max; i++) {
+		if (is_used_axi(vop2, i) == false)
+			continue;
 		active_irqs = axi_irqs[i];
 
 		SYS_ERROR_HANDLER(BUS_ERROR);
@@ -14451,6 +14539,23 @@ static u32 vop3_esmart_linebuffer_size(struct vop2 *vop2, struct vop2_win *win)
 		return vop2->data->max_output.width;
 }
 
+static int rk3576_shared_mode_esmart_scale_engine(int phy_id)
+{
+	switch (phy_id) {
+	case ROCKCHIP_VOP2_ESMART0:
+		return 0;
+	case ROCKCHIP_VOP2_ESMART1:
+		return 1;
+	case ROCKCHIP_VOP2_ESMART2:
+		return 2;
+	case ROCKCHIP_VOP2_ESMART3:
+		return 3;
+	default:
+		DRM_ERROR("Unsupported phy_id:%d\n", phy_id);
+		return 0;
+	}
+}
+
 static void vop3_init_esmart_scale_engine(struct vop2 *vop2)
 {
 	u8 scale_engine_num = 0;
@@ -14462,7 +14567,10 @@ static void vop3_init_esmart_scale_engine(struct vop2 *vop2)
 		if (win->parent || vop2_cluster_window(win))
 			continue;
 
-		win->scale_engine_num = scale_engine_num++;
+		if (vop2->shared_mode_res.shared_mode)
+			win->scale_engine_num = rk3576_shared_mode_esmart_scale_engine(win->phys_id);
+		else
+			win->scale_engine_num = scale_engine_num++;
 	}
 }
 
@@ -14649,6 +14757,8 @@ static int vop2_gamma_init(struct vop2 *vop2)
 		return 0;
 
 	for (i = 0; i < vop2_data->nr_vps; i++) {
+		if (vop2_skip_shared_vp(vop2, i))
+			continue;
 		vp = &vop2->vps[i];
 		crtc = &vp->rockchip_crtc.crtc;
 		if (!crtc->dev)
@@ -14914,6 +15024,8 @@ static int vop2_create_crtc(struct vop2 *vop2, uint8_t enabled_vp_mask)
 	 * initial all the vp.
 	 */
 	for (i = 0; i < vop2_data->nr_vps; i++) {
+		if (vop2_skip_shared_vp(vop2, i))
+			continue;
 		vp = &vop2->vps[i];
 		if (vp->plane_mask) {
 			bootloader_initialized = true;
@@ -14936,6 +15048,8 @@ static int vop2_create_crtc(struct vop2 *vop2, uint8_t enabled_vp_mask)
 		primary = NULL;
 		cursor = NULL;
 
+		if (vop2_skip_shared_vp(vop2, i))
+			continue;
 		/*
 		 * make sure that the vp to be registered has at least one connector.
 		 */
@@ -15330,6 +15444,8 @@ static int vop2_win_init(struct vop2 *vop2)
 	for (i = 0; i < vop2_data->win_size; i++) {
 		const struct vop2_win_data *win_data = &vop2_data->win[i];
 
+		if (vop2_skip_shared_plane(vop2, win_data->phys_id))
+			continue;
 		win = &vop2->win[num_wins];
 		win->name = win_data->name;
 		win->regs = win_data->regs;
@@ -15529,6 +15645,8 @@ static bool vop2_plane_mask_check(struct vop2 *vop2)
 	 * VP.
 	 */
 	for (i = 0; i < vop2_data->nr_vps; i++) {
+		if (vop2_skip_shared_vp(vop2, i))
+			continue;
 		vp = &vop2->vps[i];
 		plane_mask = vp->plane_mask;
 		primary_plane_id = vp->primary_plane_phy_id;
@@ -15972,6 +16090,27 @@ static void vop2_of_get_dsp_lut(struct vop2 *vop2, struct device_node *vp_node, 
 	}
 }
 
+static void vop2_parse_shared_mode_resources(struct vop2 *vop2)
+{
+	struct device *dev = vop2->dev;
+
+	of_property_read_u32(dev->of_node, "rockchip,shared-mode",
+			     &vop2->shared_mode_res.shared_mode);
+	if (vop2->shared_mode_res.shared_mode) {
+		of_property_read_u32(dev->of_node, "rockchip,shared-mode-axi-id",
+				     &vop2->shared_mode_res.axi_id);
+		of_property_read_u32(dev->of_node, "rockchip,shared-mode-vp-mask",
+				     &vop2->shared_mode_res.vp_mask);
+		of_property_read_u32(dev->of_node, "rockchip,shared-mode-plane-mask",
+				     &vop2->shared_mode_res.plane_mask);
+		DRM_DEV_INFO(dev, "Enable shared mode[%d], use axi%d, vp mask:0x%x, plane-mask:0x%x\n",
+			     vop2->shared_mode_res.shared_mode,
+			     vop2->shared_mode_res.axi_id,
+			     vop2->shared_mode_res.vp_mask,
+			     vop2->shared_mode_res.plane_mask);
+	}
+}
+
 static int vop2_bind(struct device *dev, struct device *master, void *data)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -16022,6 +16161,7 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 					vop2->version == VOP_VERSION_RK3588;
 
 	dev_set_drvdata(dev, vop2);
+	vop2_parse_shared_mode_resources(vop2);
 
 	vop2->support_multi_area = of_property_read_bool(dev->of_node, "support-multi-area");
 	vop2->disable_afbc_win = of_property_read_bool(dev->of_node, "disable-afbc-win");
@@ -16180,6 +16320,8 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 			of_property_read_u32(child, "rockchip,primary-plane", &primary_plane_phy_id);
 			of_property_read_u32(child, "reg", &vp_id);
 
+			if (vop2_skip_shared_vp(vop2, vp_id))
+				continue;
 			vop2->vps[vp_id].plane_mask = plane_mask;
 			if (plane_mask)
 				vop2->vps[vp_id].primary_plane_phy_id = primary_plane_phy_id;
@@ -16225,6 +16367,8 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 		}
 
 		for (i = 0; i < vop2->data->nr_vps; i++) {
+			if (vop2_skip_shared_vp(vop2, i))
+				continue;
 			plane_mask_string = vop2_plane_mask_to_string(vop2->vps[i].plane_mask);
 			DRM_DEV_INFO(dev, "vp%d assign plane mask: %s[0x%x], primary plane phy id: %s[%d]\n",
 				     i, plane_mask_string, vop2->vps[i].plane_mask,
@@ -16276,6 +16420,14 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 	if (ret)
 		return ret;
 
+	if (vop2->shared_mode_res.shared_mode == ROCKCHIP_VOP2_SHARED_MODE_PRIMARY) {
+		vop2->virtual_irq = platform_get_irq_byname(pdev, "vop-virtual-irq");
+		if (vop2->virtual_irq < 0) {
+			DRM_DEV_ERROR(dev, "cannot find vop2 virtual_irq: %d\n", vop2->virtual_irq);
+			return vop2->virtual_irq;
+		}
+	}
+
 	if (vop2->merge_irq == false) {
 		struct drm_crtc *crtc;
 		char irq_name[12];
@@ -16283,6 +16435,8 @@ static int vop2_bind(struct device *dev, struct device *master, void *data)
 		drm_for_each_crtc(crtc, drm_dev) {
 			struct vop2_video_port *vp = to_vop2_video_port(crtc);
 
+			if (vop2_skip_shared_vp(vop2, vp->id))
+				continue;
 			snprintf(irq_name, sizeof(irq_name), "vop-vp%d", vp->id);
 
 			vp->irq = platform_get_irq_byname(pdev, irq_name);
