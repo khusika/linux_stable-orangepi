@@ -258,7 +258,7 @@
 
 &rkisp_vir0_sditf {
 	status = "okay";
-}
+};
 
 &rkisp_vir1 {
 	status = "okay";
