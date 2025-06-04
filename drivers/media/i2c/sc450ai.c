@@ -197,6 +197,7 @@ struct sc450ai {
 	struct preisp_hdrae_exp_s init_hdrae_exp;
 	struct cam_sw_info *cam_sw_inf;
 	struct v4l2_fwnode_endpoint bus_cfg;
+	enum rkmodule_sync_mode	sync_mode;
 };
 
 #define to_sc450ai(sd) container_of(sd, struct sc450ai, subdev)
@@ -1205,6 +1206,23 @@ static const struct regval sc450ai_hdr2_10_2688x1520_30fps_4lane_regs[] = {
 	{REG_NULL, 0x00},
 };
 
+static __maybe_unused const struct regval sc450ai_interal_sync_master_start_regs[] = {
+	{0x300a, 0x24}, //bit[2]=1 fsync_oen
+	{0x3032, 0xa0},////bit[7]=1 vsync_tc_en
+	{REG_NULL, 0x00},
+};
+
+static __maybe_unused const struct regval sc450ai_interal_sync_slaver_start_regs[] = {
+	{0x300a, 0x22},
+	{0x3222, 0x01}, //Bit[0]: Slave mode en
+	{0x3224, 0x92}, //fsync trigger
+	{0x3230, 0x00},
+	{0x3231, 0x04},
+	{0x322e, 0x00},
+	{0x322f, 0x02},
+	{REG_NULL, 0x00},
+};
+
 static const struct sc450ai_mode supported_modes_2lane[] = {
 	{
 		.width = 2688,
@@ -1926,6 +1944,7 @@ static long sc450ai_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 	int cur_best_fit = -1;
 	int cur_best_fit_dist = -1;
 	int cur_dist, cur_fps, dst_fps;
+	u32 *sync_mode = NULL;
 
 	switch (cmd) {
 	case RKMODULE_GET_MODULE_INFO:
@@ -2103,7 +2122,14 @@ static long sc450ai_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		setting = (struct rk_sensor_setting *)arg;
 		ret = sc450ai_set_setting(sc450ai, setting);
 		break;
-
+	case RKMODULE_GET_SYNC_MODE:
+		sync_mode = (u32 *)arg;
+		*sync_mode = sc450ai->sync_mode;
+		break;
+	case RKMODULE_SET_SYNC_MODE:
+		sync_mode = (u32 *)arg;
+		sc450ai->sync_mode = *sync_mode;
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
@@ -2123,6 +2149,7 @@ static long sc450ai_compat_ioctl32(struct v4l2_subdev *sd,
 	struct rk_sensor_setting *setting;
 	long ret;
 	u32 stream = 0;
+	u32 *sync_mode = NULL;
 
 	switch (cmd) {
 	case RKMODULE_GET_MODULE_INFO:
@@ -2202,7 +2229,21 @@ static long sc450ai_compat_ioctl32(struct v4l2_subdev *sd,
 			ret = -EFAULT;
 		kfree(setting);
 		break;
-
+	case RKMODULE_GET_SYNC_MODE:
+		ret = sc450ai_ioctl(sd, cmd, &sync_mode);
+		if (!ret) {
+			ret = copy_to_user(up, &sync_mode, sizeof(u32));
+			if (ret)
+				ret = -EFAULT;
+		}
+		break;
+	case RKMODULE_SET_SYNC_MODE:
+		ret = copy_from_user(&sync_mode, up, sizeof(u32));
+		if (!ret)
+			ret = sc450ai_ioctl(sd, cmd, &sync_mode);
+		else
+			ret = -EFAULT;
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
@@ -2214,7 +2255,7 @@ static long sc450ai_compat_ioctl32(struct v4l2_subdev *sd,
 
 static int __sc450ai_start_stream(struct sc450ai *sc450ai)
 {
-	int ret;
+	int ret = 0;
 
 	if (!sc450ai->is_thunderboot) {
 		ret = sc450ai_write_array(sc450ai->client, sc450ai->cur_mode->reg_list);
@@ -2234,8 +2275,15 @@ static int __sc450ai_start_stream(struct sc450ai *sc450ai)
 			}
 		}
 	}
-	ret = sc450ai_write_reg(sc450ai->client, SC450AI_REG_CTRL_MODE,
-				 SC450AI_REG_VALUE_08BIT, SC450AI_MODE_STREAMING);
+	if (sc450ai->sync_mode == INTERNAL_MASTER_MODE)
+		ret |= sc450ai_write_array(sc450ai->client,
+			sc450ai_interal_sync_master_start_regs);
+	else if (sc450ai->sync_mode == EXTERNAL_MASTER_MODE)
+		ret |= sc450ai_write_array(sc450ai->client,
+			sc450ai_interal_sync_slaver_start_regs);
+	else if (sc450ai->sync_mode == NO_SYNC_MODE)
+		ret |= sc450ai_write_reg(sc450ai->client, SC450AI_REG_CTRL_MODE,
+			SC450AI_REG_VALUE_08BIT, SC450AI_MODE_STREAMING);
 	return ret;
 }
 
@@ -2822,6 +2870,7 @@ static int sc450ai_probe(struct i2c_client *client,
 	int ret;
 	int i, hdr_mode = 0;
 	struct device_node *endpoint;
+	const char *sync_mode_name = NULL;
 
 	dev_info(dev, "driver version: %02x.%02x.%02x",
 		 DRIVER_VERSION >> 16,
@@ -2849,6 +2898,23 @@ static int sc450ai_probe(struct i2c_client *client,
 	of_property_read_u32(node, RKMODULE_CAMERA_STANDBY_HW,
 			     &sc450ai->standby_hw);
 	dev_info(dev, "sc450ai->standby_hw = %d\n", sc450ai->standby_hw);
+	ret = of_property_read_string(node, RKMODULE_CAMERA_SYNC_MODE,
+				      &sync_mode_name);
+	if (ret) {
+		sc450ai->sync_mode = NO_SYNC_MODE;
+		dev_err(dev, "could not get sync mode!\n");
+	} else {
+		if (strcmp(sync_mode_name, RKMODULE_EXTERNAL_MASTER_MODE) == 0) {
+			sc450ai->sync_mode = EXTERNAL_MASTER_MODE;
+			dev_info(dev, "external master mode\n");
+		} else if (strcmp(sync_mode_name, RKMODULE_INTERNAL_MASTER_MODE) == 0) {
+			sc450ai->sync_mode = INTERNAL_MASTER_MODE;
+			dev_info(dev, "internal master mode\n");
+		} else if (strcmp(sync_mode_name, RKMODULE_SOFT_SYNC_MODE) == 0) {
+			sc450ai->sync_mode = SOFT_SYNC_MODE;
+			dev_info(dev, "soft sync mode\n");
+		}
+	}
 
 	sc450ai->is_thunderboot = IS_ENABLED(CONFIG_VIDEO_ROCKCHIP_THUNDER_BOOT_ISP);
 	dev_err(dev, "========= is_thunderboot %d\n", sc450ai->is_thunderboot);
