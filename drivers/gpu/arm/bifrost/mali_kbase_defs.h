@@ -1109,6 +1109,7 @@ struct kbase_device {
 	unsigned int nr_regulators;
 #endif /* CONFIG_REGULATOR */
 	char devname[DEVNAME_SIZE];
+	struct kobject *kprcs_kobj;
 	u32 id;
 
 #if !IS_ENABLED(CONFIG_MALI_REAL_HW)
@@ -1901,6 +1902,7 @@ struct kbase_sub_alloc {
  * is made on the device file.
  */
 struct kbase_context {
+	struct kobject kobj;
 	struct file *filp;
 	struct kbase_device *kbdev;
 	struct list_head kctx_list_link;
