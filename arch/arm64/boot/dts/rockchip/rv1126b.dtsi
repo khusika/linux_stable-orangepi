@@ -879,7 +879,7 @@
 	rockchip_suspend: rockchip-suspend {
 		compatible = "rockchip,pm-config";
 		status = "disabled";
-
+		rockchip,sleep-debug-en = <0>;
 		rockchip,sleep-mode-config = <
 			(0
 			| RKPM_SLP_ARMOFF_PMUOFF
