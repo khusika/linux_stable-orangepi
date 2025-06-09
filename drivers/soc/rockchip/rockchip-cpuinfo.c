@@ -214,6 +214,19 @@ static void rv1126_init(void)
 	rockchip_soc_id = ROCKCHIP_SOC_RV1126;
 }
 
+#define RV1126B_OS_REG1	0x20130204
+static void rv1109b_init(void)
+{
+	rockchip_soc_id = ROCKCHIP_SOC_RV1109B;
+	rockchip_set_cpu_version_from_os_reg(RV1126B_OS_REG1);
+}
+
+static void rv1126b_init(void)
+{
+	rockchip_soc_id = ROCKCHIP_SOC_RV1126B;
+	rockchip_set_cpu_version_from_os_reg(RV1126B_OS_REG1);
+}
+
 static void rk3288_init(void)
 {
 	void __iomem *base;
@@ -329,8 +342,12 @@ int rockchip_soc_id_init(void)
 		rv1106_init();
 	} else if (cpu_is_rv1109()) {
 		rv1109_init();
+	} else if (cpu_is_rv1109b()) {
+		rv1109b_init();
 	} else if (cpu_is_rv1126()) {
 		rv1126_init();
+	} else if (cpu_is_rv1126b()) {
+		rv1126b_init();
 	} else if (cpu_is_rk3528()) {
 		rk3528_init();
 	}  else if (cpu_is_rk3566()) {
