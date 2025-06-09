@@ -466,6 +466,10 @@ struct vop_ctrl {
 	struct vop_reg reg_done_frm;
 	struct vop_reg cfg_done;
 
+	struct vop_reg edpi_wms_fs;
+	struct vop_reg edpi_ctrl_mode;
+	struct vop_reg edpi_te_en;
+
 	/* ebc vop */
 	struct vop_reg enable;
 	struct vop_reg inf_out_en;
