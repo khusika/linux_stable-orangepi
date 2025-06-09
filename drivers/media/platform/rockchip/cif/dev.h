@@ -1177,7 +1177,8 @@ void rkcif_free_buf_by_user_require(struct rkcif_device *dev);
 static inline u64 rkcif_time_get_ns(struct rkcif_device *dev)
 {
 	if (dev->chip_id == CHIP_RV1106_CIF ||
-	    dev->chip_id == CHIP_RV1103B_CIF)
+	    dev->chip_id == CHIP_RV1103B_CIF ||
+	    dev->chip_id == CHIP_RV1126B_CIF)
 		return ktime_get_boottime_ns();
 	else
 		return ktime_get_ns();
