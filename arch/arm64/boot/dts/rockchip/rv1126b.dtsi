@@ -3312,7 +3312,7 @@
 		rockchip,pvtm-volt = <1000000>;
 		rockchip,pvtm-ref-temp = <40>;
 		rockchip,pvtm-temp-prop = <0 0>;
-		rockchip,pvtm-thermal-zone = "npu-thermal";
+		rockchip,pvtm-thermal-zone = "cpu-thermal";
 		rockchip,grf = <&pvtpll_npu>;
 		rockchip,temp-hysteresis = <5000>;
 		rockchip,low-temp = <10000>;
