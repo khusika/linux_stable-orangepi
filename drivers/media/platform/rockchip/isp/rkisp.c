@@ -3477,7 +3477,7 @@ static int rkisp_rx_buf_pool_init(struct rkisp_device *dev,
 		 "%s type:0x%x first:%d dbufs[%d]:%p", __func__,
 		 dbufs->type, dbufs->is_first, i, dbufs);
 
-	if (dbufs->is_resmem) {
+	if (dbufs->is_resmem && !dev->hw_dev->is_mmu) {
 		dma = dbufs->dma;
 		goto end;
 	}
