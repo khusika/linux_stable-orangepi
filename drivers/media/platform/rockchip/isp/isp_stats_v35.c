@@ -164,8 +164,8 @@ rkisp_stats_get_enh_stats(struct rkisp_isp_stats_vdev *stats_vdev,
 	struct rkisp_isp_params_vdev *params = &dev->params_vdev;
 	struct rkisp_isp_params_val_v35 *priv_val = params->priv_val;
 	struct isp35_isp_params_cfg *params_rec = params->isp35_params + dev->unite_index;
-	struct isp33_enh_cfg *arg_rec = &params_rec->others.enh_cfg;
-	struct isp33_enh_stat *enh;
+	struct isp35_enh_cfg *arg_rec = &params_rec->others.enh_cfg;
+	struct isp35_enh_stat *enh;
 	int val, i, j, timeout;
 
 	val = isp3_stats_read(stats_vdev, ISP33_ENH_CTRL);

@@ -2535,7 +2535,7 @@ isp_gic_enable(struct rkisp_isp_params_vdev *params_vdev, bool en, u32 id)
 
 static void
 isp_enh_cfg_sram(struct rkisp_isp_params_vdev *params_vdev,
-		 const struct isp33_enh_cfg *arg, bool is_check, u32 id)
+		 const struct isp35_enh_cfg *arg, bool is_check, u32 id)
 {
 	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	u32 i, j, val, ctrl = isp3_param_read(params_vdev, ISP33_ENH_CTRL, id);
@@ -2559,10 +2559,10 @@ isp_enh_cfg_sram(struct rkisp_isp_params_vdev *params_vdev,
 
 static void
 isp_enh_config(struct rkisp_isp_params_vdev *params_vdev,
-	       const struct isp33_enh_cfg *arg, u32 id)
+	       const struct isp35_enh_cfg *arg, u32 id)
 {
 	struct isp35_isp_params_cfg *params_rec = params_vdev->isp35_params + id;
-	struct isp33_enh_cfg *arg_rec = &params_rec->others.enh_cfg;
+	struct isp35_enh_cfg *arg_rec = &params_rec->others.enh_cfg;
 	struct rkisp_isp_params_val_v35 *priv = params_vdev->priv_val;
 	struct rkisp_device *dev = params_vdev->dev;
 	struct v4l2_rect *out_crop = &dev->isp_sdev.out_crop;
@@ -2640,7 +2640,7 @@ isp_enh_config(struct rkisp_isp_params_vdev *params_vdev,
 	if (dev->hw_dev->is_single && arg->iir_wr)
 		isp_enh_cfg_sram(params_vdev, arg, false, id);
 	else if (arg->iir_wr)
-		memcpy(arg_rec, arg, sizeof(struct isp33_enh_cfg));
+		memcpy(arg_rec, arg, sizeof(struct isp35_enh_cfg));
 }
 
 static void
