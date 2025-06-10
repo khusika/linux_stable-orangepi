@@ -98,6 +98,7 @@ static void sditf_buffree_work(struct work_struct *work)
 		if (rx_buf) {
 			list_del(&rx_buf->list_free);
 			rkcif_free_reserved_mem_buf(priv->cif_dev, rx_buf);
+			rkcif_free_reserved_mem(rx_buf->shmem.shm_start, rx_buf->shmem.shm_size);
 			memset(rx_buf, 0, sizeof(*rx_buf));
 			rx_buf->dummy.is_free = true;
 		}
@@ -1444,7 +1445,7 @@ static int sditf_s_rx_buffer(struct v4l2_subdev *sd,
 			if (cif_dev->is_thunderboot ||
 			    cif_dev->is_rtt_suspend ||
 			    cif_dev->is_aov_reserved)
-				dma_sync_single_for_device(cif_dev->dev,
+				dma_sync_single_for_device(cif_dev->hw_dev->dev,
 							   rx_buf->dummy.dma_addr + rx_buf->dummy.size -
 							   stream->pixm.plane_fmt[0].bytesperline * 3,
 							   stream->pixm.plane_fmt[0].bytesperline * 3,
@@ -1453,6 +1454,7 @@ static int sditf_s_rx_buffer(struct v4l2_subdev *sd,
 				cif_dev->hw_dev->mem_ops->prepare(rx_buf->dummy.mem_priv);
 		}
 	}
+	spin_unlock_irqrestore(&stream->vbq_lock, flags);
 
 	if (dbufs->is_switch && dbufs->type == BUF_SHORT) {
 		if (stream->is_in_vblank || !stream->dma_en) {
@@ -1465,7 +1467,6 @@ static int sditf_s_rx_buffer(struct v4l2_subdev *sd,
 		v4l2_dbg(3, rkcif_debug, &cif_dev->v4l2_dev,
 			 "switch to online mode\n");
 	}
-	spin_unlock_irqrestore(&stream->vbq_lock, flags);
 
 	spin_lock_irqsave(&stream->cifdev->stream_spinlock, flags);
 	stream->is_finish_single_cap = true;
