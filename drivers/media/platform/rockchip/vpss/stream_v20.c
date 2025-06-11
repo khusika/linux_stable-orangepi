@@ -1947,12 +1947,10 @@ static void rkvpss_stream_stop(struct rkvpss_stream *stream)
 	int ret;
 
 	stream->stopping = true;
-	if (atomic_read(&dev->pipe_stream_cnt) > 0) {
-		ret = wait_event_timeout(stream->done, !stream->streaming,
-					 msecs_to_jiffies(300));
-		if (!ret)
-			v4l2_warn(&dev->v4l2_dev, "%s id:%d timeout\n", __func__, stream->id);
-	}
+	ret = wait_event_timeout(stream->done, !stream->streaming,
+				msecs_to_jiffies(300));
+	if (!ret)
+		v4l2_warn(&dev->v4l2_dev, "%s id:%d timeout\n", __func__, stream->id);
 	stream->stopping = false;
 	stream->streaming = false;
 	if (stream->ops->disable_mi)
