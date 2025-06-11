@@ -366,6 +366,7 @@ extern struct vehicle_hw_data vehicle_uart_data;
 extern struct vehicle_hw_data vehicle_chip_mcu_data;
 
 extern struct vehicle *g_vehicle_hw;
+extern const struct regmap_bus vehicle_regmap_spi;
 extern void vehicle_set_property(u16 prop, u8 index, u32 value, u32 param);
 extern int gpio_mcu_register(struct spi_device *spi);
 extern int vehicle_spi_write_slt(struct vehicle *vehicle, const void *txbuf, size_t n);

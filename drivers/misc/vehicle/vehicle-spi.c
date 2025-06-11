@@ -31,6 +31,7 @@ int vehicle_spi_write_slt(struct vehicle *vehicle, const void *txbuf, size_t n)
 		};
 	struct spi_message      m;
 
+	mutex_lock(&vehicle->vehicle_spi->wq_lock);
 	spi = vehicle->vehicle_spi->spi;
 	reinit_completion(&spi_complete);
 	spi_message_init(&m);
@@ -40,14 +41,15 @@ int vehicle_spi_write_slt(struct vehicle *vehicle, const void *txbuf, size_t n)
 
 	if (ret) {
 		dev_err(&spi->dev, "SPI write async error: %d\n", ret);
-		return ret;
+		goto unlock;
 	}
 
 	if (!wait_for_completion_timeout(&spi_complete, msecs_to_jiffies(SPI_TIMEOUT_MS))) {
 		dev_err(&spi->dev, "SPI write operation timed out\n");
-		return -ETIMEDOUT;
+		goto unlock;
 	}
-
+unlock:
+	mutex_unlock(&vehicle->vehicle_spi->wq_lock);
 	return ret;
 }
 
@@ -62,6 +64,7 @@ int vehicle_spi_read_slt(struct vehicle *vehicle, void *rxbuf, size_t n)
 		};
 	struct spi_message      m;
 
+	mutex_lock(&vehicle->vehicle_spi->wq_lock);
 	spi = vehicle->vehicle_spi->spi;
 	reinit_completion(&spi_complete);
 	spi_message_init(&m);
@@ -70,14 +73,15 @@ int vehicle_spi_read_slt(struct vehicle *vehicle, void *rxbuf, size_t n)
 	ret = spi_async(spi, &m);
 	if (ret) {
 		dev_err(&spi->dev, "SPI read async error: %d\n", ret);
-		return ret;
+		goto unlock;
 	}
 
 	if (!wait_for_completion_timeout(&spi_complete, msecs_to_jiffies(SPI_TIMEOUT_MS))) {
 		dev_err(&spi->dev, "SPI read operation timed out\n");
-		return -ETIMEDOUT;
+		goto unlock;
 	}
-
+unlock:
+	mutex_unlock(&vehicle->vehicle_spi->wq_lock);
 	return ret;
 }
 
@@ -102,7 +106,7 @@ static int vehicle_spi_update_data(struct vehicle *vehicle)
 #ifndef CONFIG_VEHICLE_SPI_PROTOCOL
 		vehicle_spi_read_slt(vehicle, rxbuf, size);
 #else
-		Analyze_read_data(vehicle, rxbuf, size);
+		vehicle_analyze_read_data(vehicle, rxbuf, size);
 #endif
 	end_time = ktime_get();
 	cost_time = ktime_sub(end_time, start_time);
@@ -154,6 +158,36 @@ static irqreturn_t vehicle_spi_irq_handle(int irq, void *_data)
 
 	return IRQ_HANDLED;
 }
+
+#if defined(CONFIG_VEHICLE_GPIO_MCU_EXPANDER) && defined(CONFIG_VEHICLE_SPI_PROTOCOL)
+static int vehicle_spi_write_data(void *context, unsigned int reg,
+				   unsigned int val)
+{
+	unsigned char value = 0;
+
+	value = val & 0x0f;
+	return vehicle_analyze_write_data(g_vehicle_hw, (unsigned char)reg, &value, sizeof(value));
+
+}
+
+static int vehicle_spi_read_data(void *context, unsigned int reg,
+				  unsigned int *val)
+{
+	return vehicle_analyze_read_reg(g_vehicle_hw, reg, val);
+}
+
+static int vehicle_analyze_update_bits(void *context, unsigned int reg,
+					 unsigned int mask, unsigned int val)
+{
+	return 0;
+}
+
+const struct regmap_bus vehicle_regmap_spi = {
+	.reg_write = vehicle_spi_write_data,
+	.reg_read = vehicle_spi_read_data,
+	.reg_update_bits = vehicle_analyze_update_bits,
+};
+#endif
 
 static int vehicle_spi_irq_init(struct vehicle_spi *vehicle_spi)
 {
@@ -295,7 +329,8 @@ static ssize_t spi_test_write(struct file *file,
 #ifndef CONFIG_VEHICLE_SPI_PROTOCOL
 			vehicle_spi_write_slt(g_vehicle_hw, txbuf, size);
 #else
-			Analyze_write_data(g_vehicle_hw, (unsigned char)cmd_spi, txbuf, size);
+			vehicle_analyze_write_data(g_vehicle_hw, (unsigned char)cmd_spi,
+							 txbuf, size);
 #endif
 		end_time = ktime_get();
 		cost_time = ktime_sub(end_time, start_time);
@@ -357,8 +392,10 @@ static int vehicle_spi_probe(struct spi_device *spi)
 	init_completion(&spi_complete);
 	spi_hw_init(g_vehicle_hw);
 
-#ifdef CONFIG_VEHICLE_GPIO_MCU_EXPANDER
-	gpio_mcu_register(spi);
+#if defined(CONFIG_VEHICLE_GPIO_MCU_EXPANDER) && defined(CONFIG_VEHICLE_SPI_PROTOCOL)
+	ret = vehicle_analyze_read_reg(g_vehicle_hw, VERSION, &id);
+	if (ret == 0 && id == VERSION_ID)
+		gpio_mcu_register(spi);
 #endif
 
 	return 0;
