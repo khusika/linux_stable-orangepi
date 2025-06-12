@@ -2687,7 +2687,7 @@ static int rockchip_thermal_probe(struct platform_device *pdev)
 	if (IS_ERR(thermal->regs))
 		return PTR_ERR(thermal->regs);
 
-	thermal->reset = devm_reset_control_array_get(&pdev->dev, false, false);
+	thermal->reset = devm_reset_control_array_get_optional_exclusive(&pdev->dev);
 	if (IS_ERR(thermal->reset)) {
 		if (PTR_ERR(thermal->reset) != -EPROBE_DEFER)
 			dev_err(&pdev->dev, "failed to get tsadc reset lines\n");
