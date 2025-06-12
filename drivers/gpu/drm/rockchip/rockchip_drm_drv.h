@@ -274,6 +274,7 @@ struct rockchip_crtc_state {
 	int output_mode;
 	int output_bpc;
 	int output_flags;
+	int data_map_mode;
 	bool enable_afbc;
 	/**
 	 * @splice_mode: enabled when display a hdisplay > 4096 on rk3588

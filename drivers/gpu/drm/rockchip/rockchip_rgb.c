@@ -144,6 +144,7 @@ struct rockchip_rgb {
 	u8 id;
 	u32 max_dclk_rate;
 	u32 mcu_pix_total;
+	int data_map_mode;
 	struct device *dev;
 	struct device_node *np_mcu_panel;
 	struct drm_panel *panel;
@@ -391,6 +392,7 @@ rockchip_rgb_encoder_atomic_check(struct drm_encoder *encoder,
 		break;
 	}
 
+	s->data_map_mode = rgb->data_map_mode;
 	s->output_type = DRM_MODE_CONNECTOR_DPI;
 	s->bus_flags = info->bus_flags;
 	s->tv_state = &conn_state->tv;
@@ -1060,6 +1062,10 @@ static int rockchip_rgb_probe(struct platform_device *pdev)
 		id = 0;
 
 	rgb->data_sync_bypass = of_property_read_bool(dev->of_node, "rockchip,data-sync-bypass");
+	if (of_property_read_u32(dev->of_node, "rockchip,data-map-mode", &rgb->data_map_mode))
+		rgb->data_map_mode = -1;
+	if (rgb->data_map_mode < 0 || rgb->data_map_mode > 3)
+		rgb->data_map_mode = -1;
 
 	fwnode_mcu_panel = device_get_named_child_node(dev, "mcu-panel");
 	if (fwnode_mcu_panel) {
