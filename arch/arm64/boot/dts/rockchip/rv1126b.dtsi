@@ -1904,9 +1904,6 @@
 		clocks = <&cru CLK_TSADC>, <&cru PCLK_TSADC>,
 			 <&cru CLK_TSADC_PHYCTRL>;
 		clock-names = "tsadc", "apb_pclk", "tsadc_phyctrl";
-		resets = <&cru SRST_RESETN_TSADC>, <&cru SRST_PRESETN_TSADC>,
-			 <&cru SRST_RESETN_TSADC_PHYCTRL>;
-		reset-names = "tsadc", "tsadc-apb", "tsadc-phy";
 		#thermal-sensor-cells = <1>;
 		rockchip,grf = <&grf>;
 		rockchip,hw-tshut-temp = <120000>;
