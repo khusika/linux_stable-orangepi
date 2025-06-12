@@ -4176,6 +4176,15 @@ static void vop_crtc_atomic_enable(struct drm_crtc *crtc,
 	if (vop->lut_active)
 		vop_crtc_load_lut(crtc);
 
+	if (s->data_map_mode != -1) {
+		if (s->output_if & VOP_OUTPUT_IF_BT1120)
+			VOP_CTRL_SET(vop, bt1120_data_map_mode, s->data_map_mode);
+		else if (s->output_if & VOP_OUTPUT_IF_BT656)
+			VOP_CTRL_SET(vop, bt656_data_map_mode, s->data_map_mode);
+		else if (vop->mcu_timing.mcu_pix_total)
+			VOP_CTRL_SET(vop, mcu_data_map_mode, s->data_map_mode);
+	}
+
 	if (vop->mcu_timing.mcu_pix_total) {
 		/*
 		 * For RK3576_LITE/RK3506/RV1126B
