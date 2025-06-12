@@ -91,7 +91,7 @@
 #define VEHICLE_DBG(x...) no_printk(x)
 #endif
 
-#define MCU_MAX_REGS 8
+#define MCU_MAX_REGS 64
 struct mcu_gpio_chip {
 	const char *name;
 	struct platform_device *pdev;
