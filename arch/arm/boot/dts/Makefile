@@ -1181,6 +1181,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += \
 	rv1126b-evb1-v10-dv.dtb \
 	rv1126b-evb1-v10-fastboot-emmc.dtb \
 	rv1126b-evb1-v10-fastboot-spi-nand.dtb \
+	rv1126b-evb1-v10-fastboot-spi-nor.dtb \
 	rv1126b-evb1-v10-spi-nor.dtb \
 	rv1126b-evb2-v10.dtb \
 	rv1126b-evb2-v10-mcu-k350c4516t.dtb \
