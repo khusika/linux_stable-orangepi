@@ -378,6 +378,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-bt-sco.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-dual-4k.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-dv.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-fastboot-emmc.dtb
+dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-fastboot-spi-nand.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-spi-nor.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10-mcu-k350c4516t.dtb
