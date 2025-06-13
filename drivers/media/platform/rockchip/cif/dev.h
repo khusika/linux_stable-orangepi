@@ -1073,6 +1073,7 @@ struct rkcif_device {
 	u32				pre_buf_addr[MAX_PRE_BUF_NUM];
 	u64				pre_buf_timestamp[MAX_PRE_BUF_NUM];
 	u32				dvp_pin_group;
+	u32				unite_extend_pixel;
 	struct rkcif_switch_info	switch_info;
 };
 
@@ -1202,4 +1203,5 @@ void rkcif_set_sensor_streamon_in_sync_mode(struct rkcif_device *cif_dev);
 int rkcif_sensor_set_power(struct rkcif_stream *stream, int on);
 void rkcif_switch_change(struct rkcif_device *cif_dev, bool is_switch);
 
+void rkcif_update_unite_extend_pixel(struct rkcif_device *cif_dev);
 #endif

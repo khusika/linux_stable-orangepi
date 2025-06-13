@@ -4024,9 +4024,9 @@ static int rkcif_csi_channel_init(struct rkcif_stream *stream,
 	     (dev->hdr.hdr_mode == HDR_X2 && stream->id == 1) ||
 	     (dev->hdr.hdr_mode == HDR_X3 && stream->id == 2))) {
 		channel->crop_st_x += channel->width / 2;
-		channel->crop_st_x -= RKMOUDLE_UNITE_EXTEND_PIXEL;
+		channel->crop_st_x -= dev->unite_extend_pixel;
 		channel->width /= 2;
-		channel->width += RKMOUDLE_UNITE_EXTEND_PIXEL;
+		channel->width += dev->unite_extend_pixel;
 	}
 	/*
 	 * for mipi or lvds, when enable compact, the virtual width of raw10/raw12
@@ -5275,9 +5275,9 @@ void rkcif_reinit_right_half_config(struct rkcif_stream *stream)
 		return;
 	}
 	channel->crop_st_x += channel->width / 2;
-	channel->crop_st_x -= RKMOUDLE_UNITE_EXTEND_PIXEL;
+	channel->crop_st_x -= cif_dev->unite_extend_pixel;
 	channel->width /= 2;
-	channel->width += RKMOUDLE_UNITE_EXTEND_PIXEL;
+	channel->width += cif_dev->unite_extend_pixel;
 	channel->virtual_width = ALIGN(channel->width * fmt->raw_bpp / 8, 256);
 	if (cif_dev->chip_id < CHIP_RK3576_CIF)
 		rkcif_write_register(cif_dev, get_reg_index_of_id_ctrl1(channel->id),
@@ -6271,7 +6271,7 @@ static u32 rkcif_get_right_half_buf_size(struct rkcif_stream *stream)
 		height = stream->pixm.height;
 	}
 	width /= 2;
-	width += RKMOUDLE_UNITE_EXTEND_PIXEL;
+	width += stream->cifdev->unite_extend_pixel;
 	if (stream->is_compact)
 		virtual_width = ALIGN(width * stream->cif_fmt_out->raw_bpp / 8, 256);
 	else
@@ -14932,6 +14932,17 @@ void rkcif_switch_change(struct rkcif_device *cif_dev, bool is_switch)
 	} else {
 		gpiod_direction_output_raw(cif_dev->switch_info.gpio_pin, 0);
 	}
+}
+
+void rkcif_update_unite_extend_pixel(struct rkcif_device *cif_dev)
+{
+	struct v4l2_subdev *sd = get_rkisp_sd(cif_dev->sditf[0]);
+
+	if (!sd)
+		return;
+	v4l2_subdev_call(sd, core, ioctl,
+			 RKISP_VICAP_CMD_GET_UNITE_EXTEND_PIXEL,
+			 &cif_dev->unite_extend_pixel);
 }
 
 /* pingpong irq for rk3588 and next */
