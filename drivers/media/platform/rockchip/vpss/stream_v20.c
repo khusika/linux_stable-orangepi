@@ -791,17 +791,17 @@ static void calc_unite_scl_params(struct rkvpss_stream *stream)
 
 	if (stream->id == 0 && stream->crop.width != stream->out_fmt.width) {
 		right_y_crop_total = stream->crop.width / 2 +
-				     RKMOUDLE_UNITE_EXTEND_PIXEL -
+				     stream->dev->unite_extend_pixel -
 				     right_scl_need_size_y - 3;
 		right_c_crop_total = stream->crop.width / 2 +
-				     RKMOUDLE_UNITE_EXTEND_PIXEL -
+				     stream->dev->unite_extend_pixel -
 				     right_scl_need_size_c - 6;
 	} else {
 		right_y_crop_total = stream->crop.width / 2 +
-				     RKMOUDLE_UNITE_EXTEND_PIXEL -
+				     stream->dev->unite_extend_pixel -
 				     right_scl_need_size_y;
 		right_c_crop_total = stream->crop.width / 2 +
-				     RKMOUDLE_UNITE_EXTEND_PIXEL -
+				     stream->dev->unite_extend_pixel -
 				     right_scl_need_size_c;
 	}
 
@@ -1455,7 +1455,7 @@ static int rkvpss_stream_crop_ch4_5(struct rkvpss_stream *stream, bool on, bool 
 			if (crop->width == stream->out_fmt.width)
 				h_size =  crop->width / 2;
 			else
-				h_size = crop->width / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL;
+				h_size = crop->width / 2 + dev->unite_extend_pixel;
 
 			v_size = crop->height;
 			rkvpss_idx_write(dev, reg_ch4_5_size,
@@ -1471,7 +1471,7 @@ static int rkvpss_stream_crop_ch4_5(struct rkvpss_stream *stream, bool on, bool 
 			rkvpss_idx_set_bits(dev, reg_ctrl, 0, val, VPSS_UNITE_RIGHT);
 			h_offs = stream->unite_params.quad_crop_w;
 			v_offs = crop->top;
-			h_size = crop->width / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL -
+			h_size = crop->width / 2 + dev->unite_extend_pixel -
 				 stream->unite_params.quad_crop_w;
 			v_size = crop->height;
 			rkvpss_idx_write(dev, reg_ch4_5_offs,
@@ -1554,7 +1554,7 @@ static int rkvpss_stream_crop(struct rkvpss_stream *stream, bool on, bool sync)
 						 VPSS_UNITE_LEFT);
 			else
 				rkvpss_idx_write(dev, reg_h_size, crop->width / 2 +
-						 RKMOUDLE_UNITE_EXTEND_PIXEL, VPSS_UNITE_LEFT);
+						 dev->unite_extend_pixel, VPSS_UNITE_LEFT);
 			rkvpss_idx_write(dev, reg_v_size, crop->height, VPSS_UNITE_LEFT);
 			v4l2_dbg(4, rkvpss_debug, &dev->v4l2_dev,
 				 "left crop left:%d top:%d w:%d h:%d\n",
@@ -1569,8 +1569,8 @@ static int rkvpss_stream_crop(struct rkvpss_stream *stream, bool on, bool sync)
 					 VPSS_UNITE_RIGHT);
 			rkvpss_idx_write(dev, reg_v_offs, crop->top, VPSS_UNITE_RIGHT);
 			rkvpss_idx_write(dev, reg_h_size, crop->width / 2 +
-				     RKMOUDLE_UNITE_EXTEND_PIXEL -
-				     stream->unite_params.quad_crop_w, VPSS_UNITE_RIGHT);
+					 dev->unite_extend_pixel -
+					 stream->unite_params.quad_crop_w, VPSS_UNITE_RIGHT);
 			rkvpss_idx_write(dev, reg_v_size, crop->height, VPSS_UNITE_RIGHT);
 			v4l2_dbg(4, rkvpss_debug, &dev->v4l2_dev,
 				 "right crop left:%d top:%d w:%d h:%d\n",
@@ -1822,7 +1822,7 @@ static void bilinear_scale(struct rkvpss_stream *stream, bool on, bool sync)
 		if (in_w == out_w)
 			val = (in_w / 2) | (in_h << 16);
 		else
-			val = (in_w / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL) | (in_h << 16);
+			val = (in_w / 2 + dev->unite_extend_pixel) | (in_h << 16);
 		reg = stream->config->scale.src_size;
 		rkvpss_idx_write(dev, reg, val, VPSS_UNITE_LEFT);
 
@@ -1887,7 +1887,7 @@ static void bilinear_scale(struct rkvpss_stream *stream, bool on, bool sync)
 		reg = stream->config->scale.hc_offs_mi;
 		rkvpss_idx_write(dev, reg, val, VPSS_UNITE_RIGHT);
 
-		val = (in_w / 2 + RKMOUDLE_UNITE_EXTEND_PIXEL) | (in_h << 16);
+		val = (in_w / 2 + dev->unite_extend_pixel) | (in_h << 16);
 		reg = stream->config->scale.src_size;
 		rkvpss_idx_write(dev, reg, val, VPSS_UNITE_RIGHT);
 
@@ -2749,29 +2749,29 @@ void rkvpss_cmsc_config_v20(struct rkvpss_device *dev, bool sync)
 					    win->point[1].x != win->point[2].x) {
 						right_cfg.win[i].win_en &= ~BIT(j);
 					} else {
-						win->point[0].x = RKMOUDLE_UNITE_EXTEND_PIXEL;
-						win->point[3].x = RKMOUDLE_UNITE_EXTEND_PIXEL;
+						win->point[0].x = dev->unite_extend_pixel;
+						win->point[3].x = dev->unite_extend_pixel;
 						win->point[1].x = win->point[1].x -
 								  (dev->vpss_sdev.in_fmt.width / 2)
-								  + RKMOUDLE_UNITE_EXTEND_PIXEL;
+								  + dev->unite_extend_pixel;
 						win->point[2].x = win->point[2].x -
 								  (dev->vpss_sdev.in_fmt.width / 2)
-								  + RKMOUDLE_UNITE_EXTEND_PIXEL;
+								  + dev->unite_extend_pixel;
 					}
 				} else {
 					/** all right **/
 					win->point[0].x = win->point[0].x -
 							  (dev->vpss_sdev.in_fmt.width / 2) +
-							  RKMOUDLE_UNITE_EXTEND_PIXEL;
+							  dev->unite_extend_pixel;
 					win->point[1].x = win->point[1].x -
 							  (dev->vpss_sdev.in_fmt.width / 2) +
-							  RKMOUDLE_UNITE_EXTEND_PIXEL;
+							  dev->unite_extend_pixel;
 					win->point[2].x = win->point[2].x -
 							  (dev->vpss_sdev.in_fmt.width / 2) +
-							  RKMOUDLE_UNITE_EXTEND_PIXEL;
+							  dev->unite_extend_pixel;
 					win->point[3].x = win->point[3].x -
 							  (dev->vpss_sdev.in_fmt.width / 2) +
-							  RKMOUDLE_UNITE_EXTEND_PIXEL;
+							  dev->unite_extend_pixel;
 				}
 			}
 		}
