@@ -1400,8 +1400,10 @@ static int rk808_probe(struct i2c_client *client,
 	const struct mfd_cell *cells;
 	u8 on_source = 0, off_source = 0;
 	unsigned int on, off;
+	u32 pmic_id_mask = RK8XX_ID_MSK;
 	int nr_pre_init_regs;
 	int nr_cells;
+	int pmic_id;
 	int msb, lsb;
 	unsigned char pmic_id_msb, pmic_id_lsb;
 	int ret;
@@ -1423,6 +1425,7 @@ static int rk808_probe(struct i2c_client *client,
 	} else if (of_device_is_compatible(np, "rockchip,rk801")) {
 		pmic_id_msb = RK801_ID_MSB;
 		pmic_id_lsb = RK801_ID_LSB;
+		pmic_id_mask = RK801_ID_MSK;
 	} else {
 		pmic_id_msb = RK808_ID_MSB;
 		pmic_id_lsb = RK808_ID_LSB;
@@ -1443,8 +1446,9 @@ static int rk808_probe(struct i2c_client *client,
 		return lsb;
 	}
 
-	rk808->variant = ((msb << 8) | lsb) & RK8XX_ID_MSK;
-	dev_info(&client->dev, "chip id: 0x%x\n", (unsigned int)rk808->variant);
+	pmic_id = (msb << 8) | lsb;
+	rk808->variant = pmic_id & RK8XX_ID_MSK;
+	dev_info(&client->dev, "chip id: 0x%x\n", pmic_id & pmic_id_mask);
 
 	switch (rk808->variant) {
 	case RK801_ID:
