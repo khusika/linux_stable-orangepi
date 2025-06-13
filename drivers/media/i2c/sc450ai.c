@@ -1217,6 +1217,7 @@ static const struct sc450ai_mode supported_modes_2lane[] = {
 		.hts_def = 0x2ee * 4,
 		.vts_def = 0x0638,
 		.bus_fmt = MEDIA_BUS_FMT_SBGGR10_1X10,
+		.global_reg_list = sc450ai_global_regs_2lane,
 		.reg_list = sc450ai_linear_10_2688x1520_30fps_2lane_regs,
 		.hdr_mode = NO_HDR,
 		.mclk = 27000000,
