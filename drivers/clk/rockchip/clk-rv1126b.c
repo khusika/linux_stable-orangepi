@@ -866,7 +866,7 @@ static struct rockchip_clk_branch rv1126b_clk_branches[] __initdata = {
 			RV1126B_BUSCLKGATE_CON(2), 14, GFLAGS),
 	GATE(HCLK_RKRNG_NS, "hclk_rkrng_ns", "hclk_rkrng_s_ns", 0,
 			RV1126B_BUSCLKGATE_CON(2), 15, GFLAGS),
-	GATE(CLK_TIMER5, "clk_timer5", "clk_timer_root", 0,
+	GATE(CLK_TIMER5, "clk_timer5", "clk_timer_root", CLK_IS_CRITICAL,
 			RV1126B_BUSCLKGATE_CON(2), 11, GFLAGS),
 	GATE(PCLK_I2C0, "pclk_i2c0", "pclk_bus_root", 0,
 			RV1126B_BUSCLKGATE_CON(3), 0, GFLAGS),
