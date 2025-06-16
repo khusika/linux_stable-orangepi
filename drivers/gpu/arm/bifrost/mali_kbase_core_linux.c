@@ -360,8 +360,6 @@ static void kbase_file_delete(struct kbase_file *const kfile)
 #endif
 		kbase_context_debugfs_term(kctx);
 
-		kobject_put(&kctx->kobj);
-
 		kbase_destroy_context(kctx);
 
 		dev_dbg(kbdev->dev, "deleted base context\n");
@@ -626,74 +624,14 @@ static const struct file_operations kbase_force_same_va_fops = {
 };
 #endif /* CONFIG_DEBUG_FS */
 
-static ssize_t kbase_kctx_attr_show(struct kobject *kobj, struct attribute *attr, char *buf)
-{
-	struct kobj_attribute *kattr = container_of(attr, struct kobj_attribute, attr);
-
-	if (kattr->show)
-		return kattr->show(kobj, kattr, buf);
-
-	return -EIO;
-}
-
-static ssize_t kbase_total_gpu_mem_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
-{
-	struct kbase_context *kctx = container_of(kobj, struct kbase_context, kobj);
-
-	return scnprintf(buf, PAGE_SIZE, "%zu\n", kctx->kprcs->total_gpu_pages << PAGE_SHIFT);
-}
-
-static ssize_t kbase_private_gpu_mem_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
-{
-	struct kbase_context *kctx = container_of(kobj, struct kbase_context, kobj);
-
-	return scnprintf(buf, PAGE_SIZE, "%d\n", atomic_read(&kctx->used_pages) << PAGE_SHIFT);
-}
-
-static struct kobj_attribute kbase_total_gpu_mem_attr = {
-	.attr = {
-		.name = "total_gpu_mem",
-		.mode = 0444,
-	},
-	.show = kbase_total_gpu_mem_show,
-	.store = NULL,
-};
-
-static struct kobj_attribute kbase_private_gpu_mem_attr = {
-	.attr = {
-		.name = "private_gpu_mem",
-		.mode = 0444,
-	},
-	.show = kbase_private_gpu_mem_show,
-	.store = NULL,
-};
-
-static struct attribute *kbase_kctx_attrs[] = {
-	&kbase_total_gpu_mem_attr.attr,
-	&kbase_private_gpu_mem_attr.attr,
-	NULL,
-};
-
-static const struct attribute_group kbase_kctx_attr_group = {
-	.attrs = kbase_kctx_attrs,
-};
-
-static const struct sysfs_ops kbase_kctx_sysfs_ops = {
-	.show = kbase_kctx_attr_show,
-};
-
-static const struct kobj_type kbase_kctx_ktype = {
-	.sysfs_ops = &kbase_kctx_sysfs_ops,
-	.default_groups = (const struct attribute_group *[]) { &kbase_kctx_attr_group, NULL },
-};
-
 static int kbase_file_create_kctx(struct kbase_file *const kfile,
 				  base_context_create_flags const flags)
 {
 	struct kbase_device *kbdev = NULL;
 	struct kbase_context *kctx = NULL;
+#if IS_ENABLED(CONFIG_DEBUG_FS)
 	char kctx_name[64];
-	int ret = 0;
+#endif
 
 	if (WARN_ON(!kfile))
 		return -EINVAL;
@@ -737,12 +675,6 @@ static int kbase_file_create_kctx(struct kbase_file *const kfile,
 		kbase_context_debugfs_init(kctx);
 	}
 #endif /* CONFIG_DEBUG_FS */
-
-	ret = kobject_init_and_add(&kctx->kobj, &kbase_kctx_ktype, kbdev->kprcs_kobj, kctx_name);
-	if (ret) {
-		dev_err(kbdev->dev, "Failed to create kctx kobject");
-		kobject_put(&kctx->kobj);
-	}
 
 	dev_dbg(kbdev->dev, "created base context\n");
 
