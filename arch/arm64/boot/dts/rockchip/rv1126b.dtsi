@@ -940,7 +940,7 @@
 			<&cru CLK_UART_FRAC0>, <&cru CLK_UART_FRAC1>,
 			<&cru CLK_CM_FRAC0>, <&cru CLK_CM_FRAC1>,
 			<&cru CLK_CM_FRAC2>, <&cru CLK_AUDIO_FRAC0>,
-			<&cru CLK_AUDIO_FRAC1>, <&cru CLK_AISP_PLL>,
+			<&cru CLK_AUDIO_FRAC1>, <&cru CLK_AISP_PLL_SRC>,
 			<&cru CLK_CPLL_DIV10>;
 		assigned-clock-rates =
 			<1188000000>, <1000000000>,
@@ -951,7 +951,7 @@
 			<96000000>, <128000000>,
 			<18432000>, <500000000>,
 			<32768000>, <45158400>,
-			<49152000>, <393216000>,
+			<49152000>, <786432000>,
 			<98304000>;
 	};
 
