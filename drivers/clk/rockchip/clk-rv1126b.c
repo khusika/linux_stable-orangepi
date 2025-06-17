@@ -144,7 +144,7 @@ PNAME(clk_timer3_parents_p)		= { "clk_timer_root", "mclk_asrc0", "mclk_asrc1" };
 PNAME(clk_timer4_parents_p)		= { "clk_timer_root", "mclk_asrc2", "mclk_asrc3" };
 PNAME(clk_macphy_p)			= { "xin24m", "clk_cpll_div20" };
 PNAME(mux_ddrphy_p)			= { "dpll", "aclk_sysmem" };
-PNAME(clk_cpll_div10_p)			= { "gpll", "clk_aisp_pll" };
+PNAME(clk_cpll_div10_p)			= { "gpll", "clk_aisp_pll_src" };
 
 static struct rockchip_pll_clock rv1126b_pll_clks[] __initdata = {
 	[gpll] = PLL(pll_rk3328, PLL_GPLL, "gpll", mux_pll_p,
@@ -1016,9 +1016,11 @@ static struct rockchip_clk_branch rv1126b_clk_branches[] __initdata = {
 };
 
 static struct rockchip_clk_branch rv1126b_clk_cpll_div10_v0[] __initdata = {
-	COMPOSITE(CLK_AISP_PLL, "clk_aisp_pll", mux_gpll_aupll_cpll_p, 0,
-		RV1126B_CLKSEL_CON(62), 4, 2, MFLAGS, 0, 3, DFLAGS,
+	COMPOSITE_NODIV(CLK_AISP_PLL_SRC, "clk_aisp_pll_src", mux_gpll_aupll_cpll_p, 0,
+		RV1126B_CLKSEL_CON(62), 4, 2, MFLAGS,
 		RV1126B_CLKGATE_CON(5), 4, GFLAGS),
+	DIV(CLK_AISP_PLL, "clk_aisp_pll", "clk_aisp_pll_src", 0,
+		RV1126B_CLKSEL_CON(62), 0, 3, DFLAGS),
 
 	COMPOSITE(CLK_CPLL_DIV10, "clk_cpll_div10", mux_gpll_cpll_p, 0,
 		RV1126B_CLKSEL_CON(1), 15, 1, MFLAGS, 5, 5, DFLAGS,
@@ -1026,9 +1028,11 @@ static struct rockchip_clk_branch rv1126b_clk_cpll_div10_v0[] __initdata = {
 };
 
 static struct rockchip_clk_branch rv1126b_clk_cpll_div10[] __initdata = {
-	COMPOSITE(CLK_AISP_PLL, "clk_aisp_pll", mux_gpll_aupll_cpll_p, 0,
-		RV1126B_CLKSEL_CON(62), 4, 2, MFLAGS, 0, 3, DFLAGS,
+	COMPOSITE_NODIV(CLK_AISP_PLL_SRC, "clk_aisp_pll_src", mux_gpll_aupll_cpll_p, 0,
+		RV1126B_CLKSEL_CON(62), 4, 2, MFLAGS,
 		RV1126B_CLKGATE_CON(5), 4, GFLAGS),
+	DIV(CLK_AISP_PLL, "clk_aisp_pll", "clk_aisp_pll_src", 0,
+		RV1126B_CLKSEL_CON(62), 0, 3, DFLAGS),
 
 	COMPOSITE(CLK_CPLL_DIV10, "clk_cpll_div10", clk_cpll_div10_p, 0,
 		RV1126B_CLKSEL_CON(1), 15, 1, MFLAGS, 5, 5, DFLAGS,
