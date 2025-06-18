@@ -184,10 +184,7 @@ static long rkisp_sditf_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *ar
 		rkisp_check_idle(sditf->isp, ISP_FRAME_VPSS);
 		break;
 	case RKISP_VPSS_GET_UNITE_MODE:
-		if (sditf->isp->unite_div == ISP_UNITE_DIV2)
-			*(unsigned int *)arg = sditf->isp->unite_div;
-		else
-			*(unsigned int *)arg = 0;
+		*(unsigned int *)arg = sditf->isp->unite_div - 1;
 		break;
 	case RKISP_VPSS_GET_ISP_WORKING:
 		*(int *)arg = sditf->isp->hw_dev->is_runing;

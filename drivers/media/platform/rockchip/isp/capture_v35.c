@@ -760,6 +760,32 @@ static void update_mi(struct rkisp_stream *stream)
 			rkisp_idx_write(dev, reg, val, ISP_UNITE_RIGHT, false);
 		}
 
+		if (dev->unite_div == ISP_UNITE_DIV4) {
+			/* left bottom of image */
+			reg = stream->config->mi.y_base_ad_init;
+			val = stream->next_buf->buff_addr[RKISP_PLANE_Y];
+			val += (out_fmt->plane_fmt[0].bytesperline * out_fmt->height / 2);
+			rkisp_idx_write(dev, reg, val, ISP_UNITE_LEFT_B, false);
+
+			reg = stream->config->mi.cb_base_ad_init;
+			val = stream->next_buf->buff_addr[RKISP_PLANE_CB];
+			val += (out_fmt->plane_fmt[1].sizeimage / 2);
+			rkisp_idx_write(dev, reg, val, ISP_UNITE_LEFT_B, false);
+
+			/* right bottom of image */
+			reg = stream->config->mi.y_base_ad_init;
+			val = stream->next_buf->buff_addr[RKISP_PLANE_Y];
+			val += (out_fmt->plane_fmt[0].bytesperline * out_fmt->height / 2) +
+			       ((out_fmt->width / div) & ~0xf);
+			rkisp_idx_write(dev, reg, val, ISP_UNITE_RIGHT_B, false);
+
+			reg = stream->config->mi.cb_base_ad_init;
+			val = stream->next_buf->buff_addr[RKISP_PLANE_CB];
+			val += (out_fmt->plane_fmt[1].sizeimage / 2) +
+			       ((out_fmt->width / div) & ~0xf);
+			rkisp_idx_write(dev, reg, val, ISP_UNITE_RIGHT_B, false);
+		}
+
 		if (stream->is_pause) {
 			/* single sensor mode with pingpong buffer:
 			 * if mi on, addr will auto update at frame end
@@ -1618,6 +1644,8 @@ static int rkisp_stream_init(struct rkisp_device *dev, u32 id)
 		strscpy(vdev->name, SP_VDEV_NAME, sizeof(vdev->name));
 		stream->ops = &rkisp_sp_streams_ops;
 		stream->config = &rkisp_sp_stream_cfg;
+		if (dev->hw_dev->unite)
+			stream->config->max_rsz_width *= 2;
 		break;
 	case RKISP_STREAM_VIR:
 		strscpy(vdev->name, VIR_VDEV_NAME, sizeof(vdev->name));
@@ -1629,6 +1657,10 @@ static int rkisp_stream_init(struct rkisp_device *dev, u32 id)
 		strscpy(vdev->name, MP_VDEV_NAME, sizeof(vdev->name));
 		stream->ops = &rkisp_mp_streams_ops;
 		stream->config = &rkisp_mp_stream_cfg;
+		if (dev->hw_dev->unite) {
+			stream->config->max_rsz_width = CIF_ISP_INPUT_W_MAX_V35_UNITE;
+			stream->config->max_rsz_height = CIF_ISP_INPUT_H_MAX_V35_UNITE;
+		}
 	}
 
 	rockit_isp_ops.rkisp_stream_start = rkisp_stream_start;

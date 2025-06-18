@@ -241,8 +241,10 @@ int rkisp_align_sensor_resolution(struct rkisp_device *dev,
 			CIF_ISP_INPUT_H_MAX_V33_UNITE : CIF_ISP_INPUT_H_MAX_V33;
 		break;
 	case ISP_V35:
-		max_w = CIF_ISP_INPUT_W_MAX_V35;
-		max_h = CIF_ISP_INPUT_H_MAX_V35;
+		max_w = dev->hw_dev->unite ?
+			CIF_ISP_INPUT_W_MAX_V35_UNITE : CIF_ISP_INPUT_W_MAX_V35;
+		max_h = dev->hw_dev->unite ?
+			CIF_ISP_INPUT_H_MAX_V35_UNITE : CIF_ISP_INPUT_H_MAX_V35;
 		break;
 	default:
 		max_w = CIF_ISP_INPUT_W_MAX;
@@ -2980,6 +2982,58 @@ err:
 	return -EINVAL;
 }
 
+static int rkisp_unite_div(struct rkisp_device *dev, u32 w, u32 h)
+{
+	struct rkisp_hw_dev *hw = dev->hw_dev;
+	u32 max_size, max_w, max_h;
+
+	dev->unite_div = ISP_UNITE_DIV1;
+	if (hw->unite == ISP_UNITE_TWO && hw->isp_ver == ISP_V30) {
+		dev->unite_div = ISP_UNITE_DIV2;
+		return 0;
+	}
+
+	switch (dev->isp_ver) {
+	case ISP_V30:
+		max_size = CIF_ISP_INPUT_W_MAX_V30 * CIF_ISP_INPUT_H_MAX_V30;
+		max_w = CIF_ISP_INPUT_W_MAX_V30;
+		max_h = max_size / w;
+		break;
+	case ISP_V32:
+		max_size = CIF_ISP_INPUT_W_MAX_V32 * CIF_ISP_INPUT_H_MAX_V32;
+		max_w = CIF_ISP_INPUT_W_MAX_V32;
+		max_h = max_size / w;
+		break;
+	case ISP_V32_L:
+		max_size = CIF_ISP_INPUT_W_MAX_V32_L * CIF_ISP_INPUT_H_MAX_V32_L;
+		max_w = CIF_ISP_INPUT_W_MAX_V32_L;
+		max_h = max_size / w;
+		break;
+	case ISP_V33:
+		max_size = CIF_ISP_INPUT_W_MAX_V33 * CIF_ISP_INPUT_H_MAX_V33;
+		max_w = CIF_ISP_INPUT_W_MAX_V33;
+		max_h = max_size / w;
+		break;
+	case ISP_V35:
+		max_size = CIF_ISP_INPUT_W_MAX_V35 * CIF_ISP_INPUT_H_MAX_V35;
+		max_w = CIF_ISP_INPUT_W_MAX_V35;
+		max_h = CIF_ISP_INPUT_H_MAX_V35;
+		break;
+	case ISP_V39:
+		max_size = CIF_ISP_INPUT_W_MAX_V39_UNITE / 2 * CIF_ISP_INPUT_H_MAX_V39_UNITE;
+		max_w = CIF_ISP_INPUT_W_MAX_V39;
+		max_h = max_size / w;
+		break;
+	default:
+		return -EINVAL;
+	}
+	if (w * h > max_size * 2 || h > max_h)
+		dev->unite_div = ISP_UNITE_DIV4;
+	else if (w * h > max_size || w > max_w)
+		dev->unite_div = ISP_UNITE_DIV2;
+	return 0;
+}
+
 static void rkisp_isp_sd_try_crop(struct v4l2_subdev *sd,
 				  struct v4l2_rect *crop,
 				  u32 pad)
@@ -2987,8 +3041,6 @@ static void rkisp_isp_sd_try_crop(struct v4l2_subdev *sd,
 	struct rkisp_isp_subdev *isp_sd = sd_to_isp_sd(sd);
 	struct rkisp_device *dev = sd_to_isp_dev(sd);
 	struct v4l2_rect in_crop = isp_sd->in_crop;
-	struct rkisp_hw_dev *hw = dev->hw_dev;
-	u32 size;
 
 	crop->left = ALIGN(crop->left, 2);
 	crop->width = ALIGN(crop->width, 2);
@@ -2997,38 +3049,7 @@ static void rkisp_isp_sd_try_crop(struct v4l2_subdev *sd,
 		/* update sensor info if sensor link be changed */
 		rkisp_update_sensor_info(dev);
 		rkisp_align_sensor_resolution(dev, crop, true);
-		if (hw->unite == ISP_UNITE_TWO && hw->isp_ver == ISP_V30) {
-			dev->unite_div = ISP_UNITE_DIV2;
-		} else {
-			dev->unite_div = ISP_UNITE_DIV1;
-			switch (dev->isp_ver) {
-			case ISP_V30:
-				size = CIF_ISP_INPUT_W_MAX_V30 * CIF_ISP_INPUT_H_MAX_V30;
-				break;
-			case ISP_V32:
-				size = CIF_ISP_INPUT_W_MAX_V32 * CIF_ISP_INPUT_H_MAX_V32;
-				break;
-			case ISP_V32_L:
-				size = CIF_ISP_INPUT_W_MAX_V32_L * CIF_ISP_INPUT_H_MAX_V32_L;
-				break;
-			case ISP_V33:
-				size = CIF_ISP_INPUT_W_MAX_V33 * CIF_ISP_INPUT_H_MAX_V33;
-				break;
-			case ISP_V35:
-				size = CIF_ISP_INPUT_W_MAX_V35 * CIF_ISP_INPUT_H_MAX_V35;
-				break;
-			case ISP_V39:
-				size = CIF_ISP_INPUT_W_MAX_V39_UNITE * CIF_ISP_INPUT_H_MAX_V39_UNITE;
-				size /= 2;
-				break;
-			default:
-				return;
-			}
-			if (crop->width * crop->height > size * 2)
-				dev->unite_div = ISP_UNITE_DIV4;
-			else if (crop->width * crop->height > size)
-				dev->unite_div = ISP_UNITE_DIV2;
-		}
+		rkisp_unite_div(dev, crop->width, crop->height);
 	} else if (pad == RKISP_ISP_PAD_SOURCE_PATH) {
 		crop->left = clamp_t(u32, crop->left, 0, in_crop.width);
 		crop->top = clamp_t(u32, crop->top, 0, in_crop.height);
@@ -3105,8 +3126,10 @@ static int rkisp_isp_sd_get_selection(struct v4l2_subdev *sd,
 					CIF_ISP_INPUT_H_MAX_V33_UNITE : CIF_ISP_INPUT_H_MAX_V33;
 				break;
 			case ISP_V35:
-				max_w = CIF_ISP_INPUT_W_MAX_V35;
-				max_h = CIF_ISP_INPUT_H_MAX_V35;
+				max_w = dev->hw_dev->unite ?
+					CIF_ISP_INPUT_W_MAX_V35_UNITE : CIF_ISP_INPUT_W_MAX_V35;
+				max_h = dev->hw_dev->unite ?
+					CIF_ISP_INPUT_H_MAX_V35_UNITE : CIF_ISP_INPUT_H_MAX_V35;
 				break;
 			case ISP_V39:
 				max_w = dev->hw_dev->unite ?

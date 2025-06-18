@@ -629,17 +629,17 @@ rkisp_stats_send_meas(struct rkisp_isp_stats_vdev *stats_vdev)
 			cur_stat_buf = cur_buf->vaddr[0];
 		}
 
-		/* buffer done when frame of right handle */
-		if (dev->unite_div > ISP_UNITE_DIV1) {
-			if (dev->unite_index == ISP_UNITE_LEFT) {
-				cur_buf = NULL;
-				is_dummy = false;
-			} else if (cur_stat_buf) {
-				cur_stat_buf = (void *)cur_stat_buf + size / 2;
-			}
+		if (dev->unite_index > ISP_UNITE_LEFT && cur_stat_buf)
+			cur_stat_buf = (void *)cur_stat_buf + size / dev->unite_div * dev->unite_index;
+		if ((dev->unite_div == ISP_UNITE_DIV2 && dev->unite_index != ISP_UNITE_RIGHT) ||
+		    (dev->unite_div == ISP_UNITE_DIV4 && dev->unite_index != ISP_UNITE_RIGHT_B)) {
+			cur_buf = NULL;
+			is_dummy = false;
 		}
 
-		if (dev->unite_div < ISP_UNITE_DIV2 || dev->unite_index == ISP_UNITE_RIGHT) {
+		if (dev->unite_div < ISP_UNITE_DIV2 ||
+		    (dev->unite_div == ISP_UNITE_DIV2 && dev->unite_index == ISP_UNITE_RIGHT) ||
+		    (dev->unite_div == ISP_UNITE_DIV4 && dev->unite_index == ISP_UNITE_RIGHT_B)) {
 			/* config buf for next frame */
 			stats_vdev->cur_buf = NULL;
 			if (stats_vdev->nxt_buf) {
