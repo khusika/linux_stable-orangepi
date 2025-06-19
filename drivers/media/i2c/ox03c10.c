@@ -5717,6 +5717,53 @@ static int ox03c10_select_exp_mode(struct ox03c10 *ox03c10, u32 exp_mode)
 	return ret;
 }
 
+static int ox03c10_select_cmps_mode(struct ox03c10 *ox03c10, u32 cmps_mode)
+{
+	int ret = -EINVAL;
+	u32 i, h, w, hdr_mode, exp_mode;
+	int best_fit = -1;
+	int bit_width = 0;
+
+	w = ox03c10->cur_mode->width;
+	h = ox03c10->cur_mode->height;
+	hdr_mode = ox03c10->cur_mode->hdr_mode;
+	exp_mode = ox03c10->cur_mode->exp_mode;
+	for (i = 0; i < ARRAY_SIZE(supported_modes); i++) {
+		if (w == supported_modes[i].width &&
+		    h == supported_modes[i].height &&
+		    supported_modes[i].hdr_mode == hdr_mode &&
+		    supported_modes[i].exp_mode == exp_mode) {
+			if (cmps_mode == CMPS_LOW_BIT_WIDTH_MODE) {
+				if (bit_width == 0) {
+					bit_width = supported_modes[i].bpp;
+					best_fit = i;
+				} else if (supported_modes[i].bpp < bit_width) {
+					bit_width = supported_modes[i].bpp;
+					best_fit = i;
+				}
+			} else {
+				if (bit_width == 0) {
+					bit_width = supported_modes[i].bpp;
+					best_fit = i;
+				} else if (supported_modes[i].bpp > bit_width) {
+					bit_width = supported_modes[i].bpp;
+					best_fit = i;
+				}
+			}
+		}
+	}
+	if (best_fit >= 0) {
+		ox03c10->cur_mode = &supported_modes[i];
+		w = ox03c10->cur_mode->hts_def - ox03c10->cur_mode->width;
+		h = ox03c10->cur_mode->vts_def - ox03c10->cur_mode->height;
+		__v4l2_ctrl_modify_range(ox03c10->hblank, w, w, 1, w);
+		__v4l2_ctrl_modify_range(ox03c10->vblank, h,
+			OX03C10_VTS_MAX - ox03c10->cur_mode->height, 1, h);
+		ret = 0;
+	}
+	return ret;
+}
+
 static long ox03c10_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 {
 	struct ox03c10 *ox03c10 = to_ox03c10(sd);
@@ -5820,6 +5867,9 @@ static long ox03c10_ioctl(struct v4l2_subdev *sd, unsigned int cmd, void *arg)
 		blc_info = (struct rkmodule_blc_info *)arg;
 		blc_info->bit_width = 10;
 		break;
+	case RKMODULE_SET_CMPS_MODE:
+		ret = ox03c10_select_cmps_mode(ox03c10, *(u32 *)arg);
+		break;
 	default:
 		ret = -ENOIOCTLCMD;
 		break;
@@ -5846,6 +5896,7 @@ static long ox03c10_compat_ioctl32(struct v4l2_subdev *sd,
 	u32 exp_mode;
 	struct rkmodule_wb_gain_info *wb_gain_info;
 	struct rkmodule_blc_info *blc_info;
+	u32 cmps_mode;
 
 	switch (cmd) {
 	case RKMODULE_GET_MODULE_INFO:
@@ -6046,6 +6097,11 @@ static long ox03c10_compat_ioctl32(struct v4l2_subdev *sd,
 			}
 		}
 		kfree(blc_info);
+		break;
+	case RKMODULE_SET_CMPS_MODE:
+		if (copy_from_user(&cmps_mode, up, sizeof(u32)))
+			return -EFAULT;
+		ret = ox03c10_ioctl(sd, cmd, &cmps_mode);
 		break;
 	default:
 		ret = -ENOIOCTLCMD;
