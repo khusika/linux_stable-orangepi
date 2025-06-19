@@ -96,7 +96,7 @@
 		reg = <0x41240000 0x000e0000>;
 	};
 
-	rkisp_thunderboot: rkisp@41300000 {
+	rkisp_thunderboot: rkisp@41320000 {
 		/* reg's offset MUST match with RTOS */
 		/*
 		 * vicap, capture raw10, ceil(w*10/8/256)*256*h *4(buf num)
