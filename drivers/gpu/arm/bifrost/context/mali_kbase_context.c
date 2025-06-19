@@ -84,15 +84,14 @@ static ssize_t kbase_kctx_attr_show(struct kobject *kobj, struct attribute *attr
 
 static ssize_t kbase_total_gpu_mem_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	struct kbase_context *kctx = container_of(kobj, struct kbase_context, kobj);
+	struct kbase_process *kprcs = container_of(kobj, struct kbase_process, kobj);
 
-	return scnprintf(buf, PAGE_SIZE, "%zu\n", kctx->kprcs->total_gpu_pages << PAGE_SHIFT);
+	return scnprintf(buf, PAGE_SIZE, "%zu\n", kprcs->total_gpu_pages << PAGE_SHIFT);
 }
 
 static ssize_t kbase_private_gpu_mem_show(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	struct kbase_context *kctx = container_of(kobj, struct kbase_context, kobj);
-	struct kbase_process *kprcs = kctx->kprcs;
+	struct kbase_process *kprcs = container_of(kobj, struct kbase_process, kobj);
 	struct kbase_context *tmp_kctx;
 	size_t total_pages = 0;
 
@@ -183,10 +182,10 @@ static int kbase_insert_kctx_to_process(struct kbase_context *kctx)
 		if (unlikely(!scnprintf(kctx_name, 64, "%d", tgid)))
 			return -ENOMEM;
 
-		ret = kobject_init_and_add(&kctx->kobj, &kbase_kctx_ktype, kctx->kbdev->kprcs_kobj, kctx_name);
+		ret = kobject_init_and_add(&kprcs->kobj, &kbase_kctx_ktype, kctx->kbdev->kprcs_kobj, kctx_name);
 		if (ret) {
 			dev_err(kctx->kbdev->dev, "Failed to create kctx kobject");
-			kobject_put(&kctx->kobj);
+			kobject_put(&kprcs->kobj);
 		}
 
 		while (*new) {
@@ -340,7 +339,7 @@ static void kbase_remove_kctx_from_process(struct kbase_context *kctx)
 	 * we can remove it from the process rb_tree.
 	 */
 	if (list_empty(&kprcs->kctx_list)) {
-		kobject_put(&kctx->kobj);
+		kobject_put(&kprcs->kobj);
 		rb_erase(&kprcs->kprcs_node, &kctx->kbdev->process_root);
 		/* Add checks, so that the terminating process Should not
 		 * hold any gpu_memory.
