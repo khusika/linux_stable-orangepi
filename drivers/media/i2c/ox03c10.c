@@ -224,7 +224,9 @@ struct ox03c10 {
 	const char		*module_name;
 	const char		*len_name;
 	bool			has_init_exp;
+	bool			has_init_wbgain;
 	struct preisp_hdrae_exp_s init_hdrae_exp;
+	struct rkmodule_wb_gain_group init_wbgain;
 	struct rkmodule_dcg_ratio dcg_ratio;
 	struct rkmodule_dcg_ratio spd_ratio;
 };
@@ -5565,6 +5567,12 @@ static int ox03c10_set_wb_gain(struct ox03c10 *ox03c10,
 	u32 bgain, gbgain, grgain, rgain;
 #endif
 
+	if (!ox03c10->has_init_wbgain && !ox03c10->streaming) {
+		ox03c10->init_wbgain = *wb_gain_group;
+		ox03c10->has_init_wbgain = true;
+		dev_dbg(&ox03c10->client->dev, "ox03c10 don't stream, record wbgain!\n");
+		return ret;
+	}
 	for (i = 0; i < wb_gain_group->group_num; i++) {
 		switch (wb_gain_group->wb_gain_type[i]) {
 		case RKMODULE_HCG_WB_GAIN:
@@ -6070,6 +6078,16 @@ static int __ox03c10_start_stream(struct ox03c10 *ox03c10)
 			return ret;
 		}
 	}
+	if (ox03c10->has_init_wbgain) {
+		ret = ox03c10_ioctl(&ox03c10->subdev,
+				   RKMODULE_SET_WB_GAIN,
+				   &ox03c10->init_wbgain);
+		if (ret) {
+			dev_err(&ox03c10->client->dev,
+				"init wbgain fail\n");
+			return ret;
+		}
+	}
 
 	return ox03c10_write_reg(ox03c10->client, OX03C10_REG_CTRL_MODE,
 				OX03C10_REG_VALUE_08BIT, OX03C10_MODE_STREAMING);
@@ -6078,6 +6096,7 @@ static int __ox03c10_start_stream(struct ox03c10 *ox03c10)
 static int __ox03c10_stop_stream(struct ox03c10 *ox03c10)
 {
 	ox03c10->has_init_exp = false;
+	ox03c10->has_init_wbgain = false;
 	return ox03c10_write_reg(ox03c10->client, OX03C10_REG_CTRL_MODE,
 				OX03C10_REG_VALUE_08BIT, OX03C10_MODE_SW_STANDBY);
 }
@@ -6534,6 +6553,7 @@ static int ox03c10_initialize_controls(struct ox03c10 *ox03c10)
 
 	ox03c10->subdev.ctrl_handler = handler;
 	ox03c10->has_init_exp = false;
+	ox03c10->has_init_wbgain = false;
 
 	return 0;
 
