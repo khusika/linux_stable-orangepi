@@ -486,6 +486,22 @@
 	status = "okay";
 };
 
+&rkavsp {
+	status = "okay";
+};
+
+&rkavsp_mmu {
+	status = "okay";
+};
+
+&rkfec {
+	status = "okay";
+};
+
+&rkfec_mmu {
+	status = "okay";
+};
+
 &rknpu {
 	rknpu-supply = <&vdd_npu>;
 };
