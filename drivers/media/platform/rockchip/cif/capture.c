@@ -13946,7 +13946,8 @@ static void rkcif_deal_sof(struct rkcif_device *cif_dev)
 	detect_stream->fs_cnt_in_single_frame++;
 	if ((!cif_dev->sditf[0] ||
 	     cif_dev->sditf[0]->mode.rdbk_mode >= RKISP_VICAP_RDBK_AIQ) &&
-	    detect_stream->fs_cnt_in_single_frame > 1)
+	    detect_stream->fs_cnt_in_single_frame > 1 &&
+	    cif_dev->chip_id < CHIP_RK3588_CIF)
 		return;
 
 	spin_lock_irqsave(&detect_stream->fps_lock, flags);
