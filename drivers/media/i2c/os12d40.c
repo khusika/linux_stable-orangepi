@@ -73,6 +73,16 @@
 #define	ANALOG_GAIN_DEFAULT		1024
 
 #define OS12D40_REG_GROUP		0x3208
+#define OS12D40_GROUP_UPDATE_START_DATA	0x00
+#define OS12D40_GROUP_UPDATE_END_DATA	0x10
+#define OS12D40_GROUP_UPDATE_LAUNCH		0xA0
+
+#define OS12D40_GROUP1_UPDATE_START_DATA	0x01
+#define OS12D40_GROUP1_UPDATE_END_DATA		0x11
+#define OS12D40_GROUP1_UPDATE_LAUNCH		0xA1
+
+#define OS12D40_REG_XOFFSET_L	0x3811
+#define OS12D40_REG_YOFFSET_L	0x3813
 #define OS12D40_REG_FLIP		0x3820
 #define OS12D40_REG_MIRROR		0x3821
 #define MIRROR_BIT_MASK			BIT(2)
@@ -1931,7 +1941,7 @@ static const struct regval os12d40_2256x1256_regs_4lane[] = {
 
 static const struct os12d40_mode supported_modes_4lane[] = {
 	{
-		.bus_fmt = MEDIA_BUS_FMT_SGBRG10_1X10,
+		.bus_fmt = MEDIA_BUS_FMT_SBGGR10_1X10,
 		.width = 2256,
 		.height = 1256,
 		.max_fps = {
@@ -2774,6 +2784,7 @@ static int os12d40_set_ctrl(struct v4l2_ctrl *ctrl)
 	int ret = 0;
 	u32 again = 0;
 	u32 dgain = 0;
+	u32 offset = 0;
 
 	/* Propagate change of current control to all related controls */
 	switch (ctrl->id) {
@@ -2833,25 +2844,81 @@ static int os12d40_set_ctrl(struct v4l2_ctrl *ctrl)
 		ret = os12d40_read_reg(os12d40->client, OS12D40_REG_MIRROR,
 				       OS12D40_REG_VALUE_08BIT,
 				       &val);
-		if (ctrl->val)
-			val |= MIRROR_BIT_MASK;
-		else
+		if (ctrl->val) {
 			val &= ~MIRROR_BIT_MASK;
+			if (os12d40->cur_mode->width == 2256)
+				offset = 0x22;
+			else
+				offset = 0x40;
+		} else {
+			val |= MIRROR_BIT_MASK;
+			if (os12d40->cur_mode->width == 2256)
+				offset = 0x21;
+			else
+#if USE_4_CELL
+				offset = 0x3e;
+#else
+				offset = 0x3f;
+#endif
+		}
+		if (os12d40->streaming)
+			ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_GROUP,
+				OS12D40_REG_VALUE_08BIT,
+				OS12D40_GROUP_UPDATE_START_DATA);
+		ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_XOFFSET_L,
+				OS12D40_REG_VALUE_08BIT,
+				offset);
 		ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_MIRROR,
 					OS12D40_REG_VALUE_08BIT,
 					val);
+		if (os12d40->streaming) {
+			ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_GROUP,
+				OS12D40_REG_VALUE_08BIT,
+				OS12D40_GROUP_UPDATE_END_DATA);
+			ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_GROUP,
+				OS12D40_REG_VALUE_08BIT,
+				OS12D40_GROUP_UPDATE_LAUNCH);
+		}
 		break;
 	case V4L2_CID_VFLIP:
 		ret = os12d40_read_reg(os12d40->client, OS12D40_REG_FLIP,
 				       OS12D40_REG_VALUE_08BIT,
 				       &val);
-		if (ctrl->val)
+		if (ctrl->val) {
 			val |= FLIP_BIT_MASK;
-		else
+			if (os12d40->cur_mode->width == 2256)
+				offset = 0x05;
+			else
+#if USE_4_CELL
+				offset = 0x06;
+#else
+				offset = 0x07;
+#endif
+		} else {
 			val &= ~FLIP_BIT_MASK;
+			if (os12d40->cur_mode->width == 2256)
+				offset = 0x04;
+			else
+				offset = 0x08;
+		}
+		if (os12d40->streaming)
+			ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_GROUP,
+				OS12D40_REG_VALUE_08BIT,
+				OS12D40_GROUP1_UPDATE_START_DATA);
+		ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_YOFFSET_L,
+				OS12D40_REG_VALUE_08BIT,
+				offset);
 		ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_FLIP,
 					OS12D40_REG_VALUE_08BIT,
 					val);
+		if (os12d40->streaming) {
+			ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_GROUP,
+				OS12D40_REG_VALUE_08BIT,
+				OS12D40_GROUP1_UPDATE_END_DATA);
+			ret |= os12d40_write_reg(os12d40->client, OS12D40_REG_GROUP,
+				OS12D40_REG_VALUE_08BIT,
+				OS12D40_GROUP1_UPDATE_LAUNCH);
+		}
 		break;
 	default:
 		dev_warn(&client->dev, "%s Unhandled id:0x%x, val:0x%x\n",
