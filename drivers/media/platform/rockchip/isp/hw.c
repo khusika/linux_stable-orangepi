@@ -1682,8 +1682,8 @@ static void __exit rkisp_hw_drv_exit(void)
 	platform_driver_unregister(&rkisp_hw_drv);
 }
 
-#if defined(CONFIG_VIDEO_ROCKCHIP_THUNDER_BOOT_ISP) && !defined(CONFIG_INITCALL_ASYNC)
-subsys_initcall(rkisp_hw_drv_init);
+#if defined(CONFIG_VIDEO_ROCKCHIP_THUNDER_BOOT_ISP)
+subsys_initcall_sync(rkisp_hw_drv_init);
 #else
 module_init(rkisp_hw_drv_init);
 #endif
