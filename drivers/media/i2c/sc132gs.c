@@ -70,6 +70,10 @@
 
 #define SC132GS_REG_VTS			0x320e
 
+#define SC132GS_FLIP_REG		0x3221
+#define SC132GS_HFLIP_MASK		0x06
+#define SC132GS_VFLIP_MASK		0x60
+
 #define REG_NULL			0xFFFF
 
 #define SC132GS_REG_VALUE_08BIT		1
@@ -133,6 +137,8 @@ struct sc132gs {
 	struct v4l2_ctrl	*test_pattern;
 	struct v4l2_ctrl	*pixel_rate;
 	struct v4l2_ctrl	*link_freq;
+	struct v4l2_ctrl	*h_flip;
+	struct v4l2_ctrl	*v_flip;
 	struct mutex		mutex;
 	struct v4l2_fract	cur_fps;
 	u32			cur_vts;
@@ -143,6 +149,7 @@ struct sc132gs {
 	const char		*module_facing;
 	const char		*module_name;
 	const char		*len_name;
+	u8			flip;
 };
 
 #define to_sc132gs(sd) container_of(sd, struct sc132gs, subdev)
@@ -380,11 +387,6 @@ static const struct regval sc132gs_2lane_10bit_regs[] = {
 	//flip
 	//{0x3221, (0x3 << 5)},
 
-	//mirror
-	{0x3221, (0x3 << 1)},
-
-	//flip & mirror
-	//{0x3221, ((0x3 << 1)|(0x3 << 5))},
 
 	//PLL set
 	{0x36e9, 0x54},
@@ -1193,7 +1195,7 @@ static int sc132gs_set_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_EXPOSURE:
 		/* 4 least significant bits of expsoure are fractional part */
 		ret = sc132gs_write_reg(sc132gs->client, SC132GS_REG_EXPOSURE,
-		                        SC132GS_REG_VALUE_24BIT, ctrl->val << 4);
+					SC132GS_REG_VALUE_24BIT, ctrl->val << 4);
 
 		dev_dbg(&client->dev, "set exposure 0x%x \n",ctrl->val);
 		break;
@@ -1212,6 +1214,23 @@ static int sc132gs_set_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	case V4L2_CID_TEST_PATTERN:
 		ret = sc132gs_enable_test_pattern(sc132gs, ctrl->val);
+		break;
+	case V4L2_CID_HFLIP:
+		if (ctrl->val)
+			sc132gs->flip |= SC132GS_HFLIP_MASK;
+		else
+			sc132gs->flip &= ~SC132GS_HFLIP_MASK;
+		ret = sc132gs_write_reg(sc132gs->client, SC132GS_FLIP_REG,
+					SC132GS_REG_VALUE_08BIT, sc132gs->flip);
+		break;
+	case V4L2_CID_VFLIP:
+		if (ctrl->val)
+			sc132gs->flip |= SC132GS_VFLIP_MASK;
+		else
+			sc132gs->flip &= ~SC132GS_VFLIP_MASK;
+
+		ret = sc132gs_write_reg(sc132gs->client, SC132GS_FLIP_REG,
+					SC132GS_REG_VALUE_08BIT, sc132gs->flip);
 		break;
 	default:
 		dev_warn(&client->dev, "%s Unhandled id:0x%x, val:0x%x\n",
@@ -1281,7 +1300,12 @@ static int sc132gs_initialize_controls(struct sc132gs *sc132gs)
 				&sc132gs_ctrl_ops, V4L2_CID_TEST_PATTERN,
 				ARRAY_SIZE(sc132gs_test_pattern_menu) - 1,
 				0, 0, sc132gs_test_pattern_menu);
+	sc132gs->flip = 0;
+	sc132gs->h_flip = v4l2_ctrl_new_std(handler, &sc132gs_ctrl_ops,
+				V4L2_CID_HFLIP, 0, 1, 1, 0);
 
+	sc132gs->v_flip = v4l2_ctrl_new_std(handler, &sc132gs_ctrl_ops,
+				V4L2_CID_VFLIP, 0, 1, 1, 0);
 	if (handler->error) {
 		ret = handler->error;
 		dev_err(&sc132gs->client->dev,
