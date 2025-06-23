@@ -3016,7 +3016,7 @@
 
 	rkcif: rkcif@21d10000 {
 		compatible = "rockchip,rv1126b-cif";
-		reg = <0x21d10000 0x1000>;
+		reg = <0x21d10000 0xf00>;
 		reg-names = "cif_regs";
 		interrupts = <GIC_SPI 153 IRQ_TYPE_LEVEL_HIGH>;
 		interrupt-names = "cif-intr";
