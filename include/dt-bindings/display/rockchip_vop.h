@@ -28,6 +28,22 @@
 
 #define	ROCKCHIP_VOP2_PHY_ID_INVALID	-1
 
+/*
+ * FBD: Fast Boot Display
+ *
+ * ROCKCHIP_DRM_FBD_FROM_UBOOT:
+ *     show logo.bmp from uboot and show logo_kernel.bmp after enter kernel;
+ * ROCKCHIP_DRM_FBD_FROM_UBOOT_TO_RTOS:
+ *     crtc/connector/panel will be init at uboot, and update plane at rtos;
+ * ROCKCHIP_DRM_FBD_FROM_RTOS:
+ *     crtc/connector/panel will be init at rtos, uboot no need to do any hardware
+ *     config, but need to pass the logic state to kernel to ensure pd/clk/drm
+ *     state is continuous.
+ */
+#define ROCKCHIP_DRM_FBD_FROM_UBOOT		0
+#define ROCKCHIP_DRM_FBD_FROM_UBOOT_TO_RTOS	1
+#define ROCKCHIP_DRM_FBD_FROM_RTOS		2
+
 /* mcu_data[23:0] */
 #define ROCKCHIP_MCU_DATA_MAP_DATA_1x24			0
 /*
