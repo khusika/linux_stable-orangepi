@@ -272,6 +272,8 @@ struct rockchip_thermal_data {
 
 #define TSADC_DATA_SIGN_BIT			BIT(16)
 #define TSADC_DATA_NEGATIVE			0xfffe0000
+#define TSADC_TEMP_DEBOUNCE			5000
+#define TSADC_TEMP_CRITICAL			115000
 
 #define TSADCV2_HIGHT_INT_DEBOUNCE_COUNT	4
 #define TSADCV2_HIGHT_TSHUT_DEBOUNCE_COUNT	4
@@ -1401,6 +1403,33 @@ static int rk_tsadcv4_get_temp(const struct chip_tsadc_table *table,
 	return rk_tsadcv2_code_to_temp(table, val, temp);
 }
 
+static int rk_tsadc_limit_amplitude(int new_temp, bool enable)
+{
+	static int last_temp = INT_MAX;
+
+	/* Reinit last temp when phy init */
+	if (!enable) {
+		last_temp = INT_MAX;
+		return 0;
+	}
+
+	if (last_temp != INT_MAX) {
+		if (abs(new_temp - last_temp) > TSADC_TEMP_DEBOUNCE) {
+			if (new_temp > last_temp)
+				new_temp = last_temp + TSADC_TEMP_DEBOUNCE;
+			else
+				new_temp = last_temp - TSADC_TEMP_DEBOUNCE;
+		}
+	} else {
+		/* Limit the first temperature */
+		if (new_temp >= TSADC_TEMP_CRITICAL)
+			new_temp = TSADC_TEMP_CRITICAL - TSADC_TEMP_DEBOUNCE;
+	}
+	last_temp = new_temp;
+
+	return new_temp;
+}
+
 static int rk_tsadcv5_get_temp(const struct chip_tsadc_table *table,
 			       int chn, void __iomem *regs, int *temp)
 {
@@ -1415,6 +1444,8 @@ static int rk_tsadcv5_get_temp(const struct chip_tsadc_table *table,
 		*temp = MIN_TEMP;
 	else if (*temp > MAX_TEMP)
 		*temp = MAX_TEMP;
+
+	*temp = rk_tsadc_limit_amplitude(*temp, true);
 
 	return 0;
 }
@@ -1695,6 +1726,7 @@ static void rv1126b_tsadc_phy_init(struct device *dev, struct regmap *grf,
 	regmap_write(grf, RV1126B_GRF_TSADC_CON1,
 		     RV1126B_UNLOCK_TRIGGER | RV1126B_UNLOCK_TRIGGER_MASK);
 	regmap_write(grf, RV1126B_GRF_TSADC_CON1, RV1126B_UNLOCK_TRIGGER_MASK);
+	rk_tsadc_limit_amplitude(0, false);
 }
 
 static const struct rockchip_tsadc_chip px30_tsadc_data = {
