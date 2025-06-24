@@ -1604,14 +1604,11 @@ static void average_scale_down(struct rkvpss_stream *stream, bool on, bool sync)
 
 	/*config scl clk gate*/
 	switch (stream->id) {
-	case RKVPSS_OUTPUT_CH1:
-		clk_mask = RKVPSS_SCL1_CKG_DIS;
+	case RKVPSS_OUTPUT_CH0:
+		clk_mask = RKVPSS_SCL0_CKG_DIS;
 		break;
 	case RKVPSS_OUTPUT_CH2:
 		clk_mask = RKVPSS_SCL2_CKG_DIS;
-		break;
-	case RKVPSS_OUTPUT_CH3:
-		clk_mask = RKVPSS_SCL3_CKG_DIS;
 		break;
 	default:
 		return;
@@ -1651,11 +1648,11 @@ static void average_scale_down(struct rkvpss_stream *stream, bool on, bool sync)
 			ctrl |= RKVPSS_SCL_HY_EN | RKVPSS_SCL_HC_EN | RKVPSS2X_SW_AVG_SCALE_H_EN;
 		}
 		if (in_h != out_h || !sync) {
-			val = (out_h - 1) * 65536 / (out_h - 1) + 1;
+			val = (out_h - 1) * 65536 / (in_h - 1) + 1;
 			reg = stream->config->scale.vy_fac;
 			rkvpss_unite_write(dev, reg, val);
 
-			val = (out_h - 1) * 4096 / (in_h - 1) + 1;
+			val = (out_h - 1) * 65536 / (in_h - 1) + 1;
 			reg = stream->config->scale.vc_fac;
 			rkvpss_unite_write(dev, reg, val);
 
