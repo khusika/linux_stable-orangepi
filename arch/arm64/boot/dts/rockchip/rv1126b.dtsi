@@ -903,7 +903,7 @@
 	thermal_zones: thermal-zones {
 		cpu_thermal: cpu-thermal {
 			polling-delay-passive = <20>; /* milliseconds */
-			polling-delay = <1000>; /* milliseconds */
+			polling-delay = <100>; /* milliseconds */
 			thermal-sensors = <&tsadc 0>;
 			trips {
 				soc_crit: soc-crit {
