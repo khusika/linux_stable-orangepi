@@ -2,26 +2,7 @@
  * Broadcom Dongle Host Driver (DHD), Linux-specific network interface
  * Basically selected code segments from usb-cdc.c and usb-rndis.c
  *
- * Copyright (C) 2024 Synaptics Incorporated. All rights reserved.
- *
- * This software is licensed to you under the terms of the
- * GNU General Public License version 2 (the "GPL") with Broadcom special exception.
- *
- * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND SYNAPTICS
- * EXPRESSLY DISCLAIMS ALL EXPRESS AND IMPLIED WARRANTIES, INCLUDING ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE,
- * AND ANY WARRANTIES OF NON-INFRINGEMENT OF ANY INTELLECTUAL PROPERTY RIGHTS.
- * IN NO EVENT SHALL SYNAPTICS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION
- * WITH THE USE OF THE INFORMATION CONTAINED IN THIS DOCUMENT, HOWEVER CAUSED
- * AND BASED ON ANY THEORY OF LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, AND EVEN IF SYNAPTICS WAS ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE. IF A TRIBUNAL OF COMPETENT JURISDICTION
- * DOES NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES,
- * SYNAPTICS' TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT
- * EXCEED ONE HUNDRED U.S. DOLLARS
- *
- * Copyright (C) 2024, Broadcom.
+ * Copyright (C) 2022, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -53,9 +34,6 @@ extern dhd_pub_t* g_dhd_pub;
 #define DHD_NUM_NAPI_LATENCY_ROWS (17u)
 #define DHD_NAPI_LATENCY_SIZE (sizeof(uint64) * DHD_NUM_NAPI_LATENCY_ROWS)
 #endif /* DHD_LB_STATS */
-
-/* latency improvement */
-#define DHD_LB_ACTIVE_LOW_WATERMARK    3
 
 void
 dhd_lb_set_default_cpus(dhd_info_t *dhd)
@@ -1141,16 +1119,6 @@ dhd_napi_schedule(void *info)
 	 * rx performance drop of ~5Mbs(SWWLAN-349763).
 	 * So, excludes this prevention for Android platform.
 	 */
-#ifndef OEM_ANDROID
-	DHD_GENERAL_LOCK(&dhd->pub, flags);
-
-	if (DHD_BUS_BUSY_CHECK_SUSPEND_IN_PROGRESS(&dhd->pub)) {
-		DHD_GENERAL_UNLOCK(&dhd->pub, flags);
-		return;
-	}
-
-	DHD_GENERAL_UNLOCK(&dhd->pub, flags);
-#endif /* OEM_ANDROID */
 
 	/* add napi_struct to softnet data poll list and raise NET_RX_SOFTIRQ */
 	if (napi_schedule_prep(&dhd->rx_napi_struct)) {
@@ -1246,8 +1214,7 @@ dhd_lb_rx_napi_dispatch(dhd_pub_t *dhdp)
 	DHD_RX_NAPI_QUEUE_UNLOCK(&dhd->rx_napi_queue.lock, flags);
 
 	/* If sysfs lb_rxp_active is not set, schedule on current cpu */
-	if (!atomic_read(&dhd->lb_rxp_active) ||
-		(skb_queue_len(&dhd->rx_napi_queue) < DHD_LB_ACTIVE_LOW_WATERMARK))
+	if (!atomic_read(&dhd->lb_rxp_active))
 	{
 		dhd_napi_schedule(dhd);
 		return;

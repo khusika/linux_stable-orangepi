@@ -1,26 +1,7 @@
 /*
  * Linux cfg80211 driver
  *
- * Copyright (C) 2024 Synaptics Incorporated. All rights reserved.
- *
- * This software is licensed to you under the terms of the
- * GNU General Public License version 2 (the "GPL") with Broadcom special exception.
- *
- * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND SYNAPTICS
- * EXPRESSLY DISCLAIMS ALL EXPRESS AND IMPLIED WARRANTIES, INCLUDING ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE,
- * AND ANY WARRANTIES OF NON-INFRINGEMENT OF ANY INTELLECTUAL PROPERTY RIGHTS.
- * IN NO EVENT SHALL SYNAPTICS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION
- * WITH THE USE OF THE INFORMATION CONTAINED IN THIS DOCUMENT, HOWEVER CAUSED
- * AND BASED ON ANY THEORY OF LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, AND EVEN IF SYNAPTICS WAS ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE. IF A TRIBUNAL OF COMPETENT JURISDICTION
- * DOES NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES,
- * SYNAPTICS' TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT
- * EXCEED ONE HUNDRED U.S. DOLLARS
- *
- * Copyright (C) 2024, Broadcom.
+ * Copyright (C) 2022, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -48,9 +29,6 @@
 #define _wl_cfg80211_h_
 
 #include <linux/wireless.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0)
-#include <linux/sched/clock.h>
-#endif /* LINUX_VERSION_CODE >= KERNEL_VERSION(6, 3, 0) */
 #include <typedefs.h>
 #include <ethernet.h>
 #include <wlioctl.h>
@@ -96,9 +74,6 @@
 #ifdef WL_NAN
 #include <wl_cfgnan.h>
 #endif /* WL_NAN */
-#ifdef WL_BAM
-#include <wl_bam.h>
-#endif  /* WL_BAM */
 #include <dhd_dbg.h>
 
 struct wl_conf;
@@ -138,10 +113,8 @@ struct wl_ibss;
 #define WL_GCMP_SUPPORT
 #endif /* WL_GCMP_SUPPORT */
 
-#ifdef OEM_ANDROID
 /* mandatory for Android 11 */
 #define WL_ACT_FRAME_MAC_RAND
-#endif
 
 /* WPA3 R2 */
 #ifndef WL_SAE_FT
@@ -156,8 +129,12 @@ struct wl_ibss;
 #endif /* WL_SAE */
 #endif /* WL_CLIENT_SAE */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)) && !defined(WL_DISABLE_SCAN_TYPE) && \
-	!defined(WL_SCAN_TYPE)
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0) && !defined(WL_SAE))
+#define WL_SAE
+#endif /* LINUX_VERSION_CODE >= (4, 17, 0) && !(WL_SAE) */
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)) && !defined(WL_DISABLE_SCAN_TYPE) \
+	&& !defined(WL_SCAN_TYPE)
 #define WL_SCAN_TYPE
 #endif /* WL_SCAN_TYPE */
 
@@ -171,14 +148,11 @@ struct wl_ibss;
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
 /* Use driver managed regd */
-//#define WL_AUTO_COUNTRY	1
 #define WL_SELF_MANAGED_REGDOM
 #endif /* KERNEL >= 4.0 */
 
-#ifdef OEM_ANDROID
 /* mandatory for Android 11 */
 #define WL_ACT_FRAME_MAC_RAND
-#endif
 
 #if defined(WL_6G_BAND) && !defined(WL_DISABLE_SOFTAP_6G)
 /* Unless exlicitly disabled, enable softap 6G when 6G band support is present */
@@ -190,10 +164,11 @@ struct wl_ibss;
 #endif /* LINUX_VERSION_CODE >= (4, 17, 0) && !(WL_NMI_IF) */
 
 /* Define to default v6 */
+#define USE_STA_INFO_V6
 #ifdef USE_STA_INFO_V6
 typedef sta_info_v6_t wlcfg_sta_info_t;
 /* Support ver >= 6 */
-#define IS_STA_INFO_VER(sta) (dtoh16(sta->ver) >= WL_STA_VER_6)
+#define IS_STA_INFO_VER(sta) (dtoh16(sta->ver) >= WL_STA_VER_6 || (dtoh16(sta->ver) == WL_STA_VER_4))
 #define WL_STAINFO_VER WL_STA_VER_6
 #elif defined(USE_STA_INFO_V5)
 typedef sta_info_v5_t wlcfg_sta_info_t;
@@ -201,10 +176,8 @@ typedef sta_info_v5_t wlcfg_sta_info_t;
 #define WL_STAINFO_VER WL_STA_VER_5
 #else
 typedef sta_info_v4_t wlcfg_sta_info_t;
-typedef sta_info_v6_t wlcfg_sta_info_v6_t;
-typedef sta_info_v5_t wlcfg_sta_info_v5_t;
-typedef sta_info_v4_t wlcfg_sta_info_v4_t;
-#define IS_STA_INFO_VER(sta) (dtoh16(sta->ver) >= WL_STA_VER_4 && dtoh16(sta->ver) <= WL_STA_VER_6)
+#define IS_STA_INFO_VER(sta) (dtoh16(sta->ver) == WL_STA_VER_4)
+#define WL_STAINFO_VER WL_STA_VER_4
 #endif /* USE_STA_INFO_V6 */
 
 /* MSCS default configuration values */
@@ -224,33 +197,12 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #define MSCS_CFG_DEF_TCLAS_MASK         0x5Fu   /* TCLAS mask  */
 #endif /* MSCS_CFG_DEF_TCLAS_MASK */
 
-#if defined(CONFIG_6GHZ_BKPORT) || (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
-/* Native 6GHz band supported available. For Backported
- * kernels, kernels/customer makefiles should explicitly
- * define CONFIG_6GHZ_BKPORT
- */
-#if defined(WL_6G_BAND)
-#define CFG80211_6G_SUPPORT
-#endif
-#endif /* CONFIG_6GHZ_BKPORT || LINUX_VER >= 5.4 */
-
 #define CH_TO_CHSPC(band, _channel) \
 	((_channel | band) | WL_CHANSPEC_BW_20 | WL_CHANSPEC_CTL_SB_NONE)
-#ifdef EXT_REGD_INFO
-#define HW_VALUE_CHANNEL_2G(_channel) _channel
-#define HW_VALUE_CHANNEL_5G(_channel) _channel
-#define HW_VALUE_CHANNEL_6G(_channel) (CH_MAX_5G_CHANNEL  + _channel)
-#define HW_VALUE_CHANNEL_6G_2(_channel) (CH_MAX_5G_CHANNEL  + 2)
-#else
-#define HW_VALUE_CHANNEL_2G(_channel) CH_TO_CHSPC(WL_CHANSPEC_BAND_2G, _channel)
-#define HW_VALUE_CHANNEL_5G(_channel) CH_TO_CHSPC(WL_CHANSPEC_BAND_5G, _channel)
-#define HW_VALUE_CHANNEL_6G(_channel) CH_TO_CHSPC(WL_CHANSPEC_BAND_6G, _channel)
-#define HW_VALUE_CHANNEL_6G_2(_channel) 0x5002
-#endif /*  EXT_REGD_INFO */
 #define CHAN2G(_channel, _freq, _flags) {			\
 	.band			= IEEE80211_BAND_2GHZ,		\
 	.center_freq		= (_freq),			\
-	.hw_value		= HW_VALUE_CHANNEL_2G(_channel), \
+	.hw_value		= CH_TO_CHSPC(WL_CHANSPEC_BAND_2G, _channel),			\
 	.flags			= (_flags),			\
 	.max_antenna_gain	= 0,				\
 	.max_power		= 30,				\
@@ -259,7 +211,7 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #define CHAN5G(_channel, _flags) {				\
 	.band			= IEEE80211_BAND_5GHZ,		\
 	.center_freq		= 5000 + (5 * (_channel)),	\
-	.hw_value		= HW_VALUE_CHANNEL_5G(_channel), \
+	.hw_value		= CH_TO_CHSPC(WL_CHANSPEC_BAND_5G, _channel),			\
 	.flags			= (_flags),			\
 	.max_antenna_gain	= 0,				\
 	.max_power		= 30,				\
@@ -269,7 +221,7 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #define CHAN6G(_channel, _flags) {				\
 	.band			= IEEE80211_BAND_6GHZ,		\
 	.center_freq		= 5950 + (5 * (_channel)),	\
-	.hw_value		= HW_VALUE_CHANNEL_6G(_channel), \
+	.hw_value		= CH_TO_CHSPC(WL_CHANSPEC_BAND_6G, _channel),			\
 	.flags			= (_flags),			\
 	.max_antenna_gain	= 0,				\
 	.max_power		= 30,				\
@@ -278,7 +230,7 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #define CHAN6G_CHAN2(_flags) {					\
 	.band			= IEEE80211_BAND_6GHZ,		\
 	.center_freq		= 5935,				\
-	.hw_value		= HW_VALUE_CHANNEL_6G_2(_channel), \
+	.hw_value		= 0x5002,			\
 	.flags			= (_flags),			\
 	.max_antenna_gain	= 0,				\
 	.max_power		= 30,				\
@@ -287,7 +239,7 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #define CHAN6G(_channel, _flags) {				\
 	.band			= IEEE80211_BAND_5GHZ,		\
 	.center_freq		= 5950 + (5 * (_channel)),	\
-	.hw_value		= HW_VALUE_CHANNEL_6G(_channel), \
+	.hw_value		= CH_TO_CHSPC(WL_CHANSPEC_BAND_6G, _channel),			\
 	.flags			= (_flags),			\
 	.max_antenna_gain	= 0,				\
 	.max_power		= 30,				\
@@ -296,7 +248,7 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #define CHAN6G_CHAN2(_flags) {					\
 	.band			= IEEE80211_BAND_5GHZ,		\
 	.center_freq		= 5935,				\
-	.hw_value		= HW_VALUE_CHANNEL_6G_2(_channel), \
+	.hw_value		= 0x5002,			\
 	.flags			= (_flags),			\
 	.max_antenna_gain	= 0,				\
 	.max_power		= 30,				\
@@ -313,10 +265,6 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #else
 #define IS_AKM_OWE(akm) FALSE
 #endif
-
-#ifdef BCMCCX
-#define DOT11_LEAP_AUTH        0x80 /* LEAP auth frame paylod constants */
-#endif /* BCMCCX */
 
 #if defined(IL_BIGENDIAN)
 #include <bcmendian.h>
@@ -350,6 +298,16 @@ typedef sta_info_v4_t wlcfg_sta_info_v4_t;
 #define WAIT_FOR_DISCONNECT_MAX 10
 #endif /* WAIT_FOR_DISCONNECT_MAX */
 #define WAIT_FOR_DISCONNECT_STATE_SYNC 10
+
+#if defined(CONFIG_6GHZ_BKPORT) || (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+/* Native 6GHz band supported available. For Backported
+ * kernels, kernels/customer makefiles should explicitly
+ * define CONFIG_6GHZ_BKPORT
+ */
+#if defined(WL_6G_BAND)
+#define CFG80211_6G_SUPPORT
+#endif
+#endif /* CONFIG_6GHZ_BKPORT || LINUX_VER >= 5.4 */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 7, 0))
 /* Newer kernels use defines from nl80211.h */
@@ -453,7 +411,6 @@ extern char *dhd_log_dump_get_timestamp(void);
 #endif /* SUPPORT_AP_RADIO_PWRSAVE */
 
 #ifdef BCMWAPI_WPI
-#ifdef OEM_ANDROID
 #ifdef CFG80211_WAPI_BKPORT
 #define IS_WAPI_VER(version) (version == NL80211_WAPI_VERSION_1)
 #undef WLAN_AKM_SUITE_WAPI_PSK
@@ -472,17 +429,6 @@ extern char *dhd_log_dump_get_timestamp(void);
 
 #define IS_WAPI_VER(version) (version == NL80211_WAPI_VERSION_1)
 #endif /* CFG80211_WAPI_BKPORT */
-#else
-#undef WLAN_AKM_SUITE_WAPI_PSK
-#define WLAN_AKM_SUITE_WAPI_PSK         0x000FAC13
-
-#undef WLAN_AKM_SUITE_WAPI_CERT
-#define WLAN_AKM_SUITE_WAPI_CERT        0x000FAC14
-
-#undef NL80211_WAPI_VERSION_1
-#define NL80211_WAPI_VERSION_1			1 << 3
-#define IS_WAPI_VER(version) (version & NL80211_WAPI_VERSION_1)
-#endif /* OEM_ANDROID */
 #endif /* BCMWAPI_WPI */
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
@@ -1118,8 +1064,6 @@ typedef enum wl_interface_state {
 	WL_IF_DELETE_DONE,
 	WL_IF_CHANGE_REQ,
 	WL_IF_CHANGE_DONE,
-	WL_IF_NAN_ENABLE,
-	WL_IF_NAN_DISABLE,
 	WL_IF_STATE_MAX,	/* Retain as last one */
 } wl_interface_state_t;
 
@@ -1503,7 +1447,7 @@ struct wl_assoc_ielen {
 #define MIN_PMKID_LIST_V2_FW_MINOR 0
 
 #define NEW_PMK_MGR_API_BACK_PORTED(ver)  \
-	((ver.wlc_ver_major == 12) && (ver.wlc_ver_minor >= 2))
+	((ver.wlc_ver_major == 12) && (ver.wlc_ver_minor == 2))
 
 #define WLC_PMKDB_SUPPORT(ver) \
 	((ver.wlc_ver_major >= PMKDB_WLC_VER) || \
@@ -1596,9 +1540,6 @@ struct parsed_ies {
 	u32 rate_ie_len;
 	const bcm_tlv_t *ext_rate_ie;
 	u32 ext_rate_ie_len;
-#ifdef WL11U
-	bcm_tlv_t *interworking_ie;
-#endif /* WL11U */
 };
 
 #ifdef WL_SDO
@@ -2063,7 +2004,6 @@ struct bcm_cfg80211 {
 	spinlock_t cfgdrv_lock;	/* to protect scan status (and others if needed) */
 	struct completion act_frm_scan;
 	struct completion iface_disable;
-	struct completion iface_up;
 	struct completion wait_next_af;
 	struct mutex usr_sync;	/* maily for up/down synchronization */
 	struct mutex if_sync;	/* maily for iface op synchronization */
@@ -2130,9 +2070,6 @@ struct bcm_cfg80211 {
 	struct afx_hdl *afx_hdl;
 	struct p2p_info *p2p;
 	bool p2p_supported;
-#ifdef WL_FILS
-	bool fils_supported;
-#endif /* WL_FILS */
 	void *btcoex_info;
 	timer_list_compat_t scan_timeout;   /* Timer for catch scan event timeout */
 #ifdef WL_CFG80211_GON_COLLISION
@@ -2159,10 +2096,8 @@ struct bcm_cfg80211 {
 #endif /* WL_HOST_BAND_MGMT */
 	bool scan_suppressed;
 
-#ifdef OEM_ANDROID
 	timer_list_compat_t scan_supp_timer;
 	struct work_struct wlan_work;
-#endif /* OEM_ANDROID */
 
 	struct mutex event_sync;	/* maily for up/down synchronization */
 	bool disable_roam_event;
@@ -2170,13 +2105,8 @@ struct bcm_cfg80211 {
 	struct delayed_work recovery_work;
 	u32 recovery_state;
 
-#ifdef OEM_ANDROID
 	struct workqueue_struct *event_workq;   /* workqueue for event */
-#endif /* OEM_ANDROID */
 
-#ifndef OEM_ANDROID
-	bool event_workq_init;
-#endif /* OEM_ANDROID */
 	struct work_struct event_work;		/* work item for event */
 	struct mutex pm_sync;	/* mainly for pm work synchronization */
 
@@ -2192,7 +2122,6 @@ struct bcm_cfg80211 {
 #endif /* WLAIBSS_MCHAN */
 	bool bss_pending_op;		/* indicate where there is a pending IF operation */
 #ifdef WLFBT
-	bool fbt_auth_done;
 	uint8 fbt_key[FBT_KEYLEN];
 #endif
 	int roam_offload;
@@ -2266,9 +2195,6 @@ struct bcm_cfg80211 {
 	spinlock_t wps_sync;	/* to protect wps states (and others if needed) */
 #endif /* WL_WPS_SYNC */
 	struct wl_fils_info fils_info;
-#ifdef WL_BAM
-	wl_bad_ap_mngr_t bad_ap_mngr;
-#endif  /* WL_BAM */
 
 	uint8 scanmac_enabled;
 	bool scanmac_config;
@@ -2373,10 +2299,6 @@ struct bcm_cfg80211 {
 #ifdef WL_P2P_6G
 	bool p2p_6g_enabled;	/* P2P 6G support enabled */
 #endif /* WL_P2P_6G */
-	u32 authresp_status;
-	struct delayed_work	remove_iface_work;
-	/* to track the wiphy lock held context for deleting iface */
-	bool wiphy_lock_held;
 #ifdef BCMDBUS
 	bool bus_resuming;
 #endif /* BCMDBUS */
@@ -2394,7 +2316,7 @@ struct bcm_cfg80211 {
 	int best_2g_ch;
 	int best_5g_ch;
 	int best_6g_ch;
-}; /* struct bcm_cfg80211 */
+};
 
 /* Max auth timeout allowed in case of EAP is 70sec, additional 5 sec for
 * inter-layer overheads
@@ -3361,12 +3283,10 @@ extern s32 wl_cfg80211_increase_p2p_bw(struct net_device *net, char* buf, int le
 extern s32 wl_cfg80211_set_p2p_resp_ap_chn(struct net_device *net, s32 enable);
 #endif /* P2PLISTEN_AP_SAMECHN */
 
-#if defined(OEM_ANDROID)
 /* btcoex functions */
 void* wl_cfg80211_btcoex_init(struct net_device *ndev);
 void wl_cfg80211_btcoex_deinit(void);
 void wl_cfg80211_btcoex_kill_handler(void);
-#endif /* defined(OEM_ANDROID) */
 
 extern chanspec_t wl_chspec_from_legacy(chanspec_t legacy_chspec);
 extern chanspec_t wl_chspec_driver_to_host(chanspec_t chanspec);
@@ -3419,7 +3339,7 @@ extern void wl_stop_wait_next_action_frame(struct bcm_cfg80211 *cfg, struct net_
 extern s32 wl_cfg80211_set_band(struct net_device *ndev, int band);
 #endif /* WL_HOST_BAND_MGMT */
 
-#if defined(OEM_ANDROID) && defined(DHCP_SCAN_SUPPRESS)
+#if defined(DHCP_SCAN_SUPPRESS)
 extern int wl_cfg80211_scan_suppress(struct net_device *dev, int suppress);
 #endif /* OEM_ANDROID */
 
@@ -3642,10 +3562,6 @@ extern int wl_cfg80211_stop_mkeep_alive(struct net_device *ndev, struct bcm_cfg8
 extern s32 wl_cfg80211_handle_macaddr_change(struct net_device *dev, u8 *macaddr);
 extern int wl_cfg80211_handle_hang_event(struct net_device *ndev,
 	uint16 hang_reason, uint32 memdump_type);
-#ifndef OEM_ANDROID
-extern s32 wl_cfg80211_resume(struct bcm_cfg80211 *cfg);
-extern s32 wl_cfg80211_suspend(struct bcm_cfg80211 *cfg);
-#endif /* !OEM_ANDROID */
 bool wl_cfg80211_is_dpp_frame(void *frame, u32 frame_len);
 const char *get_dpp_pa_ftype(enum wl_dpp_ftype ftype);
 bool wl_cfg80211_is_dpp_gas_action(void *frame, u32 frame_len);
@@ -3660,26 +3576,6 @@ extern int wl_cfgnan_get_stats(struct bcm_cfg80211 *cfg);
 
 extern s32 wl_cfg80211_set_wsec_info(struct net_device *dev, uint32 *data,
 	uint16 data_len, int tag);
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0))
-#define CH_DEFAULT_FLAGS    IEEE80211_CHAN_DISABLED | IEEE80211_CHAN_NO_20MHZ
-#else /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)) */
-#define CH_DEFAULT_FLAGS    IEEE80211_CHAN_DISABLED
-#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 16, 0)) */
-
-#ifdef EXT_REGD_INFO
-#define WL_CHANNEL_ARRAY_INIT(band_chan_arr) \
-do { \
-	u32 arr_size, k; \
-	arr_size = ARRAYSIZE(band_chan_arr); \
-	for (k = 0; k < arr_size; k++) { \
-		band_chan_arr[k].flags =  CH_DEFAULT_FLAGS \
-			| IEEE80211_CHAN_NO_HT40 \
-			| IEEE80211_CHAN_NO_80MHZ \
-			| IEEE80211_CHAN_NO_160MHZ; \
-	} \
-} while (0)
-
-#else
 #define WL_CHANNEL_ARRAY_INIT(band_chan_arr)	\
 do {	\
 	u32 arr_size, k;	\
@@ -3688,7 +3584,6 @@ do {	\
 		band_chan_arr[k].flags = IEEE80211_CHAN_DISABLED;	\
 	}	\
 } while (0)
-#endif /* EXT_REGD_INFO */
 
 #define WL_CHANNEL_COPY_FLAG(band_chan_arr)    \
 do {   \
@@ -3725,7 +3620,8 @@ extern u32 wl_dbg_level;
 extern u32 wl_log_level;
 extern u32 wl_cfg80211_debug_data_dump(struct net_device *dev, u8 *buf, u32 buf_len);
 extern void wl_cfg80211_concurrent_roam(struct bcm_cfg80211 *cfg, int enable);
-extern s32 wl_cfg80211_iface_state_ops(struct wireless_dev *wdev, wl_interface_state_t state,
+
+extern void wl_cfg80211_iface_state_ops(struct wireless_dev *wdev, wl_interface_state_t state,
 	wl_iftype_t wl_iftype, u16 wl_mode);
 extern chanspec_t wl_cfg80211_get_shared_freq(struct wiphy *wiphy);
 #ifdef SUPPORT_SET_CAC

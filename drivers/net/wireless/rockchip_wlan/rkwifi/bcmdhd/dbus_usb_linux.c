@@ -2,26 +2,7 @@
  * Dongle BUS interface
  * USB Linux Implementation
  *
- * Copyright (C) 2024 Synaptics Incorporated. All rights reserved.
- *
- * This software is licensed to you under the terms of the
- * GNU General Public License version 2 (the "GPL") with Broadcom special exception.
- *
- * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND SYNAPTICS
- * EXPRESSLY DISCLAIMS ALL EXPRESS AND IMPLIED WARRANTIES, INCLUDING ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE,
- * AND ANY WARRANTIES OF NON-INFRINGEMENT OF ANY INTELLECTUAL PROPERTY RIGHTS.
- * IN NO EVENT SHALL SYNAPTICS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION
- * WITH THE USE OF THE INFORMATION CONTAINED IN THIS DOCUMENT, HOWEVER CAUSED
- * AND BASED ON ANY THEORY OF LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, AND EVEN IF SYNAPTICS WAS ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE. IF A TRIBUNAL OF COMPETENT JURISDICTION
- * DOES NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES,
- * SYNAPTICS' TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT
- * EXCEED ONE HUNDRED U.S. DOLLARS
- *
- * Copyright (C) 2024, Broadcom.
+ * Copyright (C) 2022, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -219,14 +200,8 @@ static inline int usb_submit_urb_linux(struct urb *urb)
 #define URB_QUEUE_BULK   0
 #endif /* WL_URB_ZPKT */
 
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
-#define CALLBACK_ARGS		struct urb *urb
-#define CALLBACK_ARGS_DATA	urb
-#else
 #define CALLBACK_ARGS		struct urb *urb, struct pt_regs *regs
 #define CALLBACK_ARGS_DATA	urb, regs
-#endif /* 5.18 */
-
 #define CONFIGDESC(usb)		(&((usb)->actconfig)->desc)
 #define IFPTR(usb, idx)		((usb)->actconfig->interface[idx])
 #define IFALTS(usb, idx)	(IFPTR((usb), (idx))->altsetting[0])
@@ -507,6 +482,9 @@ static int dbus_usbos_usbreset_func(void *data);
 static struct usb_device_id devid_table[] = {
 	{ USB_DEVICE(BCM_DNGL_VID, 0x0000) }, /* Configurable via register() */
 #if defined(BCM_DNGL_EMBEDIMAGE) || defined(BCM_REQUEST_FW)
+	{ USB_DEVICE(BCM_DNGL_VID, BCM_DNGL_BL_PID_4328) },
+	{ USB_DEVICE(BCM_DNGL_VID, BCM_DNGL_BL_PID_43143) },
+	{ USB_DEVICE(BCM_DNGL_VID, BCM_DNGL_BL_PID_43242) },
 	{ USB_DEVICE(BCM_DNGL_VID, BCM_DNGL_BL_PID_4360) },
 	{ USB_DEVICE(BCM_DNGL_VID, BCM_DNGL_BL_PID_43569) },
 	{ USB_DEVICE(BCM_DNGL_VID, BCM_DNGL_BL_PID_4381) },
@@ -4577,7 +4555,7 @@ dbus_get_fwfile(int devid, int chiprev, uint8 **fw, int *fwlen,
 	const struct firmware *firmware = NULL;
 	s8 *device_id = NULL;
 	s8 *chip_rev = "";
-	s8 file_name[64] = {0, };
+	s8 file_name[64];
 	int ret;
 
 	switch (devid) {

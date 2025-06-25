@@ -1,26 +1,7 @@
 /*
  * log_dump - debugability support for dumping logs to file
  *
- * Copyright (C) 2024 Synaptics Incorporated. All rights reserved.
- *
- * This software is licensed to you under the terms of the
- * GNU General Public License version 2 (the "GPL") with Broadcom special exception.
- *
- * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND SYNAPTICS
- * EXPRESSLY DISCLAIMS ALL EXPRESS AND IMPLIED WARRANTIES, INCLUDING ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE,
- * AND ANY WARRANTIES OF NON-INFRINGEMENT OF ANY INTELLECTUAL PROPERTY RIGHTS.
- * IN NO EVENT SHALL SYNAPTICS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION
- * WITH THE USE OF THE INFORMATION CONTAINED IN THIS DOCUMENT, HOWEVER CAUSED
- * AND BASED ON ANY THEORY OF LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, AND EVEN IF SYNAPTICS WAS ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE. IF A TRIBUNAL OF COMPETENT JURISDICTION
- * DOES NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES,
- * SYNAPTICS' TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT
- * EXCEED ONE HUNDRED U.S. DOLLARS
- *
- * Copyright (C) 2024, Broadcom.
+ * Copyright (C) 2022, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -516,7 +497,7 @@ dhd_nla_put_sssr_dump_len(void *ndev, uint32 *arr_len)
 #endif /* DHD_SSSR_DUMP */
 
 uint32
-dhd_get_time_str_len(void)
+dhd_get_time_str_len()
 {
 	char *ts = NULL, time_str[128];
 
@@ -1258,7 +1239,7 @@ do_dhd_log_dump(dhd_pub_t *dhdp, log_dump_type_t *type)
 	fp = dhd_filp_open(dump_path, file_mode, 0664);
 	if (IS_ERR(fp) || (fp == NULL)) {
 		/* If android installed image, try '/data' directory */
-#if defined(CONFIG_X86) && defined(OEM_ANDROID)
+#if defined(CONFIG_X86)
 		DHD_ERROR(("%s: File open error on Installed android image, trying /data...\n",
 			__FUNCTION__));
 		snprintf(dump_path, sizeof(dump_path), "/data/" DHD_DEBUG_DUMP_TYPE);
@@ -1707,13 +1688,6 @@ dhd_log_dump_deinit(dhd_pub_t *dhd)
 	dhd_dbg_ring_t *ring = NULL;
 
 	BCM_REFERENCE(ring);
-
-#if defined(DHD_EVENT_LOG_FILTER)
-	/* XXX deinit filter first, because filter use buffer which alloced by log dump */
-	if (dhd->event_log_filter) {
-		dhd_event_log_filter_deinit(dhd);
-	}
-#endif /* DHD_EVENT_LOG_FILTER */
 
 	if (dhd->concise_dbg_buf) {
 		MFREE(dhd->osh, dhd->concise_dbg_buf, CONCISE_DUMP_BUFLEN);
@@ -2441,7 +2415,7 @@ clear_debug_dump_time(char *str)
 {
 	memset(str, 0, DEBUG_DUMP_TIME_BUF_LEN);
 }
-#if defined(WL_CFGVENDOR_SEND_HANG_EVENT) || defined(DHD_PKT_LOGGING)
+#if defined(DHD_PKT_LOGGING)
 void
 copy_debug_dump_time(char *dest, char *src)
 {

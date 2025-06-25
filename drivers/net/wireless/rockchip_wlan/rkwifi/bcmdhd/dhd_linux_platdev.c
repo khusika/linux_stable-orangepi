@@ -1,26 +1,7 @@
 /*
  * Linux platform device for DHD WLAN adapter
  *
- * Copyright (C) 2024 Synaptics Incorporated. All rights reserved.
- *
- * This software is licensed to you under the terms of the
- * GNU General Public License version 2 (the "GPL") with Broadcom special exception.
- *
- * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND SYNAPTICS
- * EXPRESSLY DISCLAIMS ALL EXPRESS AND IMPLIED WARRANTIES, INCLUDING ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE,
- * AND ANY WARRANTIES OF NON-INFRINGEMENT OF ANY INTELLECTUAL PROPERTY RIGHTS.
- * IN NO EVENT SHALL SYNAPTICS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION
- * WITH THE USE OF THE INFORMATION CONTAINED IN THIS DOCUMENT, HOWEVER CAUSED
- * AND BASED ON ANY THEORY OF LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, AND EVEN IF SYNAPTICS WAS ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE. IF A TRIBUNAL OF COMPETENT JURISDICTION
- * DOES NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES,
- * SYNAPTICS' TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT
- * EXCEED ONE HUNDRED U.S. DOLLARS
- *
- * Copyright (C) 2024, Broadcom.
+ * Copyright (C) 2022, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -53,9 +34,7 @@
 #include <dhd.h>
 #include <dhd_bus.h>
 #include <dhd_linux.h>
-#if defined(OEM_ANDROID)
 #include <wl_android.h>
-#endif
 #include <dhd_plat.h>
 #if defined(CONFIG_WIFI_CONTROL_FUNC)
 #include <linux/wlan_plat.h>
@@ -280,7 +259,7 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 		goto fail;
 	}
 #else
-	if (!adapter->wifi_plat_data) {
+	if (!adapter || !adapter->wifi_plat_data) {
 		err = -EINVAL;
 		goto fail;
 	}
@@ -743,8 +722,7 @@ void wifi_ctrlfunc_unregister_drv(void)
 #endif /* !defined(CONFIG_DTS) */
 
 #if defined(CUSTOMER_HW)
-	if (adapter)
-		dhd_wlan_deinit_plat_data(adapter);
+	dhd_wlan_deinit_plat_data(adapter);
 #endif
 
 done:
@@ -938,9 +916,9 @@ void dhd_wifi_platform_unregister_drv(void)
 extern int dhd_watchdog_prio;
 extern int dhd_dpc_prio;
 extern uint dhd_deferred_tx;
-#if defined(OEM_ANDROID) && (defined(BCMLXSDMMC) || defined(BCMDBUS))
+#if (defined(BCMLXSDMMC) || defined(BCMDBUS))
 extern struct semaphore dhd_registration_sem;
-#endif /* defined(OEM_ANDROID) && defined(BCMLXSDMMC) */
+#endif
 
 #ifdef BCMSDIO
 static int dhd_wifi_platform_load_sdio(void)
@@ -959,7 +937,7 @@ static int dhd_wifi_platform_load_sdio(void)
 		!(dhd_watchdog_prio >= 0 && dhd_dpc_prio >= 0 && dhd_deferred_tx))
 		return -EINVAL;
 
-#if defined(OEM_ANDROID) && defined(BCMLXSDMMC) && !defined(DHD_PRELOAD)
+#if defined(BCMLXSDMMC) && !defined(DHD_PRELOAD)
 	sema_init(&dhd_registration_sem, 0);
 #endif
 
@@ -971,7 +949,7 @@ static int dhd_wifi_platform_load_sdio(void)
 		return err;
 	}
 
-#if defined(OEM_ANDROID) && defined(BCMLXSDMMC) && !defined(DHD_PRELOAD)
+#if defined(BCMLXSDMMC) && !defined(DHD_PRELOAD)
 	/* power up all adapters */
 	for (i = 0; i < dhd_wifi_platdata->num_adapters; i++) {
 		bool chip_up = FALSE;
@@ -1072,7 +1050,7 @@ fail:
 #else
 	/* x86 bring-up PC needs no power-up operations */
 	err = dhd_bus_register();
-#endif /* defined(OEM_ANDROID) && defined(BCMLXSDMMC) */
+#endif
 
 	return err;
 }
@@ -1159,14 +1137,12 @@ static int dhd_wifi_platform_load_usb(void)
 }
 #endif /* BCMDBUS */
 
-static int dhd_wifi_platform_load(void)
+static int dhd_wifi_platform_load()
 {
 	int err = 0;
 	printf("%s: Enter\n", __FUNCTION__);
 
-#if defined(OEM_ANDROID)
 	wl_android_init();
-#endif /* OEM_ANDROID */
 
 	if ((err = dhd_wifi_platform_load_usb()))
 		goto end;
@@ -1176,14 +1152,12 @@ static int dhd_wifi_platform_load(void)
 		err = dhd_wifi_platform_load_pcie();
 
 end:
-#if defined(OEM_ANDROID)
 	if (err)
 		wl_android_exit();
 #if !defined(MULTIPLE_SUPPLICANT)
 	else
 		wl_android_post_init();
 #endif
-#endif /* OEM_ANDROID */
 
 	return err;
 }
