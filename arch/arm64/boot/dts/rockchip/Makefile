@@ -385,6 +385,7 @@ dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-fastboot-spi-nand.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-fastboot-spi-nor.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb1-v10-spi-nor.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10.dtb
+dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10-aov-dual-cam.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10-mcu-k350c4516t.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10-rgb-Q7050ITH2641AA1T.dtb
 dtb-$(CONFIG_ARCH_ROCKCHIP) += rv1126b-evb2-v10-sii9022-bt1120-to-hdmi.dtb
