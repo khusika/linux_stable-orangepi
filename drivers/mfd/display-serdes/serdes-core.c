@@ -49,6 +49,21 @@ static const struct mfd_cell serdes_max96745_devs[] = {
 	},
 };
 
+static const struct mfd_cell serdes_max96749_devs[] = {
+	{
+		.name = "serdes-pinctrl",
+		.of_compatible = "maxim,max96749-pinctrl",
+	},
+	{
+		.name = "serdes-bridge",
+		.of_compatible = "maxim,max96749-bridge",
+	},
+	{
+		.name = "serdes-bridge-split",
+		.of_compatible = "maxim,max96749-bridge-split",
+	},
+};
+
 static const struct mfd_cell serdes_max96755_devs[] = {
 	{
 		.name = "serdes-pinctrl",
@@ -363,6 +378,10 @@ int serdes_device_init(struct serdes *serdes)
 	case MAXIM_ID_MAX96745:
 		serdes_devs = serdes_max96745_devs;
 		mfd_num = ARRAY_SIZE(serdes_max96745_devs);
+		break;
+	case MAXIM_ID_MAX96749:
+		serdes_devs = serdes_max96749_devs;
+		mfd_num = ARRAY_SIZE(serdes_max96749_devs);
 		break;
 	case MAXIM_ID_MAX96752:
 		serdes_devs = serdes_max96752_devs;

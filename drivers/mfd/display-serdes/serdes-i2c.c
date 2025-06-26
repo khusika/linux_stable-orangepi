@@ -310,6 +310,8 @@ static int serdes_get_init_seq(struct serdes *serdes)
 		return err;
 	}
 
+	serdes->dual_link = of_property_read_bool(dev->of_node, "dual-link");
+
 	/* init ser register(not des register) more early if uboot logo disabled */
 	serdes->route_enable = of_property_read_bool(dev->of_node, "route-enable");
 	if ((!serdes->route_enable) && (serdes->chip_data->serdes_type == TYPE_SER)) {
@@ -539,6 +541,9 @@ static const struct of_device_id serdes_of_match[] = {
 #endif
 #if IS_ENABLED(CONFIG_SERDES_DISPLAY_CHIP_MAXIM_MAX96745)
 	{ .compatible = "maxim,max96745", .data = &serdes_max96745_data },
+#endif
+#if IS_ENABLED(CONFIG_SERDES_DISPLAY_CHIP_MAXIM_MAX96749)
+	{ .compatible = "maxim,max96749", .data = &serdes_max96749_data },
 #endif
 #if IS_ENABLED(CONFIG_SERDES_DISPLAY_CHIP_MAXIM_MAX96752)
 	{ .compatible = "maxim,max96752", .data = &serdes_max96752_data },

@@ -404,6 +404,7 @@ struct serdes {
 	struct kthread_delayed_work reg_check_work;
 	bool use_reg_check_work;
 
+	bool dual_link;
 	bool split_mode_enable;
 	unsigned int reg_hw;
 	unsigned int reg_use;
@@ -459,6 +460,7 @@ void serdes_destroy_debugfs(struct serdes *serdes);
 extern struct serdes_chip_data serdes_bu18tl82_data;
 extern struct serdes_chip_data serdes_bu18rl82_data;
 extern struct serdes_chip_data serdes_max96745_data;
+extern struct serdes_chip_data serdes_max96749_data;
 extern struct serdes_chip_data serdes_max96752_data;
 extern struct serdes_chip_data serdes_max96755_data;
 extern struct serdes_chip_data serdes_max96772_data;
