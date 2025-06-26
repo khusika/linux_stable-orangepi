@@ -862,12 +862,28 @@ rkisp_stats_next_ddr_config_v35(struct rkisp_isp_stats_vdev *stats_vdev)
 	}
 }
 
+static void rkisp_stats_stop_v35(struct rkisp_isp_stats_vdev *stats_vdev)
+{
+	struct rkisp_device *dev = stats_vdev->dev;
+	u32 val, addr;
+
+	/* aiq crash or exit first */
+	if (dev->isp_state & ISP_START &&
+	    stats_vdev->stats_buf[0].mem_priv) {
+		rkisp_stats_update_buf(stats_vdev);
+		addr = stats_vdev->stats_buf[0].dma_addr;
+		readl_poll_timeout(dev->hw_dev->base_addr + ISP39_W3A_AEBIG_ADDR_SHD,
+				   val, val == addr, 5000, 50000);
+	}
+}
+
 static struct rkisp_isp_stats_ops rkisp_isp_stats_ops_tbl = {
 	.isr_hdl = rkisp_stats_isr_v35,
 	.get_stat_size = rkisp_get_stat_size_v35,
 	.stats_tb = rkisp_stats_tb_v35,
 	.first_ddr_cfg = rkisp_stats_first_ddr_config_v35,
 	.next_ddr_cfg = rkisp_stats_next_ddr_config_v35,
+	.stats_stop = rkisp_stats_stop_v35,
 };
 
 void rkisp_init_stats_vdev_v35(struct rkisp_isp_stats_vdev *stats_vdev)
