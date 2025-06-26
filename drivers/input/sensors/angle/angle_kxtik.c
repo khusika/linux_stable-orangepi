@@ -1,6 +1,6 @@
 /* drivers/input/sensors/access/angle_kxtik.c
  *
- * Copyright (C) 2012-2015 ROCKCHIP.
+ * Copyright (C) 2012-2015 Rockchip Electronics Co., Ltd.
  * Author: luowei <lw@rock-chips.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -380,7 +380,7 @@ static const struct i2c_device_id angle_kxtik_id[] = {
 
 static struct i2c_driver angle_kxtik_driver = {
 	.probe = angle_kxtik_probe,
-	.remove = angle_kxtik_remove,
+	.remove = (void *)angle_kxtik_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = angle_kxtik_id,
 	.driver = {

@@ -117,6 +117,14 @@ static int dwc2_drd_role_sw_set(struct usb_role_switch *sw, enum usb_role role)
 			return ret;
 	}
 
+	/*
+	 * Notify the usb role to usb phy when we received role_switch set
+	 * from the TCPM (Type-C Port Manager) to escape BC1.2 charge detection
+	 * at host mode in usb phy driver.
+	 */
+	if (IS_ENABLED(CONFIG_ARCH_ROCKCHIP))
+		phy_set_mode_ext(hsotg->phy, PHY_MODE_USB_OTG, role);
+
 	spin_lock_irqsave(&hsotg->lock, flags);
 
 	if (role == USB_ROLE_NONE) {
@@ -126,6 +134,15 @@ static int dwc2_drd_role_sw_set(struct usb_role_switch *sw, enum usb_role role)
 		else if (hsotg->role_sw_default_mode == USB_DR_MODE_PERIPHERAL)
 			role = USB_ROLE_DEVICE;
 	}
+
+	if ((IS_ENABLED(CONFIG_USB_DWC2_PERIPHERAL) ||
+	     IS_ENABLED(CONFIG_USB_DWC2_DUAL_ROLE)) &&
+	     dwc2_is_device_mode(hsotg) &&
+	     hsotg->lx_state == DWC2_L2 &&
+	     hsotg->params.power_down == DWC2_POWER_DOWN_PARAM_NONE &&
+	     hsotg->bus_suspended &&
+	     !hsotg->params.no_clock_gating)
+		dwc2_gadget_exit_clock_gating(hsotg, 0);
 
 	if (role == USB_ROLE_HOST) {
 		already = dwc2_ovr_avalid(hsotg, true);

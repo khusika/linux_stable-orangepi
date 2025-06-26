@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
  * Rockchip Successive Approximation Register (SAR) A/D Converter
- * Copyright (C) 2014 ROCKCHIP, Inc.
+ * Copyright (C) 2014 Rockchip Electronics Co., Ltd.
  */
 
 #include <linux/module.h>
@@ -647,17 +647,6 @@ static int rockchip_saradc_probe(struct platform_device *pdev)
 
 	init_completion(&info->completion);
 
-	irq = platform_get_irq(pdev, 0);
-	if (irq < 0)
-		return dev_err_probe(&pdev->dev, irq, "failed to get irq\n");
-
-	ret = devm_request_irq(&pdev->dev, irq, rockchip_saradc_isr,
-			       0, dev_name(&pdev->dev), info);
-	if (ret < 0) {
-		dev_err(&pdev->dev, "failed requesting irq %d\n", irq);
-		return ret;
-	}
-
 	info->pclk = devm_clk_get(&pdev->dev, "apb_pclk");
 	if (IS_ERR(info->pclk))
 		return dev_err_probe(&pdev->dev, PTR_ERR(info->pclk),
@@ -783,6 +772,17 @@ static int rockchip_saradc_probe(struct platform_device *pdev)
 	}
 #endif
 	mutex_init(&info->lock);
+
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0)
+		return dev_err_probe(&pdev->dev, irq, "failed to get irq\n");
+
+	ret = devm_request_irq(&pdev->dev, irq, rockchip_saradc_isr,
+			       0, dev_name(&pdev->dev), info);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "failed requesting irq %d\n", irq);
+		return ret;
+	}
 
 	return devm_iio_device_register(&pdev->dev, indio_dev);
 }

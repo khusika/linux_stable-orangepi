@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2017 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2017 Rockchip Electronics Co., Ltd.
  *
  * Author: Wyon Bi <bivvy.bi@rock-chips.com>
  */
@@ -208,8 +208,8 @@ static int rk618_lvds_parse_dt(struct rk618_lvds *lvds)
 {
 	struct device *dev = lvds->dev;
 
-	lvds->dual_channel = of_property_read_bool(dev->of_node,
-						   "dual-channel");
+	lvds->dual_channel = of_property_read_bool(dev->of_node, "dual-channel") ||
+		of_property_read_bool(dev->of_node, "rockchip,dual-channel");
 
 	return 0;
 }

@@ -2,7 +2,7 @@
 /*
  * drivers/video/rockchip/video/vehicle_generic_sensor.c
  *
- * Copyright (C) 2020 Rockchip Electronics Co.Ltd
+ * Copyright (C) 2020 Rockchip Electronics Co., Ltd.
  * Authors:
  *      Zhiqin Wei <wzq@rock-chips.com>
  *
@@ -12,8 +12,11 @@
 #include <linux/slab.h>
 #include <linux/i2c.h>
 #include <linux/of_gpio.h>
+#include <linux/delay.h>
+#include <linux/clk.h>
 #include "vehicle_ad.h"
 #include "vehicle_ad_7181.h"
+#include "vehicle_ad_tp2855.h"
 #include "vehicle_ad_tp2825.h"
 #include "vehicle_ad_gc2145.h"
 #include "vehicle_ad_nvp6324.h"
@@ -23,6 +26,7 @@
 #include "../../../../drivers/media/i2c/jaguar1_drv/jaguar1_v4l2.h"
 #include "../../../../drivers/media/i2c/nvp6188.h"
 #include "../../../../drivers/media/i2c/max96714.h"
+#include "../../../../drivers/media/i2c/tp2855.h"
 
 struct vehicle_sensor_ops {
 	const char *name;
@@ -116,6 +120,21 @@ static struct vehicle_sensor_ops sensor_cb_series[] = {
 		.sensor_set_channel = nvp6188_channel_set,
 #ifdef CONFIG_VIDEO_NVP6188
 		.sensor_mod_init = nvp6188_sensor_mod_init
+#endif
+#endif
+	},
+	{
+		.name = "tp2855",
+#ifdef CONFIG_VIDEO_REVERSE_TP2855
+		.sensor_init = tp2855_ad_init,
+		.sensor_deinit = tp2855_ad_deinit,
+		.sensor_stream = tp2855_stream,
+		.sensor_get_cfg = tp2855_ad_get_cfg,
+		.sensor_check_cif_error = tp2855_ad_check_cif_error,
+		.sensor_check_id_cb = tp2855_check_id,
+		.sensor_set_channel = tp2855_channel_set,
+#ifdef CONFIG_VIDEO_TP2855
+		.sensor_mod_init = tp2855_sensor_mod_init
 #endif
 #endif
 	}
@@ -311,6 +330,12 @@ int vehicle_parse_sensor(struct vehicle_ad_dev *ad)
 		ad->reset = of_get_named_gpio_flags(cp, "reset-gpios",
 						0, &flags);
 
+		ad->xvclk = of_clk_get_by_name(cp, "xvclk");
+		if (IS_ERR(ad->xvclk)) {
+			ad->xvclk = NULL;
+			VEHICLE_DGERR("Failed to get sensor xvclk, maybe unuse\n");
+		}
+
 		if (of_property_read_u32(cp, "i2c_add", &ad->i2c_add))
 			VEHICLE_DGERR("Get %s i2c_add failed!\n", cp->name);
 
@@ -365,9 +390,27 @@ int vehicle_parse_sensor(struct vehicle_ad_dev *ad)
 	return ret;
 }
 
+static void vehicle_ad_mclk_set(struct vehicle_ad_dev *ad, int on)
+{
+	int err = 0;
+	int clk_rate = ad->mclk_rate * 1000000;
+
+	if (on) {
+		err = clk_set_rate(ad->xvclk, clk_rate);
+		if (err < 0)
+			VEHICLE_DGERR("Failed to set xvclk rate (%dMHz)\n", ad->mclk_rate);
+		clk_prepare_enable(ad->xvclk);
+		if (err < 0)
+			VEHICLE_DGERR("Failed to enable xvclk\n");
+	} else {
+		clk_disable_unprepare(ad->xvclk);
+	}
+	usleep_range(2000, 5000);
+}
+
 void vehicle_ad_channel_set(struct vehicle_ad_dev *ad, int channel)
 {
-	if (sensor_cb->sensor_set_channel)
+	if (sensor_cb && sensor_cb->sensor_set_channel)
 		sensor_cb->sensor_set_channel(ad, channel);
 }
 
@@ -377,7 +420,8 @@ int vehicle_ad_init(struct vehicle_ad_dev *ad)
 	//WARN_ON(1);
 	VEHICLE_DGERR("%s(%d) ad_name:%s!", __func__, __LINE__, ad->ad_name);
 
-	if (sensor_cb->sensor_init) {
+	vehicle_ad_mclk_set(ad, 1);
+	if (sensor_cb && sensor_cb->sensor_init) {
 		ret = sensor_cb->sensor_init(ad);
 		if (ret < 0) {
 			VEHICLE_DGERR("%s sensor_init failed!\n", ad->ad_name);
@@ -389,7 +433,7 @@ int vehicle_ad_init(struct vehicle_ad_dev *ad)
 		goto end;
 	}
 
-	if (sensor_cb->sensor_check_id_cb) {
+	if (sensor_cb && sensor_cb->sensor_check_id_cb) {
 		ret = sensor_cb->sensor_check_id_cb(ad);
 		if (ret < 0)
 			VEHICLE_DGERR("%s check id failed!\n", ad->ad_name);
@@ -399,14 +443,17 @@ end:
 	return ret;
 }
 
-int vehicle_ad_deinit(void)
+int vehicle_ad_deinit(struct vehicle_ad_dev *ad)
 {
 	int ret = 0;
 
-	if (sensor_cb->sensor_deinit)
+	if (sensor_cb && sensor_cb->sensor_deinit)
 		ret = sensor_cb->sensor_deinit();
 	else
 		ret = -EINVAL;
+
+	clk_disable_unprepare(ad->xvclk);
+	clk_put(ad->xvclk);
 
 	return ret;
 }
@@ -428,7 +475,7 @@ struct vehicle_cfg *vehicle_ad_get_vehicle_cfg(void)
 {
 	struct vehicle_cfg *cfg = NULL;
 
-	if (sensor_cb->sensor_get_cfg)
+	if (sensor_cb && sensor_cb->sensor_get_cfg)
 		sensor_cb->sensor_get_cfg(&cfg);
 
 	return cfg;
@@ -436,6 +483,6 @@ struct vehicle_cfg *vehicle_ad_get_vehicle_cfg(void)
 
 void vehicle_ad_check_cif_error(struct vehicle_ad_dev *ad, int last_line)
 {
-	if (sensor_cb->sensor_get_cfg)
+	if (sensor_cb && sensor_cb->sensor_get_cfg)
 		sensor_cb->sensor_check_cif_error(ad, last_line);
 }

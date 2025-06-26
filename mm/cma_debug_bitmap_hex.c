@@ -4,7 +4,7 @@
  *
  * Copyright (c) 2015 Sasha Levin <sasha.levin@oracle.com>
  *
- * Copyright (C) 2022 Rockchip Electronics Co. Ltd.
+ * Copyright (C) 2022 Rockchip Electronics Co., Ltd.
  *
  */
 
@@ -96,7 +96,7 @@ static int cma_debugfs_add_one(struct cma *cma, struct dentry *root_dentry)
 	struct dentry *tmp;
 	char name[16];
 
-	scnprintf(name, sizeof(name), "cma-%s", cma->name);
+	scnprintf(name, sizeof(name), "%s", cma->name);
 
 	tmp = debugfs_lookup(name, root_dentry);
 	if (!tmp)

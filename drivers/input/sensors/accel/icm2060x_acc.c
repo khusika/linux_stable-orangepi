@@ -2,7 +2,7 @@
 /*
  * kernel/drivers/input/sensors/accel/icm2060x_acc.c
  *
- * Copyright (C) 2020 Rockchip Co.,Ltd.
+ * Copyright (C) 2020 Rockchip Electronics Co., Ltd.
  * Author: Wang Jie <dave.wang@rock-chips.com>
  */
 #include <linux/interrupt.h>
@@ -242,7 +242,7 @@ static const struct i2c_device_id gsensor_icm2060x_id[] = {
 
 static struct i2c_driver gsensor_icm2060x_driver = {
 	.probe = gsensor_icm2060x_probe,
-	.remove = gsensor_icm2060x_remove,
+	.remove = (void *)gsensor_icm2060x_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = gsensor_icm2060x_id,
 	.driver = {

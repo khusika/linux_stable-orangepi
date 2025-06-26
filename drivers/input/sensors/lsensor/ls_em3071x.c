@@ -2,7 +2,7 @@
 /*
  * kernel/drivers/input/sensors/lsensor/ls_em3071x.c
  *
- * Copyright (C) 2020 Rockchip Co.,Ltd.
+ * Copyright (C) 2020 Rockchip Electronics Co., Ltd.
  * Author: Wang Jie <dave.wang@rock-chips.com>
  */
 
@@ -265,7 +265,7 @@ static const struct i2c_device_id light_em3071x_id[] = {
 
 static struct i2c_driver light_em3071x_driver = {
 	.probe = light_em3071x_probe,
-	.remove = light_em3071x_remove,
+	.remove = (void *)light_em3071x_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = light_em3071x_id,
 	.driver = {

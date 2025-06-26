@@ -3,7 +3,7 @@
  *
  * ALSA SoC Audio Layer - Rockchip I2S Controller driver
  *
- * Copyright (c) 2014 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2014 Rockchip Electronics Co., Ltd.
  * Author: Jianqun <jay.xu@rock-chips.com>
  */
 
@@ -75,6 +75,7 @@ struct rk_i2s_dev {
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *bclk_on;
 	struct pinctrl_state *bclk_off;
+	struct pinctrl_state *clk_state;
 	unsigned int clk_trcm;
 
 	unsigned int mclk_root_rate;
@@ -129,6 +130,20 @@ static int i2s_runtime_suspend(struct device *dev)
 	regcache_cache_only(i2s->regmap, true);
 	clk_disable_unprepare(i2s->mclk);
 
+	pinctrl_pm_select_idle_state(dev);
+
+	return 0;
+}
+
+static int rockchip_i2s_pinctrl_select_clk_state(struct device *dev)
+{
+	struct rk_i2s_dev *i2s = dev_get_drvdata(dev);
+
+	if (IS_ERR_OR_NULL(i2s->pinctrl) || !i2s->clk_state)
+		return 0;
+
+	pinctrl_select_state(i2s->pinctrl, i2s->clk_state);
+
 	return 0;
 }
 
@@ -136,6 +151,13 @@ static int i2s_runtime_resume(struct device *dev)
 {
 	struct rk_i2s_dev *i2s = dev_get_drvdata(dev);
 	int ret;
+
+	/*
+	 * pinctrl default state is invoked by ASoC framework, so,
+	 * we just handle clk state here if DT assigned.
+	 */
+	if (i2s->is_master_mode)
+		rockchip_i2s_pinctrl_select_clk_state(dev);
 
 	ret = clk_prepare_enable(i2s->mclk);
 	if (ret) {
@@ -149,6 +171,13 @@ static int i2s_runtime_resume(struct device *dev)
 	ret = regcache_sync(i2s->regmap);
 	if (ret)
 		clk_disable_unprepare(i2s->mclk);
+
+	/*
+	 * should be placed after regcache sync done to back
+	 * to the slave mode and then enable clk state.
+	 */
+	if (!i2s->is_master_mode)
+		rockchip_i2s_pinctrl_select_clk_state(dev);
 
 	return ret;
 }
@@ -941,7 +970,7 @@ static const struct regmap_config rockchip_i2s_regmap_config = {
 	.reg_bits = 32,
 	.reg_stride = 4,
 	.val_bits = 32,
-	.max_register = I2S_RXDR,
+	.max_register = I2S_RXFIFOLR,
 	.reg_defaults = rockchip_i2s_reg_defaults,
 	.num_reg_defaults = ARRAY_SIZE(rockchip_i2s_reg_defaults),
 	.writeable_reg = rockchip_i2s_wr_reg,
@@ -1025,7 +1054,7 @@ static int rockchip_i2s_init_dai(struct rk_i2s_dev *i2s, struct resource *res,
 		dai->playback.stream_name = "Playback";
 		dai->playback.channels_min = 2;
 		dai->playback.channels_max = 8;
-		dai->playback.rates = SNDRV_PCM_RATE_8000_192000;
+		dai->playback.rates = SNDRV_PCM_RATE_CONTINUOUS;
 		dai->playback.formats = SNDRV_PCM_FMTBIT_S8 |
 					SNDRV_PCM_FMTBIT_S16_LE |
 					SNDRV_PCM_FMTBIT_S20_3LE |
@@ -1047,7 +1076,7 @@ static int rockchip_i2s_init_dai(struct rk_i2s_dev *i2s, struct resource *res,
 		dai->capture.stream_name = "Capture";
 		dai->capture.channels_min = 2;
 		dai->capture.channels_max = 8;
-		dai->capture.rates = SNDRV_PCM_RATE_8000_192000;
+		dai->capture.rates = SNDRV_PCM_RATE_CONTINUOUS;
 		dai->capture.formats = SNDRV_PCM_FMTBIT_S8 |
 				       SNDRV_PCM_FMTBIT_S16_LE |
 				       SNDRV_PCM_FMTBIT_S20_3LE |
@@ -1145,6 +1174,39 @@ static const struct snd_dlp_config dconfig = {
 	.get_fifo_count = rockchip_i2s_get_fifo_count,
 };
 
+static int rockchip_i2s_wait_time_init(struct rk_i2s_dev *i2s)
+{
+	unsigned int wait_time;
+
+	if (!device_property_read_u32(i2s->dev, "rockchip,i2s-tx-wait-time-ms", &wait_time)) {
+		dev_info(i2s->dev, "Init TX wait-time-ms: %d\n", wait_time);
+		i2s->wait_time[SNDRV_PCM_STREAM_PLAYBACK] = wait_time;
+	}
+
+	if (!device_property_read_u32(i2s->dev, "rockchip,i2s-rx-wait-time-ms", &wait_time)) {
+		dev_info(i2s->dev, "Init RX wait-time-ms: %d\n", wait_time);
+		i2s->wait_time[SNDRV_PCM_STREAM_CAPTURE] = wait_time;
+	}
+	return 0;
+}
+
+static int rockchip_i2s_register_platform(struct device *dev)
+{
+	int ret = 0;
+
+	if (device_property_read_bool(dev, "rockchip,no-dmaengine")) {
+		dev_info(dev, "Used for Multi-DAI\n");
+		return 0;
+	}
+
+	if (device_property_read_bool(dev, "rockchip,digital-loopback"))
+		ret = devm_snd_dmaengine_dlp_register(dev, &dconfig);
+	else
+		ret = devm_snd_dmaengine_pcm_register(dev, NULL, 0);
+
+	return ret;
+}
+
 static int rockchip_i2s_probe(struct platform_device *pdev)
 {
 	struct device_node *node = pdev->dev.of_node;
@@ -1175,6 +1237,8 @@ static int rockchip_i2s_probe(struct platform_device *pdev)
 		if (device_property_read_bool(i2s->dev, of_quirks[i].quirk))
 			i2s->quirks |= of_quirks[i].id;
 
+	rockchip_i2s_wait_time_init(i2s);
+
 	regs = devm_platform_get_and_ioremap_resource(pdev, 0, &res);
 	if (IS_ERR(regs))
 		return PTR_ERR(regs);
@@ -1201,6 +1265,12 @@ static int rockchip_i2s_probe(struct platform_device *pdev)
 				dev_err(&pdev->dev, "failed to find i2s bclk_off\n");
 				return -EINVAL;
 			}
+		}
+
+		i2s->clk_state = pinctrl_lookup_state(i2s->pinctrl, "clk");
+		if (IS_ERR(i2s->clk_state)) {
+			i2s->clk_state = NULL;
+			dev_dbg(i2s->dev, "Have no clk pinctrl state\n");
 		}
 	} else {
 		dev_dbg(&pdev->dev, "failed to find i2s pinctrl\n");
@@ -1271,27 +1341,16 @@ static int rockchip_i2s_probe(struct platform_device *pdev)
 			goto err_pm_disable;
 	}
 
+	ret = rockchip_i2s_register_platform(&pdev->dev);
+	if (ret)
+		goto err_suspend;
+
 	ret = devm_snd_soc_register_component(&pdev->dev,
 					      &rockchip_i2s_component,
 					      dai, 1);
 
 	if (ret) {
 		dev_err(&pdev->dev, "Could not register DAI\n");
-		goto err_suspend;
-	}
-
-	if (device_property_read_bool(&pdev->dev, "rockchip,no-dmaengine")) {
-		dev_info(&pdev->dev, "Used for Multi-DAI\n");
-		return 0;
-	}
-
-	if (device_property_read_bool(&pdev->dev, "rockchip,digital-loopback"))
-		ret = devm_snd_dmaengine_dlp_register(&pdev->dev, &dconfig);
-	else
-		ret = devm_snd_dmaengine_pcm_register(&pdev->dev, NULL, 0);
-
-	if (ret) {
-		dev_err(&pdev->dev, "Could not register PCM\n");
 		goto err_suspend;
 	}
 

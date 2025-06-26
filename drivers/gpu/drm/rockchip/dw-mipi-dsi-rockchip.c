@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright (C) Fuzhou Rockchip Electronics Co.Ltd
+ * Copyright (C) Rockchip Electronics Co., Ltd.
  * Author:
  *      Chris Zhong <zyw@rock-chips.com>
  *      Nickey Yang <nickey.yang@rock-chips.com>
@@ -185,6 +185,13 @@
 #define RK3399_TXRX_SRC_SEL_ISP0	BIT(4)
 #define RK3399_TXRX_TURNREQUEST		GENMASK(3, 0)
 
+#define RK3506_SYS_GRF_SOC_CON6		0x0018
+#define RK3506_DSI_FORCETXSTOPMODE	(0xf << 4)
+#define RK3506_DSI_PHY_ENABLE_LANE1     BIT(9)
+#define RK3506_DSI_PHY_ENABLE_LANE0     BIT(8)
+#define RK3506_DSI_TURNDISABLE		BIT(2)
+#define RK3506_DSI_FORCERXMODE		BIT(0)
+
 #define RK3562_SYS_GRF_VO_CON1		0x05d4
 #define RK3562_DSI_FORCETXSTOPMODE	(0xf << 4)
 #define RK3562_DSI_TURNDISABLE		(0x1 << 2)
@@ -247,6 +254,7 @@ enum soc_type {
 	RK3128,
 	RK3288,
 	RK3399,
+	RK3506,
 	RK3562,
 	RK3568,
 	RV1126,
@@ -310,6 +318,7 @@ struct dw_mipi_dsi_rockchip {
 	/* dual-channel */
 	bool is_slave;
 	struct dw_mipi_dsi_rockchip *slave;
+	bool data_swap;
 
 	/* optional external dphy */
 	bool phy_enabled;
@@ -829,11 +838,15 @@ dw_mipi_dsi_encoder_atomic_check(struct drm_encoder *encoder,
 
 	s->output_type = DRM_MODE_CONNECTOR_DSI;
 	s->tv_state = &conn_state->tv;
-	s->color_space = V4L2_COLORSPACE_DEFAULT;
+	s->color_encoding = DRM_COLOR_YCBCR_BT709;
+	s->color_range = DRM_COLOR_YCBCR_FULL_RANGE;
 	s->output_if = dsi->id ? VOP_OUTPUT_IF_MIPI1 : VOP_OUTPUT_IF_MIPI0;
 	if (dsi->slave) {
 		s->output_flags |= ROCKCHIP_OUTPUT_DUAL_CHANNEL_LEFT_RIGHT_MODE;
 		s->output_if |= VOP_OUTPUT_IF_MIPI1;
+
+		if (dsi->data_swap)
+			s->output_flags |= ROCKCHIP_OUTPUT_DATA_SWAP;
 	}
 
 	/* dual link dsi for rk3399 */
@@ -928,26 +941,46 @@ static int rockchip_dsi_drm_create_encoder(struct dw_mipi_dsi_rockchip *dsi,
 	return 0;
 }
 
+static int dw_mipi_dsi_rockchip_match_by_id(struct device *dev,
+					    const void *data)
+{
+	unsigned int *id = (unsigned int *)data;
+	struct dw_mipi_dsi_rockchip *dsi;
+
+	dsi = dev_get_drvdata(dev);
+	if (!dsi)
+		return 0;
+
+	return dsi->id == *id;
+}
+
+static struct dw_mipi_dsi_rockchip
+*dw_mipi_dsi_rockchip_find_by_id(struct device_driver *drv, unsigned int id)
+{
+	struct device *dev;
+
+	dev = driver_find_device(drv, NULL, &id,
+				 dw_mipi_dsi_rockchip_match_by_id);
+	if (!dev)
+		return NULL;
+
+	return dev_get_drvdata(dev);
+}
+
 static struct device
 *dw_mipi_dsi_rockchip_find_second(struct dw_mipi_dsi_rockchip *dsi)
 {
-	struct device_node *node = NULL;
-	struct platform_device *pdev;
-	struct dw_mipi_dsi_rockchip *dsi2;
+	struct dw_mipi_dsi_rockchip *slave;
 
-	node = of_parse_phandle(dsi->dev->of_node, "rockchip,dual-channel", 0);
-	if (node) {
-		pdev = of_find_device_by_node(node);
-		if (!pdev)
+	if (of_property_read_bool(dsi->dev->of_node, "rockchip,dual-channel")) {
+		dsi->data_swap = of_property_read_bool(dsi->dev->of_node,
+						       "rockchip,data-swap");
+
+		slave = dw_mipi_dsi_rockchip_find_by_id(dsi->dev->driver, 1);
+		if (!slave)
 			return ERR_PTR(-EPROBE_DEFER);
 
-		dsi2 = platform_get_drvdata(pdev);
-		if (!dsi2) {
-			platform_device_put(pdev);
-			return ERR_PTR(-EPROBE_DEFER);
-		}
-
-		return &pdev->dev;
+		return slave->dev;
 	}
 
 	return NULL;
@@ -1745,6 +1778,25 @@ static const struct rockchip_dw_dsi_chip_data rk3399_chip_data[] = {
 	{ /* sentinel */ }
 };
 
+static const struct rockchip_dw_dsi_chip_data rk3506_chip_data[] = {
+	{
+		.reg = 0xff640000,
+		.lanecfg1_grf_reg = RK3506_SYS_GRF_SOC_CON6,
+		.lanecfg1 = HIWORD_UPDATE(RK3506_DSI_PHY_ENABLE_LANE0 |
+					  RK3506_DSI_PHY_ENABLE_LANE1,
+					  RK3506_DSI_TURNDISABLE |
+					  RK3506_DSI_FORCERXMODE |
+					  RK3506_DSI_FORCETXSTOPMODE |
+					  RK3506_DSI_PHY_ENABLE_LANE0 |
+					  RK3506_DSI_PHY_ENABLE_LANE1),
+
+		.max_data_lanes = 2,
+		.max_bit_rate_per_lane = 1500000000UL,
+		.soc_type = RK3506,
+	},
+	{ /* sentinel */ }
+};
+
 static const struct rockchip_dw_dsi_chip_data rk3562_chip_data[] = {
 	{
 		.reg = 0xffb10000,
@@ -1806,28 +1858,54 @@ static const struct rockchip_dw_dsi_chip_data rv1126_chip_data[] = {
 };
 
 static const struct of_device_id dw_mipi_dsi_rockchip_dt_ids[] = {
+#if IS_ENABLED(CONFIG_CPU_PX30)
 	{
 	 .compatible = "rockchip,px30-mipi-dsi",
 	 .data = &px30_chip_data,
-	}, {
+	},
+#endif
+#if IS_ENABLED(CONFIG_CPU_RK312X)
+	{
 	 .compatible = "rockchip,rk3128-mipi-dsi",
 	 .data = &rk3128_chip_data,
-	}, {
+	},
+#endif
+#if IS_ENABLED(CONFIG_CPU_RK3288)
+	{
 	 .compatible = "rockchip,rk3288-mipi-dsi",
 	 .data = &rk3288_chip_data,
-	}, {
+	},
+#endif
+#if IS_ENABLED(CONFIG_CPU_RK3399)
+	{
 	 .compatible = "rockchip,rk3399-mipi-dsi",
 	 .data = &rk3399_chip_data,
-	}, {
+	},
+#endif
+#if IS_ENABLED(CONFIG_CPU_RK3506)
+	{
+	 .compatible = "rockchip,rk3506-mipi-dsi",
+	 .data = &rk3506_chip_data,
+	},
+#endif
+#if IS_ENABLED(CONFIG_CPU_RK3562)
+	{
 	 .compatible = "rockchip,rk3562-mipi-dsi",
 	 .data = &rk3562_chip_data,
-	}, {
+	},
+#endif
+#if IS_ENABLED(CONFIG_CPU_RK3568)
+	{
 	 .compatible = "rockchip,rk3568-mipi-dsi",
 	 .data = &rk3568_chip_data,
-	}, {
+	},
+#endif
+#if IS_ENABLED(CONFIG_CPU_RV1126)
+	{
 	 .compatible = "rockchip,rv1126-mipi-dsi",
 	 .data = &rv1126_chip_data,
 	},
+#endif
 	{ /* sentinel */ }
 };
 MODULE_DEVICE_TABLE(of, dw_mipi_dsi_rockchip_dt_ids);

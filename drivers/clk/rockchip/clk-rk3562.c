@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2022 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
  * Author: Elaine Zhang <zhangqing@rock-chips.com>
  * Author: Finley Xiao <finley.xiao@rock-chips.com>
  */
@@ -744,8 +744,6 @@ static struct rockchip_clk_branch rk3562_clk_branches[] __initdata = {
 	COMPOSITE_NOMUX(CLK_USER_OTPC_S, "clk_user_otpc_s", "xin24m", CLK_IGNORE_UNUSED,
 			RK3562_PERI_CLKSEL_CON(44), 8, 8, DFLAGS,
 			RK3562_PERI_CLKGATE_CON(14), 5, GFLAGS),
-	GATE(CLK_OTPC_ARB, "clk_otpc_arb", "xin24m", 0,
-			RK3562_PERI_CLKGATE_CON(14), 6, GFLAGS),
 	GATE(PCLK_OTPPHY, "pclk_otpphy", "pclk_peri", 0,
 			RK3562_PERI_CLKGATE_CON(14), 7, GFLAGS),
 	GATE(PCLK_USB2PHY, "pclk_usb2phy", "pclk_peri", 0,
@@ -1032,6 +1030,14 @@ static void rk3562_dump_cru(void)
 }
 
 static int protect_clocks[] = {
+	PCLK_PWM1_PERI,
+	CLK_PWM1_PERI,
+	PCLK_PWM2_PERI,
+	CLK_PWM2_PERI,
+	PCLK_PWM3_PERI,
+	CLK_PWM3_PERI,
+	PCLK_PMU1_PWM0,
+	CLK_PMU1_PWM0,
 	ACLK_VO_PRE,
 	HCLK_VO_PRE,
 	ACLK_VOP,

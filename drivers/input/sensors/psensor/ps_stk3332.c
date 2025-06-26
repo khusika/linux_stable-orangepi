@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2021 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
  *
  * Author: Kay Guo <kay.guo@rock-chips.com>
  */
@@ -365,7 +365,7 @@ static const struct i2c_device_id proximity_stk3332_id[] = {
 
 static struct i2c_driver proximity_stk3332_driver = {
 	.probe = proximity_stk3332_probe,
-	.remove = proximity_stk3332_remove,
+	.remove = (void *)proximity_stk3332_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = proximity_stk3332_id,
 	.driver = {

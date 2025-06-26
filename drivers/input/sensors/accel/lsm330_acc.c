@@ -1,7 +1,7 @@
 /*
  * kernel/drivers/input/sensors/accel/lsm330_acc.c
  *
- * Copyright (C) 2012-2016 Rockchip Co.,Ltd.
+ * Copyright (C) 2012-2016 Rockchip Electronics Co., Ltd.
  * Author: Bin Yang <yangbin@rock-chips.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -260,7 +260,7 @@ static const struct i2c_device_id gsensor_lsm330_id[] = {
 
 static struct i2c_driver gsensor_lsm330_driver = {
 	.probe = gsensor_lsm330_probe,
-	.remove = gsensor_lsm330_remove,
+	.remove = (void *)gsensor_lsm330_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = gsensor_lsm330_id,
 	.driver = {

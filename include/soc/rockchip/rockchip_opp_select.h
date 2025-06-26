@@ -76,6 +76,7 @@ struct pvtpll_opp_table {
  * @volt_rm_tbl:	Pointer to voltage to memory read margin conversion table.
  * @grf:		General Register Files regmap.
  * @dsu_grf:		DSU General Register Files regmap.
+ * @cci_grf:		CCI General Register Files regmap.
  * @clocks:		Pvtpll clocks.
  * @nclocks:		Number of pvtpll clock.
  * @intermediate_threshold_freq: The frequency threshold of intermediate rate.
@@ -96,6 +97,7 @@ struct pvtpll_opp_table {
  * @init_freq:		Set the initial frequency when init opp table.
  * @is_rate_volt_checked: Marks if device has checked initial rate and voltage.
  * @pvtpll_clk_id:      Device's clock id.
+ * @pvtpll_smc:		Marks if smc call of pvtpll is available.
  * @pvtpll_low_temp:    Marks if device has low temperature pvtpll config.
  */
 struct rockchip_opp_info {
@@ -103,13 +105,17 @@ struct rockchip_opp_info {
 	struct mutex dvfs_mutex;
 	const struct rockchip_opp_data *data;
 	struct pvtpll_opp_table *opp_table;
+	struct regmap *pvtpll_base;
 	unsigned int pvtpll_avg_offset;
 	unsigned int pvtpll_min_rate;
 	unsigned int pvtpll_volt_step;
 
 	struct volt_rm_table *volt_rm_tbl;
 	struct regmap *grf;
-	struct regmap *dsu_grf;
+	union {
+		struct regmap *dsu_grf;
+		struct regmap *cci_grf;
+	};
 	struct clk_bulk_data *clocks;
 	int nclocks;
 	unsigned long intermediate_threshold_freq;
@@ -133,6 +139,7 @@ struct rockchip_opp_info {
 	bool is_rate_volt_checked;
 
 	u32 pvtpll_clk_id;
+	bool pvtpll_smc;
 	bool pvtpll_low_temp;
 };
 
@@ -161,6 +168,8 @@ int rockchip_set_intermediate_rate(struct device *dev,
 				   struct clk *clk, unsigned long old_freq,
 				   unsigned long new_freq, bool is_scaling_up,
 				   bool is_set_clk);
+int rockchip_opp_set_low_length(struct device *dev, struct device_node *np,
+				struct rockchip_opp_info *opp_info);
 int rockchip_opp_config_regulators(struct device *dev,
 				     struct dev_pm_opp *old_opp,
 				     struct dev_pm_opp *new_opp,
@@ -244,6 +253,13 @@ rockchip_set_intermediate_rate(struct device *dev,
 			       struct clk *clk, unsigned long old_freq,
 			       unsigned long new_freq, bool is_scaling_up,
 			       bool is_set_clk)
+{
+	return -EOPNOTSUPP;
+}
+
+static inline int
+rockchip_opp_set_low_length(struct device *dev, struct device_node *np,
+			    struct rockchip_opp_info *opp_info)
 {
 	return -EOPNOTSUPP;
 }

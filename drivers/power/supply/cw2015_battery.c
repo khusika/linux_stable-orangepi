@@ -2,7 +2,7 @@
 /*
  * Fuel gauge driver for CellWise 2013 / 2015
  *
- * Copyright (C) 2012, RockChip
+ * Copyright (C) 2012, Rockchip Electronics Co., Ltd.
  * Copyright (C) 2020, Tobias Schramm
  *
  * Authors: xuhuicong <xhc@rock-chips.com>
@@ -512,7 +512,7 @@ static int cw_battery_get_property(struct power_supply *psy,
 
 	case POWER_SUPPLY_PROP_TIME_TO_EMPTY_NOW:
 		if (cw_battery_valid_time_to_empty(cw_bat))
-			val->intval = cw_bat->time_to_empty;
+			val->intval = cw_bat->time_to_empty * 60;
 		else
 			val->intval = 0;
 		break;

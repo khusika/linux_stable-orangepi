@@ -43,13 +43,18 @@ find_crtc_by_node(struct drm_device *drm_dev, struct device_node *node)
 	struct drm_crtc *crtc;
 
 	np_crtc = of_get_parent(node);
-	if (!np_crtc || !of_device_is_available(np_crtc))
+	if (!np_crtc || !of_device_is_available(np_crtc)) {
+		of_node_put(np_crtc);
 		return NULL;
+	}
 
 	drm_for_each_crtc(crtc, drm_dev) {
-		if (crtc->port == np_crtc)
+		if (crtc->port == np_crtc) {
+			of_node_put(np_crtc);
 			return crtc;
+		}
 	}
+	of_node_put(np_crtc);
 
 	return NULL;
 }
@@ -61,12 +66,32 @@ find_sub_dev_by_node(struct drm_device *drm_dev, struct device_node *node)
 	struct rockchip_drm_sub_dev *sub_dev;
 
 	np_connector = of_graph_get_remote_port_parent(node);
-	if (!np_connector || !of_device_is_available(np_connector))
+	if (!np_connector || !of_device_is_available(np_connector)) {
+		of_node_put(np_connector);
 		return NULL;
+	}
 
 	sub_dev = rockchip_drm_get_sub_dev(np_connector);
-	if (!sub_dev)
-		return NULL;
+	if (!sub_dev) {
+		/*
+		 * for DP-MST, ports node->parent node->parent node is the device node
+		 */
+		struct device_node *np_top;
+
+		np_top = of_get_parent(np_connector);
+		if (!np_top) {
+			of_node_put(np_connector);
+			return NULL;
+		}
+
+		sub_dev = rockchip_drm_get_sub_dev(np_top);
+		of_node_put(np_top);
+		if (!sub_dev) {
+			of_node_put(np_connector);
+			return NULL;
+		}
+	}
+	of_node_put(np_connector);
 
 	return sub_dev;
 }
@@ -108,7 +133,7 @@ find_sub_dev_by_bridge(struct drm_device *drm_dev, struct device_node *node)
 		goto err_put_port;
 	}
 
-sub_dev = rockchip_drm_get_sub_dev(np_connector);
+	sub_dev = rockchip_drm_get_sub_dev(np_connector);
 	if (!sub_dev)
 		goto err_put_port;
 
@@ -241,7 +266,7 @@ static int init_loader_memory(struct drm_device *drm_dev)
 	if (!size)
 		return -ENOMEM;
 	if (!IS_ALIGNED(res.start, PAGE_SIZE) || !IS_ALIGNED(size, PAGE_SIZE))
-		DRM_ERROR("Reserved logo memory should be aligned as:0x%lx, cureent is:start[%pad] size[%pad]\n",
+		DRM_ERROR("Reserved logo memory should be aligned as:0x%lx, current is:start[%pad] size[%pad]\n",
 			  PAGE_SIZE, &res.start, &size);
 	if (pg_size != PAGE_SIZE)
 		DRM_WARN("iommu page size[0x%x] isn't equal to OS page size[0x%lx]\n", pg_size, PAGE_SIZE);
@@ -286,7 +311,7 @@ static int init_loader_memory(struct drm_device *drm_dev)
 	if (!size)
 		return 0;
 	if (!IS_ALIGNED(res.start, PAGE_SIZE) || !IS_ALIGNED(size, PAGE_SIZE))
-		DRM_ERROR("Reserved drm cubic memory should be aligned as:0x%lx, cureent is:start[%pad] size[%pad]\n",
+		DRM_ERROR("Reserved drm cubic memory should be aligned as:0x%lx, current is:start[%pad] size[%pad]\n",
 			  PAGE_SIZE, &res.start, &size);
 
 	private->cubic_lut_kvaddr = phys_to_virt(start);
@@ -456,8 +481,10 @@ of_parse_display_resource(struct drm_device *drm_dev, struct device_node *route)
 		return NULL;
 
 	fb = get_framebuffer_by_node(drm_dev, route);
-	if (IS_ERR_OR_NULL(fb))
+	if (IS_ERR_OR_NULL(fb)) {
+		of_node_put(connect);
 		return NULL;
+	}
 
 	crtc = find_crtc_by_node(drm_dev, connect);
 
@@ -465,6 +492,7 @@ of_parse_display_resource(struct drm_device *drm_dev, struct device_node *route)
 
 	if (!sub_dev)
 		sub_dev = find_sub_dev_by_bridge(drm_dev, connect);
+	of_node_put(connect);
 
 	if (!crtc || !sub_dev) {
 		dev_warn(drm_dev->dev,
@@ -630,8 +658,7 @@ static int rockchip_drm_fill_connector_modes(struct drm_connector *connector,
 		goto prune;
 	}
 
-	if (!force_output)
-		count = (*connector_funcs->get_modes)(connector);
+	count = (*connector_funcs->get_modes)(connector);
 
 	if (count == 0 && connector->status == connector_status_connected)
 		count = drm_add_modes_noedid(connector, 4096, 4096);
@@ -695,6 +722,31 @@ rockchip_drm_connector_get_single_encoder(struct drm_connector *connector)
 	return NULL;
 }
 
+static void rockchip_drm_mode_fixup(struct drm_crtc_state *crtc_state,
+				    struct drm_connector_state *conn_state,
+				    struct drm_display_mode *adj_mode)
+{
+	const struct drm_encoder_helper_funcs *encoder_funcs;
+	const struct drm_crtc_helper_funcs *crtc_funcs;
+	struct drm_encoder *encoder = conn_state->best_encoder;
+	struct drm_crtc *crtc = crtc_state->crtc;
+	int ret;
+
+	ret = drm_atomic_set_mode_for_crtc(crtc_state, adj_mode);
+	if (ret)
+		return;
+
+	encoder_funcs = encoder->helper_private;
+	if (encoder_funcs && encoder_funcs->atomic_check)
+		encoder_funcs->atomic_check(encoder, crtc_state, conn_state);
+	else if (encoder_funcs && encoder_funcs->mode_fixup)
+		encoder_funcs->mode_fixup(encoder, &crtc_state->mode, adj_mode);
+
+	crtc_funcs = crtc->helper_private;
+	if (crtc_funcs && crtc_funcs->mode_fixup)
+		crtc_funcs->mode_fixup(crtc, &crtc_state->mode, adj_mode);
+}
+
 static int setup_initial_state(struct drm_device *drm_dev,
 			       struct drm_atomic_state *state,
 			       struct rockchip_drm_mode_set *set)
@@ -706,6 +758,7 @@ static int setup_initial_state(struct drm_device *drm_dev,
 	struct drm_connector_state *conn_state;
 	struct drm_plane_state *primary_state;
 	struct drm_display_mode *mode = NULL;
+	struct drm_display_mode adj_mode;
 	const struct drm_connector_helper_funcs *funcs;
 	int pipe = drm_crtc_index(crtc);
 	bool is_crtc_enabled = true;
@@ -750,18 +803,26 @@ static int setup_initial_state(struct drm_device *drm_dev,
 		goto error_conn;
 	}
 
+	crtc_state = drm_atomic_get_crtc_state(state, crtc);
+	if (IS_ERR(crtc_state)) {
+		ret = PTR_ERR(crtc_state);
+		goto error_conn;
+	}
+
 	list_for_each_entry(mode, &connector->modes, head) {
-		if (mode->clock == set->clock &&
-		    mode->hdisplay == set->hdisplay &&
-		    mode->vdisplay == set->vdisplay &&
-		    mode->crtc_hsync_end == set->crtc_hsync_end &&
-		    mode->crtc_vsync_end == set->crtc_vsync_end &&
-		    drm_mode_vrefresh(mode) == set->vrefresh &&
+		drm_mode_copy(&adj_mode, mode);
+		rockchip_drm_mode_fixup(crtc_state, conn_state, &adj_mode);
+		if (adj_mode.clock == set->clock &&
+		    adj_mode.hdisplay == set->hdisplay &&
+		    adj_mode.vdisplay == set->vdisplay &&
+		    adj_mode.crtc_hsync_end == set->crtc_hsync_end &&
+		    adj_mode.crtc_vsync_end == set->crtc_vsync_end &&
+		    drm_mode_vrefresh(&adj_mode) == set->vrefresh &&
 		    /* we just need to focus on DRM_MODE_FLAG_ALL flag, so here
 		     * we compare mode->flags with set->flags & DRM_MODE_FLAG_ALL.
 		     */
-		    mode->flags == (set->flags & DRM_MODE_FLAG_ALL) &&
-		    mode->picture_aspect_ratio == set->picture_aspect_ratio) {
+		    adj_mode.flags == (set->flags & DRM_MODE_FLAG_ALL) &&
+		    adj_mode.picture_aspect_ratio == set->picture_aspect_ratio) {
 			found = 1;
 			match = 1;
 			break;
@@ -775,10 +836,13 @@ static int setup_initial_state(struct drm_device *drm_dev,
 			connector->name);
 		DRM_INFO("%s support modes:\n\n", connector->name);
 		list_for_each_entry(mode, &connector->modes, head) {
-			DRM_INFO(DRM_MODE_FMT "\n", DRM_MODE_ARG(mode));
+			drm_mode_copy(&adj_mode, mode);
+			rockchip_drm_mode_fixup(crtc_state, conn_state, &adj_mode);
+			DRM_INFO(DRM_MODE_FMT "\n", DRM_MODE_ARG(&adj_mode));
 		}
-		DRM_INFO("uboot set mode: h/v display[%d,%d] h/v sync_end[%d,%d] vfresh[%d], flags[0x%x], aspect_ratio[%d]\n",
-			 set->hdisplay, set->vdisplay, set->crtc_hsync_end, set->crtc_vsync_end,
+		DRM_INFO("uboot set mode: clock[%d] h/v display[%d,%d] h/v sync_end[%d,%d] vfresh[%d], flags[0x%x], aspect_ratio[%d]\n",
+			 set->clock, set->hdisplay, set->vdisplay,
+			 set->crtc_hsync_end, set->crtc_vsync_end,
 			 set->vrefresh, set->flags, set->picture_aspect_ratio);
 		goto error_conn;
 	}
@@ -788,13 +852,8 @@ static int setup_initial_state(struct drm_device *drm_dev,
 	conn_state->tv.saturation = set->saturation;
 	conn_state->tv.hue = set->hue;
 	set->mode = mode;
-	crtc_state = drm_atomic_get_crtc_state(state, crtc);
-	if (IS_ERR(crtc_state)) {
-		ret = PTR_ERR(crtc_state);
-		goto error_conn;
-	}
 
-	drm_mode_copy(&crtc_state->adjusted_mode, mode);
+	drm_mode_copy(&crtc_state->adjusted_mode, &adj_mode);
 	if (!match || !is_crtc_enabled) {
 		set->mode_changed = true;
 	} else {
@@ -878,12 +937,24 @@ static int update_state(struct drm_device *drm_dev,
 {
 	struct drm_crtc *crtc = set->crtc;
 	struct drm_connector *connector = set->sub_dev->connector;
+	struct drm_encoder *encoder;
 	struct drm_display_mode *mode = set->mode;
 	struct drm_plane_state *primary_state;
 	struct drm_crtc_state *crtc_state;
 	struct drm_connector_state *conn_state;
+	const struct drm_connector_helper_funcs *connector_helper_funcs;
 	int ret;
 	struct rockchip_crtc_state *s;
+
+	connector_helper_funcs = connector->helper_private;
+	if (!connector_helper_funcs)
+		return -ENXIO;
+	if (connector_helper_funcs->best_encoder)
+		encoder = connector_helper_funcs->best_encoder(connector);
+	else
+		encoder = rockchip_drm_connector_get_single_encoder(connector);
+	if (!encoder)
+		return -ENXIO;
 
 	crtc_state = drm_atomic_get_crtc_state(state, crtc);
 	if (IS_ERR(crtc_state))
@@ -891,6 +962,10 @@ static int update_state(struct drm_device *drm_dev,
 	conn_state = drm_atomic_get_connector_state(state, connector);
 	if (IS_ERR(conn_state))
 		return PTR_ERR(conn_state);
+	ret = drm_atomic_add_encoder_bridges(state, encoder);
+	if (ret)
+		return ret;
+
 	s = to_rockchip_crtc_state(crtc_state);
 	s->left_margin = set->left_margin;
 	s->right_margin = set->right_margin;
@@ -909,19 +984,8 @@ static int update_state(struct drm_device *drm_dev,
 		crtc_state->active = true;
 	} else {
 		const struct drm_encoder_helper_funcs *encoder_helper_funcs;
-		const struct drm_connector_helper_funcs *connector_helper_funcs;
-		struct drm_encoder *encoder;
 		struct drm_bridge *bridge;
 
-		connector_helper_funcs = connector->helper_private;
-		if (!connector_helper_funcs)
-			return -ENXIO;
-		if (connector_helper_funcs->best_encoder)
-			encoder = connector_helper_funcs->best_encoder(connector);
-		else
-			encoder = rockchip_drm_connector_get_single_encoder(connector);
-		if (!encoder)
-			return -ENXIO;
 		encoder_helper_funcs = encoder->helper_private;
 		if (!encoder_helper_funcs->atomic_check)
 			return -ENXIO;
@@ -1170,10 +1234,12 @@ err_unlock:
 
 #ifndef MODULE
 static const char *const loader_protect_clocks[] __initconst = {
+	"hclk_ebc",
 	"hclk_vio",
 	"hclk_vop",
 	"hclk_vopb",
 	"hclk_vopl",
+	"aclk_ebc",
 	"aclk_vio",
 	"aclk_vio0",
 	"aclk_vio1",
@@ -1182,11 +1248,18 @@ static const char *const loader_protect_clocks[] __initconst = {
 	"aclk_vopl",
 	"aclk_vo_pre",
 	"aclk_vio_pre",
+	"dclk_ebc",
 	"dclk_vop",
 	"dclk_vop0",
 	"dclk_vop1",
+	"dclk_vop2",
+	"dclk_vop3",
 	"dclk_vopb",
 	"dclk_vopl",
+	"dclk_vp0",
+	"dclk_vp1",
+	"dclk_vp2",
+	"dclk_vp3",
 };
 
 static struct clk **loader_clocks __initdata;

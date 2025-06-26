@@ -2,7 +2,7 @@
 /*
  * kernel/drivers/input/sensors/accel/mxc6655xa.c
  *
- * Copyright (C) 2020 Rockchip Co.,Ltd.
+ * Copyright (C) 2020 Rockchip Electronics Co., Ltd.
  * Author: Wang Jie <dave.wang@rock-chips.com>
  */
 
@@ -140,6 +140,7 @@ static int gsensor_report_value(struct i2c_client *client,
 		input_report_abs(sensor->input_dev, ABS_X, axis->x);
 		input_report_abs(sensor->input_dev, ABS_Y, axis->y);
 		input_report_abs(sensor->input_dev, ABS_Z, axis->z);
+		input_sync(sensor->input_dev);
 	}
 
 	return 0;
@@ -244,7 +245,7 @@ static const struct i2c_device_id gsensor_mxc6655_id[] = {
 
 static struct i2c_driver gsensor_mxc6655_driver = {
 	.probe = gsensor_mxc6655_probe,
-	.remove = gsensor_mxc6655_remove,
+	.remove = (void *)gsensor_mxc6655_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = gsensor_mxc6655_id,
 	.driver = {

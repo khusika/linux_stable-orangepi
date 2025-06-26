@@ -195,6 +195,7 @@ snd-soc-rk312x-objs := rk312x_codec.o
 snd-soc-rk3228-objs := rk3228_codec.o
 snd-soc-rk3308-objs := rk3308_codec.o
 snd-soc-rk3328-objs := rk3328_codec.o
+snd-soc-rk3506-objs := rk3506_codec.o
 snd-soc-rk3528-objs := rk3528_codec.o
 snd-soc-rk730-objs := rk730.o
 snd-soc-rk817-objs := rk817_codec.o
@@ -569,6 +570,7 @@ obj-$(CONFIG_SND_SOC_RK312X)	+= snd-soc-rk312x.o
 obj-$(CONFIG_SND_SOC_RK3228)	+= snd-soc-rk3228.o
 obj-$(CONFIG_SND_SOC_RK3308)	+= snd-soc-rk3308.o
 obj-$(CONFIG_SND_SOC_RK3328)	+= snd-soc-rk3328.o
+obj-$(CONFIG_SND_SOC_RK3506)	+= snd-soc-rk3506.o
 obj-$(CONFIG_SND_SOC_RK3528)    += snd-soc-rk3528.o
 obj-$(CONFIG_SND_SOC_RK730)	+= snd-soc-rk730.o
 obj-$(CONFIG_SND_SOC_RK817)	+= snd-soc-rk817.o
@@ -746,7 +748,9 @@ obj-$(CONFIG_SND_SOC_ZL38060)	+= snd-soc-zl38060.o
 
 # Amp
 obj-$(CONFIG_SND_SOC_AW87XXX)	+= aw87xxx/
+obj-$(CONFIG_SND_SOC_AW882XX)	+= aw882xx/
 obj-$(CONFIG_SND_SOC_AW883XX)	+= aw883xx/
+obj-$(CONFIG_SND_SOC_IT6621)	+= it6621/
 obj-$(CONFIG_SND_SOC_MAX9877)	+= snd-soc-max9877.o
 obj-$(CONFIG_SND_SOC_MAX98504)	+= snd-soc-max98504.o
 obj-$(CONFIG_SND_SOC_SIMPLE_AMPLIFIER)	+= snd-soc-simple-amplifier.o

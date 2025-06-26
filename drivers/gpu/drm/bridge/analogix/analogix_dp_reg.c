@@ -738,9 +738,9 @@ void analogix_dp_set_training_pattern(struct analogix_dp_device *dp,
 	case TEST_PATTERN_80BIT:
 		reg = 0x3e0f83e0;
 		analogix_dp_write(dp, ANALOGIX_DP_TEST_80B_PATTERN0, reg);
-		reg = 0x0f83e0f8;
+		reg = 0x3e0f83e0;
 		analogix_dp_write(dp, ANALOGIX_DP_TEST_80B_PATTERN1, reg);
-		reg = 0x0000f83e;
+		reg = 0x000f83e0;
 		analogix_dp_write(dp, ANALOGIX_DP_TEST_80B_PATTERN2, reg);
 		reg = SCRAMBLING_ENABLE | LINK_QUAL_PATTERN_SET_80BIT;
 		analogix_dp_write(dp, ANALOGIX_DP_TRAINING_PTN_SET, reg);
@@ -1012,6 +1012,7 @@ static void analogix_dp_reuse_spd(struct analogix_dp_device *dp)
 	u32 reg, val;
 
 	switch (dp->plat_data->dev_type) {
+	case RK3576_EDP:
 	case RK3588_EDP:
 		reg = ANALOGIX_DP_SPDIF_AUDIO_CTL_0;
 		break;
@@ -1142,7 +1143,6 @@ ssize_t analogix_dp_transfer(struct analogix_dp_device *dp,
 	u32 reg;
 	u8 *buffer = msg->buffer;
 	unsigned int i;
-	int num_transferred = 0;
 	int ret;
 
 	/* Buffer size of AUX CH is 16 bytes */
@@ -1194,7 +1194,6 @@ ssize_t analogix_dp_transfer(struct analogix_dp_device *dp,
 			reg = buffer[i];
 			analogix_dp_write(dp, ANALOGIX_DP_BUF_DATA_0 + 4 * i,
 					  reg);
-			num_transferred++;
 		}
 	}
 
@@ -1243,7 +1242,6 @@ ssize_t analogix_dp_transfer(struct analogix_dp_device *dp,
 			reg = analogix_dp_read(dp, ANALOGIX_DP_BUF_DATA_0 +
 					       4 * i);
 			buffer[i] = (unsigned char)reg;
-			num_transferred++;
 		}
 	}
 
@@ -1260,7 +1258,7 @@ ssize_t analogix_dp_transfer(struct analogix_dp_device *dp,
 		 (msg->request & ~DP_AUX_I2C_MOT) == DP_AUX_NATIVE_READ)
 		msg->reply = DP_AUX_NATIVE_REPLY_ACK;
 
-	return (num_transferred == msg->size) ? num_transferred : -EBUSY;
+	return msg->size;
 
 aux_error:
 	/* if aux err happen, reset aux */
@@ -1275,22 +1273,22 @@ void analogix_dp_set_video_format(struct analogix_dp_device *dp)
 	const struct drm_display_mode *mode = &video->mode;
 	unsigned int hsw, hfp, hbp, vsw, vfp, vbp;
 
-	hsw = mode->hsync_end - mode->hsync_start;
-	hfp = mode->hsync_start - mode->hdisplay;
-	hbp = mode->htotal - mode->hsync_end;
-	vsw = mode->vsync_end - mode->vsync_start;
-	vfp = mode->vsync_start - mode->vdisplay;
-	vbp = mode->vtotal - mode->vsync_end;
+	hsw = mode->crtc_hsync_end - mode->crtc_hsync_start;
+	hfp = mode->crtc_hsync_start - mode->crtc_hdisplay;
+	hbp = mode->crtc_htotal - mode->crtc_hsync_end;
+	vsw = mode->crtc_vsync_end - mode->crtc_vsync_start;
+	vfp = mode->crtc_vsync_start - mode->crtc_vdisplay;
+	vbp = mode->crtc_vtotal - mode->crtc_vsync_end;
 
 	/* Set Video Format Parameters */
 	analogix_dp_write(dp, ANALOGIX_DP_TOTAL_LINE_CFG_L,
-			  TOTAL_LINE_CFG_L(mode->vtotal));
+			  TOTAL_LINE_CFG_L(mode->crtc_vtotal));
 	analogix_dp_write(dp, ANALOGIX_DP_TOTAL_LINE_CFG_H,
-			  TOTAL_LINE_CFG_H(mode->vtotal >> 8));
+			  TOTAL_LINE_CFG_H(mode->crtc_vtotal >> 8));
 	analogix_dp_write(dp, ANALOGIX_DP_ACTIVE_LINE_CFG_L,
-			  ACTIVE_LINE_CFG_L(mode->vdisplay));
+			  ACTIVE_LINE_CFG_L(mode->crtc_vdisplay));
 	analogix_dp_write(dp, ANALOGIX_DP_ACTIVE_LINE_CFG_H,
-			  ACTIVE_LINE_CFG_H(mode->vdisplay >> 8));
+			  ACTIVE_LINE_CFG_H(mode->crtc_vdisplay >> 8));
 	analogix_dp_write(dp, ANALOGIX_DP_V_F_PORCH_CFG,
 			  V_F_PORCH_CFG(vfp));
 	analogix_dp_write(dp, ANALOGIX_DP_V_SYNC_WIDTH_CFG,
@@ -1298,13 +1296,13 @@ void analogix_dp_set_video_format(struct analogix_dp_device *dp)
 	analogix_dp_write(dp, ANALOGIX_DP_V_B_PORCH_CFG,
 			  V_B_PORCH_CFG(vbp));
 	analogix_dp_write(dp, ANALOGIX_DP_TOTAL_PIXEL_CFG_L,
-			  TOTAL_PIXEL_CFG_L(mode->htotal));
+			  TOTAL_PIXEL_CFG_L(mode->crtc_htotal));
 	analogix_dp_write(dp, ANALOGIX_DP_TOTAL_PIXEL_CFG_H,
-			  TOTAL_PIXEL_CFG_H(mode->htotal >> 8));
+			  TOTAL_PIXEL_CFG_H(mode->crtc_htotal >> 8));
 	analogix_dp_write(dp, ANALOGIX_DP_ACTIVE_PIXEL_CFG_L,
-			  ACTIVE_PIXEL_CFG_L(mode->hdisplay));
+			  ACTIVE_PIXEL_CFG_L(mode->crtc_hdisplay));
 	analogix_dp_write(dp, ANALOGIX_DP_ACTIVE_PIXEL_CFG_H,
-			  ACTIVE_PIXEL_CFG_H(mode->hdisplay >> 8));
+			  ACTIVE_PIXEL_CFG_H(mode->crtc_hdisplay >> 8));
 	analogix_dp_write(dp, ANALOGIX_DP_H_F_PORCH_CFG_L,
 			  H_F_PORCH_CFG_L(hfp));
 	analogix_dp_write(dp, ANALOGIX_DP_H_F_PORCH_CFG_H,

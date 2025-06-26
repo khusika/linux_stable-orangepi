@@ -1,7 +1,7 @@
 /*
  * ec battery driver
  *
- * Copyright (C) 2016 Rockchip Electronics Co., Ltd
+ * Copyright (C) 2016 Rockchip Electronics Co., Ltd.
  * Shunqing Chen <csq@rock-chips.com>
  *
  * This program is free software; you can redistribute it and/or modify it

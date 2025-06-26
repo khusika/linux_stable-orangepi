@@ -2,7 +2,7 @@
 /*
  * kernel/drivers/input/sensors/compass/akm09918.c
  *
- * Copyright (C) 2020 Rockchip Co.,Ltd.
+ * Copyright (C) 2020 Rockchip Electronics Co., Ltd.
  * Author: Wang Jie <dave.wang@rock-chips.com>
  */
 
@@ -674,7 +674,7 @@ static const struct i2c_device_id compass_akm09918_id[] = {
 
 static struct i2c_driver compass_akm09918_driver = {
 	.probe = compass_akm09918_probe,
-	.remove = compass_akm09918_remove,
+	.remove = (void *)compass_akm09918_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = compass_akm09918_id,
 	.driver = {

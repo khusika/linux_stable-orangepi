@@ -156,12 +156,23 @@ static int dmaengine_pcm_open(struct snd_soc_component *component,
 	if (ret)
 		return ret;
 
+	if (IS_ENABLED(CONFIG_SND_SOC_DYNAMIC_DMA_CHAN)) {
+		chan = dma_request_chan(component->dev, substream->stream ? "rx" : "tx");
+		if (IS_ERR(chan)) {
+			dev_err(component->dev, "No DMA channel available\n");
+			return -ENXIO;
+		}
+	}
+
 	return snd_dmaengine_pcm_open(substream, chan);
 }
 
 static int dmaengine_pcm_close(struct snd_soc_component *component,
 			       struct snd_pcm_substream *substream)
 {
+	if (IS_ENABLED(CONFIG_SND_SOC_DYNAMIC_DMA_CHAN))
+		return snd_dmaengine_pcm_close_release_chan(substream);
+
 	return snd_dmaengine_pcm_close(substream);
 }
 
@@ -318,6 +329,12 @@ static int dmaengine_copy_user(struct snd_soc_component *component,
 	return 0;
 }
 
+static int dmaengine_pcm_sync_stop(struct snd_soc_component *component,
+				   struct snd_pcm_substream *substream)
+{
+	return snd_dmaengine_pcm_sync_stop(substream);
+}
+
 static const struct snd_soc_component_driver dmaengine_pcm_component = {
 	.name		= SND_DMAENGINE_PCM_DRV_NAME,
 	.probe_order	= SND_SOC_COMP_ORDER_LATE,
@@ -327,6 +344,7 @@ static const struct snd_soc_component_driver dmaengine_pcm_component = {
 	.trigger	= dmaengine_pcm_trigger,
 	.pointer	= dmaengine_pcm_pointer,
 	.pcm_construct	= dmaengine_pcm_new,
+	.sync_stop	= dmaengine_pcm_sync_stop,
 };
 
 static const struct snd_soc_component_driver dmaengine_pcm_component_process = {
@@ -339,6 +357,7 @@ static const struct snd_soc_component_driver dmaengine_pcm_component_process = {
 	.pointer	= dmaengine_pcm_pointer,
 	.copy_user	= dmaengine_copy_user,
 	.pcm_construct	= dmaengine_pcm_new,
+	.sync_stop	= dmaengine_pcm_sync_stop,
 };
 
 static const char * const dmaengine_pcm_dma_channel_names[] = {
@@ -457,6 +476,9 @@ int snd_dmaengine_pcm_register(struct device *dev,
 	ret = snd_soc_add_component(&pcm->component, NULL, 0);
 	if (ret)
 		goto err_free_dma;
+
+	if (IS_ENABLED(CONFIG_SND_SOC_DYNAMIC_DMA_CHAN))
+		dmaengine_pcm_release_chan(pcm);
 
 	return 0;
 

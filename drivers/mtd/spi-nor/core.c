@@ -733,7 +733,7 @@ static int spi_nor_wait_till_ready_with_timeout_and_msleep(struct spi_nor *nor,
  *
  * Return: 0 on success, -errno otherwise.
  */
-int spi_nor_wait_till_ready_with_msleep(struct spi_nor *nor)
+static int spi_nor_wait_till_ready_with_msleep(struct spi_nor *nor)
 {
 	return spi_nor_wait_till_ready_with_timeout_and_msleep(nor,
 							       DEFAULT_READY_WAIT_JIFFIES);
@@ -825,21 +825,22 @@ static int spi_nor_write_16bit_sr_and_check(struct spi_nor *nor, u8 sr1)
 		ret = spi_nor_read_cr(nor, &sr_cr[1]);
 		if (ret)
 			return ret;
-	} else if (nor->params->quad_enable) {
+	} else if (spi_nor_get_protocol_width(nor->read_proto) == 4 &&
+		   spi_nor_get_protocol_width(nor->write_proto) == 4 &&
+		   nor->params->quad_enable) {
 		/*
 		 * If the Status Register 2 Read command (35h) is not
 		 * supported, we should at least be sure we don't
 		 * change the value of the SR2 Quad Enable bit.
 		 *
-		 * We can safely assume that when the Quad Enable method is
-		 * set, the value of the QE bit is one, as a consequence of the
-		 * nor->params->quad_enable() call.
+		 * When the Quad Enable method is set and the buswidth is 4, we
+		 * can safely assume that the value of the QE bit is one, as a
+		 * consequence of the nor->params->quad_enable() call.
 		 *
-		 * We can safely assume that the Quad Enable bit is present in
-		 * the Status Register 2 at BIT(1). According to the JESD216
-		 * revB standard, BFPT DWORDS[15], bits 22:20, the 16-bit
-		 * Write Status (01h) command is available just for the cases
-		 * in which the QE bit is described in SR2 at BIT(1).
+		 * According to the JESD216 revB standard, BFPT DWORDS[15],
+		 * bits 22:20, the 16-bit Write Status (01h) command is
+		 * available just for the cases in which the QE bit is
+		 * described in SR2 at BIT(1).
 		 */
 		sr_cr[1] = SR2_QUAD_EN_BIT1;
 	} else {
@@ -939,12 +940,11 @@ int spi_nor_write_16bit_cr_and_check(struct spi_nor *nor, u8 cr)
 		return ret;
 
 	sr_cr[1] = cr;
+	sr_written = sr_cr[0];
 
 	ret = spi_nor_write_sr(nor, sr_cr, 2);
 	if (ret)
 		return ret;
-
-	sr_written = sr_cr[0];
 
 	ret = spi_nor_read_sr(nor, sr_cr);
 	if (ret)
@@ -1753,29 +1753,75 @@ int spi_nor_sr2_bit2_quad_enable(struct spi_nor *nor)
 }
 
 static const struct spi_nor_manufacturer *manufacturers[] = {
+#ifdef CONFIG_MTD_SPI_NOR_ATMEL
 	&spi_nor_atmel,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_BOYA
 	&spi_nor_boya,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_CATALYST
 	&spi_nor_catalyst,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_DOSILICON
 	&spi_nor_dosilicon,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_EON
 	&spi_nor_eon,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_ESMT
 	&spi_nor_esmt,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_EVERSPIN
 	&spi_nor_everspin,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_FMSH
 	&spi_nor_fmsh,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_FUJITSU
 	&spi_nor_fujitsu,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_GIGADEVICE
 	&spi_nor_gigadevice,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_NORMEM
 	&spi_nor_normem,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_INTEL
 	&spi_nor_intel,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_ISSI
 	&spi_nor_issi,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_MACRONIX
 	&spi_nor_macronix,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_STMICRO
 	&spi_nor_micron,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_PUYA
 	&spi_nor_puya,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_STMICRO
 	&spi_nor_st,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_SPANSION
 	&spi_nor_spansion,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_SST
 	&spi_nor_sst,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_WINBOND
 	&spi_nor_winbond,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_XILINX
 	&spi_nor_xilinx,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_XMC
 	&spi_nor_xmc,
+#endif
+#ifdef CONFIG_MTD_SPI_NOR_XTX
 	&spi_nor_xtx,
+#endif
 };
 
 static const struct flash_info *spi_nor_match_id(struct spi_nor *nor,

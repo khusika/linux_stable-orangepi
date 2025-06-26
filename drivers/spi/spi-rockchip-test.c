@@ -76,7 +76,7 @@ int spi_write_slt(int id, const void *txbuf, size_t n)
 	spi_message_add_tail(&t, &m);
 	ret = spi_sync(spi, &m);
 	if (m.actual_length && m.actual_length != n)
-		pr_err("%s len=%d actual_length=%d\n", __func__, n, m.actual_length);
+		pr_err("%s len=%zu actual_length=%d\n", __func__, n, m.actual_length);
 
 	return ret;
 }
@@ -105,7 +105,7 @@ int spi_read_slt(int id, void *rxbuf, size_t n)
 	spi_message_add_tail(&t, &m);
 	ret = spi_sync(spi, &m);
 	if (m.actual_length && m.actual_length != n)
-		pr_err("%s len=%d actual_length=%d\n", __func__, n, m.actual_length);
+		pr_err("%s len=%zu actual_length=%d\n", __func__, n, m.actual_length);
 
 	return ret;
 }
@@ -399,6 +399,21 @@ MODULE_DEVICE_TABLE(of, rockchip_spi_test_dt_match);
 
 #endif /* CONFIG_OF */
 
+static const struct spi_device_id spi_rockchip_test_spi_ids[] = {
+	{ .name = "spi_test_bus0_cs0" },
+	{ .name = "spi_test_bus0_cs1" },
+	{ .name = "spi_test_bus1_cs0" },
+	{ .name = "spi_test_bus1_cs1" },
+	{ .name = "spi_test_bus2_cs0" },
+	{ .name = "spi_test_bus2_cs1" },
+	{ .name = "spi_test_bus3_cs0" },
+	{ .name = "spi_test_bus3_cs1" },
+	{ .name = "spi_test_bus4_cs0" },
+	{ .name = "spi_test_bus4_cs1" },
+	{},
+};
+MODULE_DEVICE_TABLE(spi, spi_rockchip_test_spi_ids);
+
 static struct spi_driver spi_rockchip_test_driver = {
 	.driver = {
 		.name	= "spi_test",
@@ -407,6 +422,7 @@ static struct spi_driver spi_rockchip_test_driver = {
 	},
 	.probe = rockchip_spi_test_probe,
 	.remove = rockchip_spi_test_remove,
+	.id_table =	spi_rockchip_test_spi_ids,
 };
 
 static int __init spi_rockchip_test_init(void)

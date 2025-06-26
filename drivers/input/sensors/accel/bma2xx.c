@@ -1,7 +1,7 @@
 /*
  * drivers/input/sensors/accel/bma2xx.c
  *
- * Copyright (C) Fuzhou Rockchip Electronics Co.Ltd
+ * Copyright (C) Rockchip Electronics Co., Ltd.
  *
  * Author: Bin Yang <yangbin@rock - chips.com>
  *
@@ -2250,7 +2250,7 @@ static const struct i2c_device_id gsensor_bma2x2_id[] = {
 
 static struct i2c_driver gsensor_bma2x2_driver = {
 	.probe = gsensor_bma2x2_probe,
-	.remove = gsensor_bma2x2_remove,
+	.remove = (void *)gsensor_bma2x2_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = gsensor_bma2x2_id,
 	.driver = {

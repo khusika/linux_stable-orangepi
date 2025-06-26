@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2022 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2022 Rockchip Electronics Co., Ltd.
  *
  * Author: Guochun Huang <hero.huang@rock-chips.com>
  */
@@ -1179,5 +1179,11 @@ void rkx120_dsi_tx_disable(struct rk_serdes *des, struct rk_serdes_route *route,
 	dsi_write(des, remote_id, DSI_LPCLK_CTRL, 0);
 	dsi_write(des, remote_id, DSI_EDPI_CMD_SIZE, 0);
 	dsi_write(des, remote_id, DSI_MODE_CFG, CMD_VIDEO_MODE(COMMAND_MODE));
+	dsi_write(des, remote_id, DSI_PWR_UP, POWER_UP);
+}
+
+void rkx120_dsi_tx_reset(struct rk_serdes *des, u8 remote_id)
+{
+	dsi_write(des, remote_id, DSI_PWR_UP, RESET);
 	dsi_write(des, remote_id, DSI_PWR_UP, POWER_UP);
 }

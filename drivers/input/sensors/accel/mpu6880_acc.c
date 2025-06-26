@@ -1,6 +1,6 @@
 /* drivers/input/sensors/access/mpu6880_acc.c
  *
- * Copyright (C) 2012-2015 ROCKCHIP.
+ * Copyright (C) 2012-2015 Rockchip Electronics Co., Ltd.
  * Author: oeh<oeh@rock-chips.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -278,7 +278,7 @@ static const struct i2c_device_id gsensor_mpu6880_id[] = {
 
 static struct i2c_driver gsensor_mpu6880_driver = {
 	.probe = gsensor_mpu6880_probe,
-	.remove = gsensor_mpu6880_remove,
+	.remove = (void *)gsensor_mpu6880_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = gsensor_mpu6880_id,
 	.driver = {
