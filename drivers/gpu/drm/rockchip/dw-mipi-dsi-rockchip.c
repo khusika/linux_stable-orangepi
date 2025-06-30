@@ -914,10 +914,11 @@ static void dw_mipi_dsi_rockchip_loader_protect(struct dw_mipi_dsi_rockchip *dsi
 		dw_mipi_dsi_rockchip_loader_protect(dsi->slave, on);
 }
 
-static int dw_mipi_dsi_rockchip_encoder_loader_protect(struct drm_encoder *encoder,
-					      bool on)
+static int dw_mipi_dsi_rockchip_encoder_loader_protect(struct rockchip_drm_sub_dev *sub_dev,
+						       bool on)
 {
-	struct dw_mipi_dsi_rockchip *dsi = to_dsi(encoder);
+	struct dw_mipi_dsi_rockchip *dsi = container_of(sub_dev, struct dw_mipi_dsi_rockchip,
+							sub_dev);
 
 	if (dsi->panel)
 		panel_simple_loader_protect(dsi->panel);

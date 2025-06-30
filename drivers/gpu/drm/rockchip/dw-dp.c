@@ -3308,9 +3308,9 @@ static void _dw_dp_loader_protect(struct dw_dp *dp, bool on)
 	}
 }
 
-static int dw_dp_loader_protect(struct drm_encoder *encoder, bool on)
+static int dw_dp_loader_protect(struct rockchip_drm_sub_dev *sub_dev, bool on)
 {
-	struct dw_dp *dp = encoder_to_dp(encoder);
+	struct dw_dp *dp = container_of(sub_dev, struct dw_dp, sub_dev);
 
 	dp->is_loader_protect = true;
 	_dw_dp_loader_protect(dp, on);

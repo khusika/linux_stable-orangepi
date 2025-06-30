@@ -813,7 +813,7 @@ static int setup_initial_state(struct drm_device *drm_dev,
 		conn_state->best_encoder = rockchip_drm_connector_get_single_encoder(connector);
 
 	if (set->sub_dev->loader_protect) {
-		ret = set->sub_dev->loader_protect(conn_state->best_encoder, true);
+		ret = set->sub_dev->loader_protect(set->sub_dev, true);
 		if (ret) {
 			dev_err(drm_dev->dev,
 				"connector[%s] loader protect failed\n",
@@ -979,7 +979,7 @@ error_crtc:
 		priv->crtc_funcs[pipe]->loader_protect(crtc, false, NULL);
 error_conn:
 	if (set->sub_dev->loader_protect)
-		set->sub_dev->loader_protect(conn_state->best_encoder, false);
+		set->sub_dev->loader_protect(set->sub_dev, false);
 
 	return ret;
 }

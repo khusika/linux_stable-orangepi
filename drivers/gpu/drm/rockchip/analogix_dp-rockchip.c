@@ -251,9 +251,9 @@ static int rockchip_dp_get_modes(struct analogix_dp_plat_data *plat_data,
 	return 0;
 }
 
-static int rockchip_dp_loader_protect(struct drm_encoder *encoder, bool on)
+static int rockchip_dp_loader_protect(struct rockchip_drm_sub_dev *sub_dev, bool on)
 {
-	struct rockchip_dp_device *dp = encoder_to_dp(encoder);
+	struct rockchip_dp_device *dp = container_of(sub_dev, struct rockchip_dp_device, sub_dev);
 	struct analogix_dp_plat_data *plat_data = &dp->plat_data;
 	struct rockchip_dp_device *secondary = NULL;
 	int ret;
@@ -261,7 +261,7 @@ static int rockchip_dp_loader_protect(struct drm_encoder *encoder, bool on)
 	if (plat_data->right) {
 		secondary = rockchip_dp_find_by_id(dp->dev->driver, !dp->id);
 
-		ret = rockchip_dp_loader_protect(&secondary->encoder.encoder, on);
+		ret = rockchip_dp_loader_protect(&secondary->sub_dev, on);
 		if (ret)
 			return ret;
 	}

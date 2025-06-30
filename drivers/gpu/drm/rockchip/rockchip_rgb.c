@@ -403,10 +403,9 @@ rockchip_rgb_encoder_atomic_check(struct drm_encoder *encoder,
 	return 0;
 }
 
-static int rockchip_rgb_encoder_loader_protect(struct drm_encoder *encoder,
-					       bool on)
+static int rockchip_rgb_encoder_loader_protect(struct rockchip_drm_sub_dev *sub_dev, bool on)
 {
-	struct rockchip_rgb *rgb = encoder_to_rgb(encoder);
+	struct rockchip_rgb *rgb = container_of(sub_dev, struct rockchip_rgb, sub_dev);
 
 	if (rgb->np_mcu_panel) {
 		struct rockchip_mcu_panel *mcu_panel = to_rockchip_mcu_panel(rgb->panel);
