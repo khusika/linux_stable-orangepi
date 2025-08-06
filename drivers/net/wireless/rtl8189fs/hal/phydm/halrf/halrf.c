@@ -852,7 +852,7 @@ void halrf_support_ability_debug(void *dm_void, char input[][16], u32 *_used,
 	u8 i;
 
 	for (i = 0; i < 5; i++)
-		if (input[i + 1])
+		if (input[i + 1][0])
 			PHYDM_SSCANF(input[i + 2], DCMD_DECIMAL, &dm_value[i]);
 
 	if (dm_value[0] == 100) {
