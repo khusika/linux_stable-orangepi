@@ -1687,7 +1687,7 @@ void phydm_supportability_en(void *dm_void, char input[][16], u32 *_used,
 	u8 i;
 
 	for (i = 0; i < 5; i++) {
-		if (input[i + 1])
+		if (input[i + 1][0])
 			PHYDM_SSCANF(input[i + 1], DCMD_DECIMAL, &dm_value[i]);
 	}
 
@@ -2061,7 +2061,7 @@ void phydm_pause_func_console(void *dm_void, char input[][16], u32 *_used,
 	}
 
 	for (i = 0; i < 10; i++) {
-		if (input[i + 1])
+		if (input[i + 1][0])
 			PHYDM_SSCANF(input[i + 1], DCMD_HEX, &var1[i]);
 	}
 
