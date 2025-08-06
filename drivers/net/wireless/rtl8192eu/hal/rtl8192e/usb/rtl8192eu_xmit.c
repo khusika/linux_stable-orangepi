@@ -25,7 +25,7 @@ s32	rtl8192eu_init_xmit_priv(_adapter *padapter)
 
 #ifdef PLATFORM_LINUX
 	tasklet_init(&pxmitpriv->xmit_tasklet,
-		     (void(*)(unsigned long))rtl8192eu_xmit_tasklet,
+		     (void *)rtl8192eu_xmit_tasklet,
 		     (unsigned long)padapter);
 #endif
 	rtl8192e_init_xmit_priv(padapter);
