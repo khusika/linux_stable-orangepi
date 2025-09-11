@@ -91,31 +91,53 @@
 
 	matrix-keypad {
 		compatible = "gpio-matrix-keypad";
-		debounce-delay-ms = <5>;
-		col-scan-delay-us = <2>;
-		//linux,no-autorepeat = <1>;
+		debounce-delay-ms = <30>;
+		col-scan-delay-us = <100>;
 		wakeup-source;
 		pinctrl-names = "default";
 		pinctrl-0 = <&keypad_pins>;
 
-		col-gpios = <&gpio0 RK_PC0 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PC1 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PC2 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PC3 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PC4 GPIO_ACTIVE_LOW>;
+		linux,no-autorepeat;
+		drive-inactive-cols;
 
-		row-gpios = <&gpio0 RK_PB3 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PB4 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PB5 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PB6 GPIO_ACTIVE_LOW
-			     &gpio0 RK_PB7 GPIO_ACTIVE_LOW>;
+		col-gpios = <&gpio0 RK_PC0 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PC1 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PC2 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PC3 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PC4 GPIO_ACTIVE_HIGH>;
+
+		row-gpios = <&gpio0 RK_PB3 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PB4 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PB5 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PB6 GPIO_ACTIVE_HIGH
+			     &gpio0 RK_PB7 GPIO_ACTIVE_HIGH>;
 
 		linux,keymap = <
-				MATRIX_KEY(0, 0, KEY_NUMERIC_1) MATRIX_KEY(0, 1, KEY_NUMERIC_2) MATRIX_KEY(0, 2, KEY_NUMERIC_3) MATRIX_KEY(0, 3, KEY_UP) MATRIX_KEY(0, 4, KEY_DOWN)
-				MATRIX_KEY(1, 0, KEY_NUMERIC_4) MATRIX_KEY(1, 1, KEY_NUMERIC_5) MATRIX_KEY(1, 2, KEY_NUMERIC_6) MATRIX_KEY(1, 3, KEY_LEFT) MATRIX_KEY(1, 4, KEY_RIGHT)
-				MATRIX_KEY(2, 0, KEY_NUMERIC_7) MATRIX_KEY(0, 1, KEY_NUMERIC_8) MATRIX_KEY(0, 2, KEY_NUMERIC_9) MATRIX_KEY(0, 3, KEY_OK) MATRIX_KEY(0, 4, KEY_MUTE)
-				MATRIX_KEY(3, 0, KEY_NUMERIC_STAR) MATRIX_KEY(0, 1, KEY_NUMERIC_0) MATRIX_KEY(0, 2, KEY_NUMERIC_POUND) MATRIX_KEY(0, 3, KEY_SOUND) MATRIX_KEY(0, 4, KEY_VOLUMEDOWN)
-				MATRIX_KEY(4, 0, KEY_F1) MATRIX_KEY(0, 1, KEY_F2) MATRIX_KEY(0, 2, KEY_F3) MATRIX_KEY(0, 3, KEY_F4) MATRIX_KEY(0, 4, KEY_VOLUMEUP)
+				MATRIX_KEY(0, 0, KEY_NUMERIC_1)
+				MATRIX_KEY(0, 1, KEY_NUMERIC_2)
+				MATRIX_KEY(0, 2, KEY_NUMERIC_3)
+				MATRIX_KEY(0, 3, KEY_UP)
+				MATRIX_KEY(0, 4, KEY_DOWN)
+				MATRIX_KEY(1, 0, KEY_NUMERIC_4)
+				MATRIX_KEY(1, 1, KEY_NUMERIC_5)
+				MATRIX_KEY(1, 2, KEY_NUMERIC_6)
+				MATRIX_KEY(1, 3, KEY_LEFT)
+				MATRIX_KEY(1, 4, KEY_RIGHT)
+				MATRIX_KEY(2, 0, KEY_NUMERIC_7)
+				MATRIX_KEY(2, 1, KEY_NUMERIC_8)
+				MATRIX_KEY(2, 2, KEY_NUMERIC_9)
+				MATRIX_KEY(2, 3, KEY_OK)
+				MATRIX_KEY(2, 4, KEY_MUTE)
+				MATRIX_KEY(3, 0, KEY_NUMERIC_STAR)
+				MATRIX_KEY(3, 1, KEY_NUMERIC_0)
+				MATRIX_KEY(3, 2, KEY_NUMERIC_POUND)
+				MATRIX_KEY(3, 3, KEY_SOUND)
+				MATRIX_KEY(3, 4, KEY_VOLUMEDOWN)
+				MATRIX_KEY(4, 0, KEY_F1)
+				MATRIX_KEY(4, 1, KEY_F2)
+				MATRIX_KEY(4, 2, KEY_F3)
+				MATRIX_KEY(4, 3, KEY_F4)
+				MATRIX_KEY(4, 4, KEY_VOLUMEUP)
 		>;
 
 		status = "okay";
@@ -619,13 +641,12 @@
 				<0 RK_PB5 RK_FUNC_GPIO &pcfg_pull_down>,
 				<0 RK_PB6 RK_FUNC_GPIO &pcfg_pull_down>,
 				<0 RK_PB7 RK_FUNC_GPIO &pcfg_pull_down>,
-				<0 RK_PB7 RK_FUNC_GPIO &pcfg_pull_down>,
 				/* keyboard cols(0~4) */
-				<0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_down>,
-				<0 RK_PC1 RK_FUNC_GPIO &pcfg_pull_down>,
-				<0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_down>,
-				<0 RK_PC3 RK_FUNC_GPIO &pcfg_pull_down>,
-				<0 RK_PC4 RK_FUNC_GPIO &pcfg_pull_down>;
+				<0 RK_PC0 RK_FUNC_GPIO &pcfg_pull_none>,
+				<0 RK_PC1 RK_FUNC_GPIO &pcfg_pull_none>,
+				<0 RK_PC2 RK_FUNC_GPIO &pcfg_pull_none>,
+				<0 RK_PC3 RK_FUNC_GPIO &pcfg_pull_none>,
+				<0 RK_PC4 RK_FUNC_GPIO &pcfg_pull_none>;
 		};
 	};
 

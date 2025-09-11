@@ -40,6 +40,7 @@
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #endif
+#include <linux/pinctrl/consumer.h>
 
 #if 0
 #define DBG(x...) pr_info("[BT_RFKILL]: " x)

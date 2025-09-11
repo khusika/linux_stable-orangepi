@@ -134,6 +134,12 @@ enum rockchip_drm_vop_aclk_mode {
 	ROCKCHIP_VOP_ACLK_MAX_MODE,
 };
 
+enum rockchip_drm_vrr_type {
+	ROCKCHIP_VRR_VFP_MODE = 0,
+	ROCKCHIP_VRR_HFP_MODE = 1,
+	ROCKCHIP_VRR_DCLK_MODE = 2,
+};
+
 struct rockchip_drm_sub_dev {
 	struct list_head list;
 	struct drm_connector *connector;
@@ -268,6 +274,7 @@ struct rockchip_crtc_state {
 	int output_mode;
 	int output_bpc;
 	int output_flags;
+	int data_map_mode;
 	bool enable_afbc;
 	/**
 	 * @splice_mode: enabled when display a hdisplay > 4096 on rk3588
@@ -347,6 +354,7 @@ struct rockchip_crtc_state {
 	int min_refresh_rate;
 	int shift_x;
 	int shift_y;
+	int vrr_type;
 };
 
 #define to_rockchip_crtc_state(s) \
@@ -491,7 +499,6 @@ struct next_hdr_sink_data {
  * @disable_vblank: disable crtc vblank irq.
  * @bandwidth: report present crtc bandwidth consume.
  * @cancel_pending_vblank: cancel pending vblank.
- * @debugfs_init: init crtc debugfs.
  * @debugfs_dump: debugfs to dump crtc and plane state.
  * @regs_dump: dump vop current register config.
  * @mode_valid: verify that the current mode is supported.
@@ -511,7 +518,6 @@ struct rockchip_crtc_funcs {
 				      struct drm_file *file_priv);
 	int (*sysfs_init)(struct device *dev, struct drm_crtc *crtc);
 	int (*sysfs_fini)(struct device *dev, struct drm_crtc *crtc);
-	int (*debugfs_init)(struct drm_minor *minor, struct drm_crtc *crtc);
 	int (*debugfs_dump)(struct drm_crtc *crtc, struct seq_file *s);
 	void (*regs_dump)(struct drm_crtc *crtc, struct seq_file *s);
 	void (*active_regs_dump)(struct drm_crtc *crtc, struct seq_file *s);
@@ -554,9 +560,6 @@ struct rockchip_drm_private {
 	struct gen_pool *secure_buffer_pool;
 	struct mutex mm_lock;
 	struct drm_mm mm;
-	struct list_head psr_list;
-	struct mutex psr_list_lock;
-	struct mutex commit_lock;
 
 	/* private crtc prop */
 	struct drm_property *soc_id_prop;
@@ -589,6 +592,11 @@ struct rockchip_drm_private {
 	 * OVL_LAYER_SEL/OVL_PORT_SEL
 	 */
 	struct mutex ovl_lock;
+	bool need_ovl_lock;
+	/**
+	 * @dovi_mode: dovi mode from userspace for dovi test.
+	 */
+	u8 dovi_mode;
 
 	struct rockchip_drm_vcnt vcnt[ROCKCHIP_MAX_CRTC];
 	struct rockchip_drm_error_event error_event;
@@ -613,6 +621,13 @@ struct rockchip_encoder {
 	struct drm_encoder encoder;
 };
 
+struct rockchip_drm_hdmi21_data {
+	u8 max_frl_rate_per_lane;
+	u8 max_lanes;
+	bool allm_supported;
+	struct rockchip_drm_dsc_cap dsc_cap;
+};
+
 void rockchip_connector_update_vfp_for_vrr(struct drm_crtc *crtc, struct drm_display_mode *mode,
 					   int vfp);
 int rockchip_drm_dma_attach_device(struct drm_device *drm_dev,
@@ -634,10 +649,10 @@ void rockchip_drm_unregister_sub_dev(struct rockchip_drm_sub_dev *sub_dev);
 struct rockchip_drm_sub_dev *rockchip_drm_get_sub_dev(struct device_node *node);
 int rockchip_drm_add_modes_noedid(struct drm_connector *connector);
 void rockchip_drm_te_handle(struct drm_crtc *crtc);
-struct drm_crtc *rockchip_drm_encoder_get_old_crtc(struct drm_encoder *encoder,
-						   struct drm_atomic_state *state);
-struct drm_crtc *rockchip_drm_encoder_get_new_crtc(struct drm_encoder *encoder,
-						   struct drm_atomic_state *state);
+struct drm_crtc *drm_atomic_get_old_crtc_for_encoder(struct drm_atomic_state *state,
+						     struct drm_encoder *encoder);
+struct drm_crtc *drm_atomic_get_new_crtc_for_encoder(struct drm_atomic_state *state,
+						     struct drm_encoder *encoder);
 void drm_mode_convert_to_split_mode(struct drm_display_mode *mode);
 void drm_mode_convert_to_origin_mode(struct drm_display_mode *mode);
 const char *rockchip_drm_get_color_encoding_name(enum drm_color_encoding encoding);
@@ -664,11 +679,11 @@ uint32_t rockchip_drm_get_bpp(const struct drm_format_info *info);
 uint32_t rockchip_drm_get_cycles_per_pixel(uint32_t bus_format);
 int rockchip_drm_get_yuv422_format(struct drm_connector *connector,
 				   const struct edid *edid);
-int rockchip_drm_parse_cea_ext(struct rockchip_drm_dsc_cap *dsc_cap,
-			       u8 *max_frl_rate_per_lane, u8 *max_lanes, u8 *add_func,
+int rockchip_drm_parse_cea_ext(struct rockchip_drm_hdmi21_data *hdmi21_data,
 			       const struct edid *edid);
 int rockchip_drm_parse_dovi(u8 *sink_data, const struct edid *edid);
 int rockchip_drm_parse_colorimetry_data_block(u8 *colorimetry, const struct edid *edid);
+u8 rockchip_drm_parse_hdr10_plus_vsdb(const struct edid *edid);
 struct dma_buf *rockchip_drm_gem_prime_export(struct drm_gem_object *obj, int flags);
 long rockchip_drm_dclk_round_rate(u32 version, struct clk *dclk, unsigned long rate);
 int rockchip_drm_dclk_set_rate(u32 version, struct clk *dclk, unsigned long rate);
@@ -702,7 +717,7 @@ extern struct platform_driver rockchip_rgb_driver;
 extern struct platform_driver rockchip_tve_driver;
 extern struct platform_driver dw_dp_driver;
 extern struct platform_driver vconn_platform_driver;
-extern struct platform_driver vvop_platform_driver;
+extern struct platform_driver rockchip_vkms_platform_driver;
 
 static inline struct rockchip_encoder *to_rockchip_encoder(struct drm_encoder *encoder)
 {

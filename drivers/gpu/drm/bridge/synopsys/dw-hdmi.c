@@ -335,6 +335,7 @@ struct dw_hdmi {
 	bool logo_plug_out;		/* hdmi is plug out when kernel logo */
 	bool update;
 	bool hdr2sdr;			/* from hdr to sdr */
+	bool cts_manual;
 };
 
 #define HDMI_IH_PHY_STAT0_RX_SENSE \
@@ -1068,7 +1069,7 @@ static void hdmi_set_clk_regenerator(struct dw_hdmi *hdmi,
 	config3 = hdmi_readb(hdmi, HDMI_CONFIG3_ID);
 
 	/* Compute CTS when using internal AHB audio or General Parallel audio*/
-	if ((config3 & HDMI_CONFIG3_AHBAUDDMA) || (config3 & HDMI_CONFIG3_GPAUD)) {
+	if ((config3 & HDMI_CONFIG3_AHBAUDDMA) || (config3 & HDMI_CONFIG3_GPAUD) || hdmi->cts_manual) {
 		/*
 		 * Compute the CTS value from the N value.  Note that CTS and N
 		 * can be up to 20 bits in total, so we need 64-bit math.  Also
@@ -5206,6 +5207,8 @@ struct dw_hdmi *dw_hdmi_probe(struct platform_device *pdev,
 
 	config0 = hdmi_readb(hdmi, HDMI_CONFIG0_ID);
 	config3 = hdmi_readb(hdmi, HDMI_CONFIG3_ID);
+
+	hdmi->cts_manual = of_property_read_bool(np, "rockchip,cts-manual");
 
 	if (iores && config3 & HDMI_CONFIG3_AHBAUDDMA) {
 		struct dw_hdmi_audio_data audio;

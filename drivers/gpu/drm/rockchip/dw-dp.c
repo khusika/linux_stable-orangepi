@@ -446,7 +446,6 @@ struct dw_dp {
 	struct clk *hclk;
 	struct clk *hdcp_clk;
 	struct reset_control *rstc;
-	struct regmap *grf;
 	struct completion complete;
 	struct completion hdcp_complete;
 	int irq;
@@ -2931,8 +2930,8 @@ static void dw_dp_encoder_atomic_disable(struct drm_encoder *encoder,
 	struct drm_crtc *old_crtc, *new_crtc;
 	struct rockchip_crtc_state *s;
 
-	old_crtc = rockchip_drm_encoder_get_old_crtc(encoder, state);
-	new_crtc = rockchip_drm_encoder_get_new_crtc(encoder, state);
+	old_crtc = drm_atomic_get_old_crtc_for_encoder(state, encoder);
+	new_crtc = drm_atomic_get_new_crtc_for_encoder(state, encoder);
 
 	if (old_crtc && old_crtc != new_crtc) {
 		s = to_rockchip_crtc_state(old_crtc->state);
@@ -3060,7 +3059,10 @@ static enum drm_mode_status dw_dp_encoder_mode_valid(struct drm_encoder *encoder
 	struct drm_device *dev = encoder->dev;
 	struct rockchip_crtc_state *s;
 
-	if (!crtc) {
+	if (crtc) {
+		s = to_rockchip_crtc_state(crtc->state);
+		s->output_type = DRM_MODE_CONNECTOR_DisplayPort;
+	} else {
 		drm_for_each_crtc(crtc, dev) {
 			if (!drm_encoder_crtc_ok(encoder, crtc))
 				continue;
@@ -4143,7 +4145,8 @@ static int dw_dp_mst_find_ext_bridges(struct dw_dp *dp)
 			return ret;
 
 		if (mst_enc->next_bridge) {
-			ret = drm_bridge_attach(&mst_enc->encoder, mst_enc->next_bridge, NULL, 0);
+			ret = drm_bridge_attach(&mst_enc->encoder, mst_enc->next_bridge, NULL,
+						DRM_BRIDGE_ATTACH_NO_CONNECTOR);
 			if (ret) {
 				DRM_DEV_ERROR(dp->dev, "failed to attach next bridge: %d\n", ret);
 				return ret;

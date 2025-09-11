@@ -1500,7 +1500,7 @@ static struct i2c_adapter *rk618_hdmi_i2c_adapter(struct rk618_hdmi *hdmi)
 	adap->dev.parent = hdmi->dev;
 	adap->dev.of_node = hdmi->dev->of_node;
 	adap->algo = &rk618_hdmi_algorithm;
-	strlcpy(adap->name, "RK618 HDMI", sizeof(adap->name));
+	strscpy(adap->name, "RK618 HDMI", sizeof(adap->name));
 	i2c_set_adapdata(adap, hdmi);
 
 	ret = i2c_add_adapter(adap);
