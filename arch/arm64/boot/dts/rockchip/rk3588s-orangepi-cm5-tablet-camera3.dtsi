@@ -23,7 +23,7 @@
 			};
 
 			mipi_in_dcphy1_cam3: endpoint@1 {
-				reg = <0>;
+				reg = <1>;
 				remote-endpoint = <&imx219_out_cam3>;
 				data-lanes = <1 2>;
 			};
