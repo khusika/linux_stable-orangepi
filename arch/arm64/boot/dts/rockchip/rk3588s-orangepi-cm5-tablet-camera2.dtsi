@@ -22,7 +22,7 @@
 			};
 
 			mipi_in_dcphy_1: endpoint@1 {
-				reg = <0>;
+				reg = <1>;
 				remote-endpoint = <&imx219_out_1>;
 				data-lanes = <1 2>;
 			};
