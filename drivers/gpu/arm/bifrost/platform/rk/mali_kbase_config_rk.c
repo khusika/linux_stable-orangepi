@@ -1,5 +1,5 @@
 /*
- * (C) COPYRIGHT RockChip Limited. All rights reserved.
+ * (C) COPYRIGHT Rockchip Electronics Co., Ltd. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -201,7 +201,7 @@ struct kbase_platform_funcs_conf platform_funcs = {
 
 /*---------------------------------------------------------------------------*/
 
-static int rk_pm_callback_runtime_on(struct kbase_device *kbdev)
+static __maybe_unused int rk_pm_callback_runtime_on(struct kbase_device *kbdev)
 {
 	struct rockchip_opp_info *opp_info = &kbdev->opp_info;
 	int ret = 0;
@@ -226,7 +226,7 @@ static int rk_pm_callback_runtime_on(struct kbase_device *kbdev)
 	return 0;
 }
 
-static void rk_pm_callback_runtime_off(struct kbase_device *kbdev)
+static __maybe_unused void rk_pm_callback_runtime_off(struct kbase_device *kbdev)
 {
 	struct rockchip_opp_info *opp_info = &kbdev->opp_info;
 
@@ -310,29 +310,22 @@ static void rk_pm_callback_power_off(struct kbase_device *kbdev)
 			   msecs_to_jiffies(platform->delay_ms));
 }
 
-static int rk_kbase_device_runtime_init(struct kbase_device *kbdev)
+static __maybe_unused int rk_kbase_device_runtime_init(struct kbase_device *kbdev)
 {
 	return 0;
 }
 
-static void rk_kbase_device_runtime_disable(struct kbase_device *kbdev)
+static __maybe_unused void rk_kbase_device_runtime_disable(struct kbase_device *kbdev)
 {
 }
 
 struct kbase_pm_callback_conf pm_callbacks = {
 	.power_on_callback = rk_pm_callback_power_on,
 	.power_off_callback = rk_pm_callback_power_off,
-#ifdef CONFIG_PM
-	.power_runtime_init_callback = rk_kbase_device_runtime_init,
-	.power_runtime_term_callback = rk_kbase_device_runtime_disable,
-	.power_runtime_on_callback = rk_pm_callback_runtime_on,
-	.power_runtime_off_callback = rk_pm_callback_runtime_off,
-#else				/* CONFIG_PM */
-	.power_runtime_init_callback = NULL,
-	.power_runtime_term_callback = NULL,
-	.power_runtime_on_callback = NULL,
-	.power_runtime_off_callback = NULL,
-#endif				/* CONFIG_PM */
+	.power_runtime_init_callback = pm_ptr(rk_kbase_device_runtime_init),
+	.power_runtime_term_callback = pm_ptr(rk_kbase_device_runtime_disable),
+	.power_runtime_on_callback = pm_ptr(rk_pm_callback_runtime_on),
+	.power_runtime_off_callback = pm_ptr(rk_pm_callback_runtime_off),
 };
 
 /*---------------------------------------------------------------------------*/
@@ -515,6 +508,25 @@ static void kbase_platform_rk_remove_sysfs_files(struct device *dev)
 	device_remove_file(dev, &dev_attr_utilisation);
 }
 
+static int rk3576_gpu_set_read_margin(struct device *dev,
+				      struct rockchip_opp_info *opp_info,
+				      u32 rm)
+{
+	if (!opp_info->grf || !opp_info->volt_rm_tbl)
+		return 0;
+	if (rm == opp_info->current_rm || rm == UINT_MAX)
+		return 0;
+
+	dev_dbg(dev, "set rm to %d\n", rm);
+	regmap_write(opp_info->grf, 0x3c, 0x001c0000 | (rm << 2));
+	regmap_write(opp_info->grf, 0x40, 0x001c0000 | (rm << 2));
+	regmap_write(opp_info->grf, 0x48, 0x001c0000 | (rm << 2));
+
+	opp_info->current_rm = rm;
+
+	return 0;
+}
+
 static int rk3588_gpu_get_soc_info(struct device *dev, struct device_node *np,
 			       int *bin, int *process)
 {
@@ -626,6 +638,13 @@ static int gpu_opp_config_clks(struct device *dev, struct opp_table *opp_table,
 					&kbdev->opp_info);
 }
 
+static const struct rockchip_opp_data rk3576_gpu_opp_data = {
+	.set_read_margin = rk3576_gpu_set_read_margin,
+	.set_soc_info = rockchip_opp_set_low_length,
+	.config_regulators = gpu_opp_config_regulators,
+	.config_clks = gpu_opp_config_clks,
+};
+
 static const struct rockchip_opp_data rk3588_gpu_opp_data = {
 	.get_soc_info = rk3588_gpu_get_soc_info,
 	.set_soc_info = rk3588_gpu_set_soc_info,
@@ -639,6 +658,10 @@ static const struct rockchip_opp_data rockchip_gpu_opp_data = {
 };
 
 static const struct of_device_id rockchip_mali_of_match[] = {
+	{
+		.compatible = "rockchip,rk3576",
+		.data = (void *)&rk3576_gpu_opp_data,
+	},
 	{
 		.compatible = "rockchip,rk3588",
 		.data = (void *)&rk3588_gpu_opp_data,

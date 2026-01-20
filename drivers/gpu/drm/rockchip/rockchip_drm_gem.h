@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) Fuzhou Rockchip Electronics Co.Ltd
+ * Copyright (C) Rockchip Electronics Co., Ltd.
  * Author:Mark Yao <mark.yao@rock-chips.com>
  */
 
@@ -54,6 +54,7 @@ void rockchip_gem_free_object(struct drm_gem_object *obj);
 int rockchip_gem_dumb_create(struct drm_file *file_priv,
 			     struct drm_device *dev,
 			     struct drm_mode_create_dumb *args);
+
 /*
  * request gem object creation and buffer allocation as the size
  * that it is calculated with framebuffer information such as width,
@@ -76,4 +77,7 @@ int rockchip_gem_prime_end_cpu_access(struct drm_gem_object *obj,
 				      enum dma_data_direction dir);
 
 void rockchip_gem_get_ddr_info(void);
+
+extern const struct drm_gem_object_funcs rockchip_gem_object_funcs;
+
 #endif /* _ROCKCHIP_DRM_GEM_H */

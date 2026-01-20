@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Copyright (c) 2018 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2018 Rockchip Electronics Co., Ltd.
  * Author: Elaine Zhang<zhangqing@rock-chips.com>
  */
 
@@ -263,7 +263,7 @@ static struct rockchip_clk_branch px30_clk_branches[] __initdata = {
 	 * Clock-Architecture Diagram 1
 	 */
 
-	MUX(USB480M, "usb480m", mux_usb480m_p, CLK_SET_RATE_PARENT,
+	MUX(USB480M, "usb480m", mux_usb480m_p, CLK_SET_RATE_PARENT | CLK_IS_CRITICAL,
 			PX30_MODE_CON, 8, 2, MFLAGS),
 	FACTOR(0, "xin12m", "xin24m", 0, 1, 2),
 
@@ -1000,6 +1000,20 @@ static void __init px30_register_armclk(void)
 				     ARRAY_SIZE(px30_cpuclk_rates));
 }
 
+static int protect_clocks[] = {
+	SCLK_VOPB_PWM,
+	SCLK_PWM0,
+	SCLK_PWM1,
+	PCLK_PWM0,
+	PCLK_PWM1,
+	ACLK_VOPB,
+	ACLK_VOPL,
+	HCLK_VOPB,
+	HCLK_VOPL,
+	DCLK_VOPB,
+	DCLK_VOPL,
+};
+
 static void __init px30_clk_init(struct device_node *np)
 {
 	struct rockchip_clk_provider *ctx;
@@ -1049,6 +1063,8 @@ static void __init px30_clk_init(struct device_node *np)
 	rockchip_register_restart_notifier(ctx, PX30_GLB_SRST_FST, NULL);
 
 	rockchip_clk_of_add_provider(np, ctx);
+
+	rockchip_clk_protect(ctx, protect_clocks, ARRAY_SIZE(protect_clocks));
 }
 CLK_OF_DECLARE(px30_cru, "rockchip,px30-cru", px30_clk_init);
 

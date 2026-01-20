@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2021 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
  * Author: Elaine Zhang <zhangqing@rock-chips.com>
  */
 
@@ -79,17 +79,18 @@ static struct rockchip_pll_rate_table rk3568_pll_rates[] = {
 	RK3036_PLL_RATE(500000000, 1, 125, 6, 1, 1, 0),
 	RK3036_PLL_RATE(408000000, 1, 68, 2, 2, 1, 0),
 	RK3036_PLL_RATE(312000000, 1, 78, 6, 1, 1, 0),
-	RK3036_PLL_RATE(297000000, 1, 99, 8, 1, 1, 0),
-	RK3036_PLL_RATE(241500000, 1, 161, 8, 2, 1, 0),
+	RK3036_PLL_RATE(297000000, 1, 99, 4, 2, 1, 0),
+	RK3036_PLL_RATE(292500000, 1, 195, 4, 4, 1, 0),
+	RK3036_PLL_RATE(241500000, 1, 161, 4, 4, 1, 0),
 	RK3036_PLL_RATE(216000000, 1, 72, 4, 2, 1, 0),
 	RK3036_PLL_RATE(200000000, 1, 100, 3, 4, 1, 0),
 	RK3036_PLL_RATE(148500000, 1, 99, 4, 4, 1, 0),
-	RK3036_PLL_RATE(135000000, 1, 45, 8, 1, 1, 0),
+	RK3036_PLL_RATE(135000000, 1, 45, 4, 2, 1, 0),
 	RK3036_PLL_RATE(119000000, 3, 119, 4, 2, 1, 0),
-	RK3036_PLL_RATE(108000000, 1, 45, 8, 1, 1, 0),
+	RK3036_PLL_RATE(108000000, 1, 45, 4, 2, 1, 0),
 	RK3036_PLL_RATE(100000000, 1, 150, 6, 6, 1, 0),
 	RK3036_PLL_RATE(96000000, 1, 96, 6, 4, 1, 0),
-	RK3036_PLL_RATE(78750000, 1, 96, 6, 4, 1, 0),
+	RK3036_PLL_RATE(78750000, 4, 315, 6, 4, 1, 0),
 	RK3036_PLL_RATE(74250000, 2, 99, 4, 4, 1, 0),
 	{ /* sentinel */ },
 };
@@ -1625,6 +1626,12 @@ static void rk3568_dump_cru(void)
 }
 
 static int protect_clocks[] = {
+	CLK_PWM1,
+	PCLK_PWM1,
+	CLK_PWM2,
+	PCLK_PWM2,
+	CLK_PWM3,
+	PCLK_PWM3,
 	ACLK_VO,
 	HCLK_VO,
 	ACLK_VOP,

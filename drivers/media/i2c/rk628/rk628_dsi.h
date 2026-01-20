@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2020 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
  *
  * Author: Guochun Huang<hero.huang@rock-chips.com>
  */
@@ -166,8 +166,11 @@ struct rk628_dsi {
 	u64 lane_mbps;
 	int vid_mode;
 	int mode_flags;
+	uint8_t  id;
 };
 
 void rk628_mipi_dsi_power_on(struct rk628_dsi *dsi);
+void rk628_dsi_disable_stream(struct rk628_dsi *dsi);
+u32 rk628_dsi_get_lane_rate_mbps(struct rk628_dsi *dsi);
 
 #endif

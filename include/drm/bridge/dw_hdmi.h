@@ -164,6 +164,7 @@ struct dw_hdmi_qp_phy_ops {
 	void (*setup_hpd)(struct dw_hdmi_qp *hdmi, void *data);
 	void (*set_mode)(struct dw_hdmi_qp *dw_hdmi, void *data,
 			 u32 mode_mask, bool enable);
+	void (*set_ffe)(struct dw_hdmi_qp *dw_hdmi, void *data, u8 ffe);
 };
 
 struct dw_hdmi_property_ops {
@@ -226,6 +227,8 @@ struct dw_hdmi_plat_data {
 	/* split mode */
 	bool split_mode;
 	bool first_screen;
+	bool dual_connector_split;
+	bool left_display;
 	struct dw_hdmi_qp *left;
 	struct dw_hdmi_qp *right;
 
@@ -247,8 +250,8 @@ struct dw_hdmi_plat_data {
 	struct drm_property_blob *(*get_hdr_blob)(void *data);
 	bool (*get_color_changed)(void *data);
 	int (*get_yuv422_format)(struct drm_connector *connector,
-				 struct edid *edid);
-	int (*get_edid_dsc_info)(void *data, struct edid *edid);
+				 const struct edid *edid);
+	int (*get_edid_dsc_info)(void *data, const struct edid *edid);
 	int (*get_next_hdr_data)(void *data, struct edid *edid,
 				 struct drm_connector *connector);
 	struct dw_hdmi_link_config *(*get_link_cfg)(void *data);
@@ -264,9 +267,12 @@ struct dw_hdmi_plat_data {
 	void (*update_color_format)(struct drm_connector_state *conn_state, void *data);
 	bool (*check_hdr_color_change)(struct drm_connector_state *conn_state, void *data);
 	void (*set_prev_bus_format)(void *data, unsigned long bus_format);
-	int (*get_colorimetry)(void *data, struct edid *edid);
+	int (*get_colorimetry)(void *data, const struct edid *edid);
 	void (*set_ddc_io)(void *data, bool enable);
 	void (*set_hdcp14_mem)(void *data, bool enable);
+	struct drm_display_mode *(*get_force_timing)(void *data);
+	u32 (*get_refclk_rate)(void *data);
+	void (*force_frl_rate)(void *data, u8 rate);
 
 	/* Vendor Property support */
 	const struct dw_hdmi_property_ops *property_ops;
@@ -356,5 +362,8 @@ int dw_hdmi_qp_get_output_type_cap(struct dw_hdmi_qp *hdmi);
 void dw_hdmi_set_hpd_wake(struct dw_hdmi *hdmi);
 void dw_hdmi_cec_wake_ops_register(struct dw_hdmi *hdmi,
 				   const struct dw_hdmi_cec_wake_ops *cec_ops);
+int dw_hdmi_qp_register_audio(struct dw_hdmi_qp *hdmi);
+int dw_hdmi_qp_register_cec(struct dw_hdmi_qp *hdmi);
+int dw_hdmi_qp_register_hdcp(struct dw_hdmi_qp *hdmi);
 
 #endif /* __IMX_HDMI_H__ */

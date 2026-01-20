@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2023 Rockchip Electronics Co., Ltd
+ * Copyright (c) 2023 Rockchip Electronics Co., Ltd.
  *
  * Authors:
  *	Dingqiang Lin <jon.lin@rock-chips.com>
@@ -86,6 +86,15 @@ static const struct spinand_info xincun_spinand_table[] = {
 	SPINAND_INFO("XCSP2AAPK",
 		     SPINAND_ID(SPINAND_READID_METHOD_OPCODE_ADDR, 0xA1),
 		     NAND_MEMORG(1, 2048, 128, 64, 2048, 40, 1, 1, 1),
+		     NAND_ECCREQ(8, 512),
+		     SPINAND_INFO_OP_VARIANTS(&read_cache_variants,
+					      &write_cache_variants,
+					      &update_cache_variants),
+		     SPINAND_HAS_QE_BIT,
+		     SPINAND_ECCINFO(&xcsp2aapk_ooblayout, xcsp2aapk_ecc_get_status)),
+	SPINAND_INFO("XCSP1AAPK",
+		     SPINAND_ID(SPINAND_READID_METHOD_OPCODE_ADDR, 0x01),
+		     NAND_MEMORG(1, 2048, 128, 64, 1024, 20, 1, 1, 1),
 		     NAND_ECCREQ(8, 512),
 		     SPINAND_INFO_OP_VARIANTS(&read_cache_variants,
 					      &write_cache_variants,

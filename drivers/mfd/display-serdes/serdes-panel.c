@@ -2,7 +2,7 @@
 /*
  * serdes-panel.c  --  drm panel access for different serdes chips
  *
- * Copyright (c) 2023-2028 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2023-2028 Rockchip Electronics Co., Ltd.
  *
  * Author: luowei <lw@rock-chips.com>
  */
@@ -29,6 +29,7 @@ static int serdes_panel_prepare(struct drm_panel *panel)
 	if (serdes->chip_data->panel_ops && serdes->chip_data->panel_ops->prepare)
 		ret = serdes->chip_data->panel_ops->prepare(serdes);
 
+	serdes_set_pinctrl_sleep(serdes);
 	serdes_set_pinctrl_default(serdes);
 
 	SERDES_DBG_MFD("%s: %s\n", __func__, serdes->chip_data->name);
@@ -153,8 +154,7 @@ static int serdes_panel_parse_dt(struct serdes_panel *serdes_panel)
 	if (of_find_property(dev->of_node, "panel-size", &len)) {
 		len /= sizeof(unsigned int);
 		if (len != 2) {
-			dev_err(dev, "panel-size length is error, set 2 default\n",
-				dev->of_node);
+			dev_err(dev, "panel-size length is error, set 2 default\n");
 			len = 2;
 		}
 		ret = of_property_read_u32_array(dev->of_node, "panel-size",
@@ -168,8 +168,7 @@ static int serdes_panel_parse_dt(struct serdes_panel *serdes_panel)
 	if (of_find_property(dev->of_node, "rate-count-ssc", &len)) {
 		len /= sizeof(unsigned int);
 		if (len != 3) {
-			dev_err(dev, "rate-count-ssc length is error, set 3 default\n",
-				dev->of_node);
+			dev_err(dev, "rate-count-ssc length is error, set 3 default\n");
 			len = 3;
 		}
 		ret = of_property_read_u32_array(dev->of_node, "rate-count-ssc",
@@ -202,6 +201,7 @@ static int serdes_panel_probe(struct platform_device *pdev)
 	struct serdes *serdes = dev_get_drvdata(pdev->dev.parent);
 	struct device *dev = &pdev->dev;
 	struct serdes_panel *serdes_panel;
+	struct device_node *np = NULL;
 	int ret;
 
 	serdes_panel = devm_kzalloc(dev, sizeof(*serdes_panel), GFP_KERNEL);
@@ -221,10 +221,14 @@ static int serdes_panel_probe(struct platform_device *pdev)
 	if (ret)
 		return dev_err_probe(dev, ret, "failed to parse serdes DT\n");
 
-	serdes_panel->backlight = devm_of_find_backlight(dev);
-	if (IS_ERR(serdes_panel->backlight))
-		return dev_err_probe(dev, PTR_ERR(serdes_panel->backlight),
-				     "failed to get serdes backlight\n");
+	np = of_parse_phandle(dev->of_node, "backlight", 0);
+	if (np) {
+		serdes_panel->backlight = of_find_backlight_by_node(np);
+		of_node_put(np);
+		if (!serdes_panel->backlight)
+			return dev_err_probe(dev, -EPROBE_DEFER,
+					     "failed to get serdes backlight\n");
+	}
 
 	if (serdes_panel->parent->chip_data->connector_type) {
 		drm_panel_init(&serdes_panel->panel, dev, &serdes_panel_funcs,
@@ -244,6 +248,10 @@ static int serdes_panel_probe(struct platform_device *pdev)
 static int serdes_panel_remove(struct platform_device *pdev)
 {
 	struct serdes_panel *serdes_panel = platform_get_drvdata(pdev);
+	struct backlight_device *backlight = serdes_panel->backlight;
+
+	if (backlight)
+		put_device(&backlight->dev);
 
 	drm_panel_remove(&serdes_panel->panel);
 

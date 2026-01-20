@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2021 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
  *
  * Author: Kay Guo <kay.guo@rock-chips.com>
  */
@@ -325,7 +325,7 @@ static const struct i2c_device_id gsensor_da215s_id[] = {
 
 static struct i2c_driver gsensor_da215s_driver = {
 	.probe = gsensor_da215s_probe,
-	.remove = gsensor_da215s_remove,
+	.remove = (void *)gsensor_da215s_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = gsensor_da215s_id,
 	.driver = {

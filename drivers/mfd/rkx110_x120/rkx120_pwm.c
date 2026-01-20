@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2023 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2023 Rockchip Electronics Co., Ltd.
  *
  * Author: Damon Ding <damon.ding@rock-chips.com>
  */
@@ -395,3 +395,5 @@ static struct platform_driver rkx120_pwm_driver = {
 	.remove = rkx120_pwm_remove,
 };
 module_platform_driver(rkx120_pwm_driver);
+
+MODULE_LICENSE("GPL");

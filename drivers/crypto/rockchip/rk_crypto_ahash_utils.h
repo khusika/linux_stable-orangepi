@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-/* Copyright (c) 2022 Rockchip Electronics Co. Ltd. */
+/* Copyright (c) 2022 Rockchip Electronics Co., Ltd. */
 
 #ifndef __RK_CRYPTO_AHASH_UTILS_H__
 #define __RK_CRYPTO_AHASH_UTILS_H__
@@ -9,6 +9,8 @@
 
 #include "rk_crypto_core.h"
 #include "rk_crypto_utils.h"
+
+extern uint32_t rk_hash_reserve_block;
 
 struct rk_alg_ctx *rk_ahash_alg_ctx(struct rk_crypto_dev *rk_dev);
 

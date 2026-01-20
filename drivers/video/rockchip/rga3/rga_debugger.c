@@ -7,11 +7,10 @@
  *	Huang Lee <Putin.li@rock-chips.com>
  */
 
-#define pr_fmt(fmt) "rga_debugger: " fmt
-
 #include <linux/slab.h>
 #include <linux/delay.h>
 #include <linux/syscalls.h>
+#include <linux/kernel.h>
 #include <linux/debugfs.h>
 #include <linux/proc_fs.h>
 #include <linux/seq_file.h>
@@ -21,6 +20,7 @@
 #include "rga_drv.h"
 #include "rga_mm.h"
 #include "rga_common.h"
+#include "rga_job.h"
 
 #define RGA_DEBUGGER_ROOT_NAME "rkrga"
 
@@ -32,6 +32,7 @@ int RGA_DEBUG_TIME;
 int RGA_DEBUG_INT_FLAG;
 int RGA_DEBUG_MM;
 int RGA_DEBUG_CHECK_MODE;
+int RGA_DEBUG_INTERNAL_MODE;
 int RGA_DEBUG_NONUSE;
 int RGA_DEBUG_DEBUG_MODE;
 int RGA_DEBUG_DUMP_IMAGE;
@@ -48,6 +49,7 @@ static int rga_debug_show(struct seq_file *m, void *data)
 		 "INT [%s]\n"
 		 "MM [%s]\n"
 		 "CHECK [%s]\n"
+		 "INTL [%s]\n"
 		 "STOP [%s]\n",
 		 STR_ENABLE(RGA_DEBUG_REG),
 		 STR_ENABLE(RGA_DEBUG_MSG),
@@ -55,6 +57,7 @@ static int rga_debug_show(struct seq_file *m, void *data)
 		 STR_ENABLE(RGA_DEBUG_INT_FLAG),
 		 STR_ENABLE(RGA_DEBUG_MM),
 		 STR_ENABLE(RGA_DEBUG_CHECK_MODE),
+		 STR_ENABLE(RGA_DEBUG_INTERNAL_MODE),
 		 STR_ENABLE(RGA_DEBUG_NONUSE));
 
 	seq_puts(m, "\nhelp:\n");
@@ -64,6 +67,7 @@ static int rga_debug_show(struct seq_file *m, void *data)
 	seq_puts(m, " 'echo int > debug' to enable/disable interruppt log printing.\n");
 	seq_puts(m, " 'echo mm > debug' to enable/disable memory manager log printing.\n");
 	seq_puts(m, " 'echo check > debug' to enable/disable check mode.\n");
+	seq_puts(m, " 'echo intl > debug' to enable/disable internal mode.\n");
 	seq_puts(m, " 'echo stop > debug' to enable/disable stop using hardware\n");
 
 	return 0;
@@ -103,6 +107,14 @@ static ssize_t rga_debug_write(struct file *file, const char __user *ubuf,
 		} else {
 			RGA_DEBUG_TIME = 1;
 			pr_info("open rga test time!\n");
+		}
+	} else if (strncmp(buf, "intl", 4) == 0) {
+		if (RGA_DEBUG_INTERNAL_MODE) {
+			RGA_DEBUG_INTERNAL_MODE = 0;
+			pr_info("close rga internal flag!\n");
+		} else {
+			RGA_DEBUG_INTERNAL_MODE = 1;
+			pr_info("open rga internal flag!\n");
 		}
 	} else if (strncmp(buf, "int", 3) == 0) {
 		if (RGA_DEBUG_INT_FLAG) {
@@ -178,11 +190,12 @@ static int rga_load_show(struct seq_file *m, void *data)
 	int i;
 	int load;
 	u32 busy_time_total;
+	ktime_t now;
 
 	session_manager = rga_drvdata->session_manager;
 
 	seq_printf(m, "num of scheduler = %d\n", rga_drvdata->num_of_scheduler);
-	seq_printf(m, "================= load ==================\n");
+	seq_puts(m, "================= load ==================\n");
 
 	for (i = 0; i < rga_drvdata->num_of_scheduler; i++) {
 		scheduler = rga_drvdata->scheduler[i];
@@ -201,13 +214,20 @@ static int rga_load_show(struct seq_file *m, void *data)
 			load = 100;
 
 		seq_printf(m, "\t load = %d%%\n", load);
-		seq_printf(m, "-----------------------------------\n");
+		seq_puts(m, "-----------------------------------\n");
 	}
+
+	seq_puts(m, "=========================================\n");
+	seq_puts(m, "<session>  <status>  <tgid>  <process>\n");
 
 	mutex_lock(&session_manager->lock);
 
+	now = ktime_get();
 	idr_for_each_entry(&session_manager->ctx_id_idr, session, id)
-		seq_printf(m, "\t process %d: pid = %d, name: %s\n", id,
+		seq_printf(m, "%-9d  %-8s  %-6d  %-s\n",
+			session->id,
+			ktime_us_delta(now, session->last_active) < RGA_LOAD_ACTIVE_MAX_US ?
+				"active" : "idle",
 			session->tgid, session->pname);
 
 	mutex_unlock(&session_manager->lock);
@@ -462,6 +482,65 @@ static int rga_hardware_show(struct seq_file *m, void *data)
 	return 0;
 }
 
+static int rga_reset_show(struct seq_file *m, void *data)
+{
+	struct rga_scheduler_t *scheduler = NULL;
+	int i;
+
+	seq_puts(m, "help:\n");
+	seq_puts(m, " 'echo <core> > reset' to reset hardware.\n");
+
+	seq_puts(m, "core:\n");
+	for (i = 0; i < rga_drvdata->num_of_scheduler; i++) {
+		scheduler = rga_drvdata->scheduler[i];
+
+		seq_printf(m, "  %s core <%d>\n",
+			   dev_driver_string(scheduler->dev), scheduler->core);
+	}
+
+	return 0;
+}
+
+static ssize_t rga_reset_write(struct file *file, const char __user *ubuf,
+			       size_t len, loff_t *offp)
+{
+	char buf[14];
+	int i, ret;
+	int reset_core = 0;
+	int reset_done = false;
+	struct rga_scheduler_t *scheduler = NULL;
+
+	if (len > sizeof(buf) - 1)
+		return -EINVAL;
+	if (copy_from_user(buf, ubuf, len))
+		return -EFAULT;
+	buf[len - 1] = '\0';
+
+	ret = kstrtoint(buf, 10, &reset_core);
+	if (ret < 0 || reset_core <= 0) {
+		pr_err("invalid core! failed to reset hardware, data = %s len = %zu.\n", buf, len);
+		return -EINVAL;
+	}
+
+	for (i = 0; i < rga_drvdata->num_of_scheduler; i++) {
+		scheduler = rga_drvdata->scheduler[i];
+
+		if (scheduler->core == reset_core) {
+			reset_done = true;
+			pr_info("reset hardware core[%d]!\n", reset_core);
+
+			rga_request_scheduler_abort(scheduler);
+
+			break;
+		}
+	}
+
+	if (!reset_done)
+		pr_err("cannot find core[%d]\n", reset_core);
+
+	return len;
+}
+
 static struct rga_debugger_list rga_debugger_root_list[] = {
 	{"debug", rga_debug_show, rga_debug_write, NULL},
 	{"driver_version", rga_version_show, NULL, NULL},
@@ -474,6 +553,7 @@ static struct rga_debugger_list rga_debugger_root_list[] = {
 	{"dump_image", rga_dump_image_show, rga_dump_image_write, NULL},
 #endif
 	{"hardware", rga_hardware_show, NULL, NULL},
+	{"reset", rga_reset_show, rga_reset_write, NULL},
 };
 
 static ssize_t rga_debugger_write(struct file *file, const char __user *ubuf,
@@ -780,53 +860,6 @@ void rga_request_task_debug_info(struct seq_file *m, struct rga_req *req)
 	seq_printf(m, "\t\t alpha: rop_mode = %x\n", req->alpha_rop_mode);
 	seq_printf(m, "\t\t yuv2rgb mode is %x\n", req->yuv2rgb_mode);
 	seq_printf(m, "\t\t set core = %d, priority = %d, in_fence_fd = %d\n",
-		req->core, req->priority, req->in_fence_fd);
-}
-
-void rga_cmd_print_debug_info(struct rga_req *req)
-{
-	pr_info("render_mode = %d, bitblit_mode=%d, rotate_mode = %d\n",
-		req->render_mode, req->bsfilter_flag,
-		req->rotate_mode);
-
-	pr_info("src: y = %lx uv = %lx v = %lx aw = %d ah = %d vw = %d vh = %d\n",
-		 (unsigned long)req->src.yrgb_addr,
-		 (unsigned long)req->src.uv_addr,
-		 (unsigned long)req->src.v_addr,
-		 req->src.act_w, req->src.act_h,
-		 req->src.vir_w, req->src.vir_h);
-	pr_info("src: xoff = %d, yoff = %d, format = 0x%x, rd_mode = %d\n",
-		req->src.x_offset, req->src.y_offset,
-		 req->src.format, req->src.rd_mode);
-
-	if (req->pat.yrgb_addr != 0 || req->pat.uv_addr != 0
-		|| req->pat.v_addr != 0) {
-		pr_info("pat: y=%lx uv=%lx v=%lx aw=%d ah=%d vw=%d vh=%d\n",
-			 (unsigned long)req->pat.yrgb_addr,
-			 (unsigned long)req->pat.uv_addr,
-			 (unsigned long)req->pat.v_addr,
-			 req->pat.act_w, req->pat.act_h,
-			 req->pat.vir_w, req->pat.vir_h);
-		pr_info("pat: xoff = %d yoff = %d, format = 0x%x, rd_mode = %d\n",
-			req->pat.x_offset, req->pat.y_offset,
-			req->pat.format, req->pat.rd_mode);
-	}
-
-	pr_info("dst: y=%lx uv=%lx v=%lx aw=%d ah=%d vw=%d vh=%d\n",
-		 (unsigned long)req->dst.yrgb_addr,
-		 (unsigned long)req->dst.uv_addr,
-		 (unsigned long)req->dst.v_addr,
-		 req->dst.act_w, req->dst.act_h,
-		 req->dst.vir_w, req->dst.vir_h);
-	pr_info("dst: xoff = %d, yoff = %d, format = 0x%x, rd_mode = %d\n",
-		req->dst.x_offset, req->dst.y_offset,
-		req->dst.format, req->dst.rd_mode);
-
-	pr_info("mmu: mmu_flag=%x en=%x\n",
-		req->mmu_info.mmu_flag, req->mmu_info.mmu_en);
-	pr_info("alpha: rop_mode = %x\n", req->alpha_rop_mode);
-	pr_info("yuv2rgb mode is %x\n", req->yuv2rgb_mode);
-	pr_info("set core = %d, priority = %d, in_fence_fd = %d\n",
 		req->core, req->priority, req->in_fence_fd);
 }
 

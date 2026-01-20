@@ -4,6 +4,7 @@
  */
 
 #include <dt-bindings/clock/rk3568-cru.h>
+#include <dt-bindings/gpio/gpio.h>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/phy/phy.h>
@@ -127,7 +128,6 @@
 		nvmem-cell-names = "leakage", "pvtm", "mbist-vmin", "opp-info",
 				   "specification_serial_number", "remark_spec_serial_number";
 		rockchip,supported-hw;
-		rockchip,max-volt = <1150000>;
 		rockchip,pvtm-voltage-sel = <
 			0        84000   0
 			84001    87000   1
@@ -1136,6 +1136,7 @@
 			91001    100000  3
 		>;
 		rockchip,pvtm-ch = <0 5>;
+		rockchip,init-freq = <900000>;
 
 		/* RK3568 && RK3568M npu OPPs */
 		opp-200000000 {
@@ -1316,6 +1317,7 @@
 		compatible = "rockchip,rk3568-vpu";
 		reg = <0x0 0xfdea0000 0x0 0x800>;
 		interrupts = <GIC_SPI 139 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-names = "vdpu";
 		clocks = <&cru ACLK_VPU>, <&cru HCLK_VPU>;
 		clock-names = "aclk", "hclk";
 		iommus = <&vdpu_mmu>;
@@ -2458,6 +2460,30 @@
 		status = "disabled";
 	};
 
+	nfc: nand-controller@fe330000 {
+		compatible = "rockchip,px30-nfc";
+		reg = <0x0 0xfe330000 0x0 0x4000>;
+		interrupts = <GIC_SPI 70 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&cru HCLK_NANDC>, <&cru NCLK_NANDC>;
+		clock-names = "ahb", "nfc";
+		assigned-clocks = <&cru NCLK_NANDC>;
+		assigned-clock-rates = <150000000>;
+		status = "disabled";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		nand@0 {
+			reg = <0>;
+			label = "rk-nand";
+			nand-bus-width = <8>;
+			nand-ecc-mode = "hw";
+			nand-ecc-step-size = <1024>;
+			nand-ecc-strength = <16>;
+			nand-is-boot-medium;
+			rockchip,boot-blks = <8>;
+			rockchip,boot-ecc-strength = <16>;
+		};
+	};
+
 	nandc0: nandc@fe330000 {
 		compatible = "rockchip,rk-nandc-v9";
 		reg = <0x0 0xfe330000 0x0 0x4000>;
@@ -2590,6 +2616,7 @@
 		rockchip,grf = <&grf>;
 		rockchip,playback-only;
 		#sound-dai-cells = <0>;
+		sound-name-prefix = "I2S0";
 		status = "disabled";
 	};
 
@@ -2605,6 +2632,7 @@
 		reset-names = "tx-m", "rx-m";
 		rockchip,cru = <&cru>;
 		rockchip,grf = <&grf>;
+		i2s-lrck-gpio = <&gpio1 RK_PA5 GPIO_ACTIVE_HIGH>; /* i2s1m0_lrcktx */
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2s1m0_sclktx &i2s1m0_sclkrx
 			     &i2s1m0_lrcktx &i2s1m0_lrckrx
@@ -2613,6 +2641,7 @@
 			     &i2s1m0_sdo0   &i2s1m0_sdo1
 			     &i2s1m0_sdo2   &i2s1m0_sdo3>;
 		#sound-dai-cells = <0>;
+		sound-name-prefix = "I2S1";
 		status = "disabled";
 	};
 
@@ -2627,12 +2656,14 @@
 		rockchip,cru = <&cru>;
 		rockchip,grf = <&grf>;
 		rockchip,trcm-sync-tx-only;
+		i2s-lrck-gpio = <&gpio2 RK_PC3 GPIO_ACTIVE_HIGH>; /* i2s2m0_lrcktx */
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2s2m0_sclktx
 			     &i2s2m0_lrcktx
 			     &i2s2m0_sdi
 			     &i2s2m0_sdo>;
 		#sound-dai-cells = <0>;
+		sound-name-prefix = "I2S2";
 		status = "disabled";
 	};
 
@@ -2650,12 +2681,14 @@
 		rockchip,cru = <&cru>;
 		rockchip,grf = <&grf>;
 		rockchip,trcm-sync-tx-only;
+		i2s-lrck-gpio = <&gpio3 RK_PA4 GPIO_ACTIVE_HIGH>; /* i2s3m0_lrck */
 		#sound-dai-cells = <0>;
 		pinctrl-names = "default";
 		pinctrl-0 = <&i2s3m0_sclk
 			     &i2s3m0_lrck
 			     &i2s3m0_sdi
 			     &i2s3m0_sdo>;
+		sound-name-prefix = "I2S3";
 		status = "disabled";
 	};
 
@@ -2677,6 +2710,7 @@
 		resets = <&cru SRST_M_PDM>;
 		reset-names = "pdm-m";
 		#sound-dai-cells = <0>;
+		sound-name-prefix = "PDM";
 		status = "disabled";
 	};
 

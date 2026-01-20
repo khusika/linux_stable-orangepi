@@ -1,6 +1,6 @@
 /* drivers/input/sensors/temperature/tmp_ms5607.c
  *
- * Copyright (C) 2012-2015 ROCKCHIP.
+ * Copyright (C) 2012-2015 Rockchip Electronics Co., Ltd.
  * Author: luowei <lw@rock-chips.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -296,7 +296,7 @@ static const struct i2c_device_id temperature_ms5607_id[] = {
 
 static struct i2c_driver temperature_ms5607_driver = {
 	.probe = temperature_ms5607_probe,
-	.remove = temperature_ms5607_remove,
+	.remove = (void *)temperature_ms5607_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = temperature_ms5607_id,
 	.driver = {

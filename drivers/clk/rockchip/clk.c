@@ -3,7 +3,7 @@
  * Copyright (c) 2014 MundoReader S.L.
  * Author: Heiko Stuebner <heiko@sntech.de>
  *
- * Copyright (c) 2016 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2016 Rockchip Electronics Co., Ltd.
  * Author: Xing Zheng <zhengxing@rock-chips.com>
  *
  * based on
@@ -552,6 +552,16 @@ void rockchip_clk_register_branches(struct rockchip_clk_provider *ctx,
 				list->div_flags,
 				list->gate_offset, list->gate_shift,
 				list->gate_flags, flags, list->child,
+				&ctx->lock);
+			break;
+		case branch_fraction_divider_v2:
+			clk = clk_register_fractional_divider_v2(NULL, list->name,
+				list->parent_names[0], flags,
+				ctx->reg_base + list->muxdiv_offset,
+				list->mux_shift, list->mux_width,
+				ctx->reg_base + list->div_offset,
+				list->div_shift, list->div_width,
+				list->div_flags,
 				&ctx->lock);
 			break;
 		case branch_half_divider:

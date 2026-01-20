@@ -1,6 +1,6 @@
 /* drivers/input/sensors/lsensor/cm3218.c
  *
- * Copyright (C) 2012-2016 ROCKCHIP.
+ * Copyright (C) 2012-2016 Rockchip Electronics Co., Ltd.
  * Author: luowei <lw@rock-chips.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -397,7 +397,7 @@ static const struct i2c_device_id light_cm3218_id[] = {
 
 static struct i2c_driver light_cm3218_driver = {
 	.probe = light_cm3218_probe,
-	.remove = light_cm3218_remove,
+	.remove = (void *)light_cm3218_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = light_cm3218_id,
 	.driver = {

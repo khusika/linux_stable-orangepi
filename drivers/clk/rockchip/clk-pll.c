@@ -3,7 +3,7 @@
  * Copyright (c) 2014 MundoReader S.L.
  * Author: Heiko Stuebner <heiko@sntech.de>
  *
- * Copyright (c) 2015 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2015 Rockchip Electronics Co., Ltd.
  * Author: Xing Zheng <zhengxing@rock-chips.com>
  */
 
@@ -1409,7 +1409,10 @@ static unsigned long rockchip_rk3588_pll_recalc_rate(struct clk_hw *hw,
 	}
 	rate64 = rate64 >> cur.s;
 
-	return (unsigned long)rate64;
+	if (pll->type == pll_rk3588_ddr)
+		return (unsigned long)rate64 * 2;
+	else
+		return (unsigned long)rate64;
 }
 
 static int rockchip_rk3588_pll_set_params(struct rockchip_clk_pll *pll,
@@ -1845,6 +1848,7 @@ struct clk *rockchip_clk_register_pll(struct rockchip_clk_provider *ctx,
 #ifdef CONFIG_ROCKCHIP_PLL_RK3588
 	case pll_rk3588:
 	case pll_rk3588_core:
+	case pll_rk3588_ddr:
 		if (!pll->rate_table)
 			init.ops = &rockchip_rk3588_pll_clk_norate_ops;
 		else

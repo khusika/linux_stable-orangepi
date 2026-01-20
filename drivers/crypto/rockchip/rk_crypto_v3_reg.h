@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-/* Copyright (c) 2022 Rockchip Electronics Co. Ltd. */
+/* Copyright (c) 2022 Rockchip Electronics Co., Ltd. */
 
 #ifndef __RK_CRYPTO_V3_REG_H__
 #define __RK_CRYPTO_V3_REG_H__
@@ -19,6 +19,8 @@
 #define CRYPTO_MID_VALID		0x03e8
 #define CRYPTO_BC_MID_IS_VALID		BIT(0)
 #define CRYPTO_HASH_MID_IS_VALID	BIT(1)
+
+#define CRYPTO_ECC_MAX_CURVE_WIDE	0x0404
 
 #define CRYPTO_KEY_SEL			0x0610
 

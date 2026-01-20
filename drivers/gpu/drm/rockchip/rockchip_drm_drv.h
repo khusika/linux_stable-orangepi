@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * Copyright (C) Fuzhou Rockchip Electronics Co.Ltd
+ * Copyright (C) Rockchip Electronics Co., Ltd.
  * Author:Mark Yao <mark.yao@rock-chips.com>
  *
  * based on exynos_drm_drv.h
@@ -53,14 +53,7 @@ struct iommu_domain;
 #define VOP_OUTPUT_IF_DP1	BIT(10)
 #define VOP_OUTPUT_IF_HDMI0	BIT(11)
 #define VOP_OUTPUT_IF_HDMI1	BIT(12)
-
-#ifndef DRM_FORMAT_NV20
-#define DRM_FORMAT_NV20		fourcc_code('N', 'V', '2', '0') /* 2x1 subsampled Cr:Cb plane */
-#endif
-
-#ifndef DRM_FORMAT_NV30
-#define DRM_FORMAT_NV30		fourcc_code('N', 'V', '3', '0') /* non-subsampled Cr:Cb plane */
-#endif
+#define VOP_OUTPUT_IF_DP2	BIT(13)
 
 #define RK_IF_PROP_COLOR_DEPTH		"color_depth"
 #define RK_IF_PROP_COLOR_FORMAT		"color_format"
@@ -74,7 +67,9 @@ enum rockchip_drm_debug_category {
 	VOP_DEBUG_WB		= BIT(2),
 	VOP_DEBUG_CFG_DONE	= BIT(3),
 	VOP_DEBUG_CLK		= BIT(4),
+	VOP_DEBUG_IOMMU_MAP     = BIT(5),
 	VOP_DEBUG_VSYNC		= BIT(7),
+	VOP_DEBUG_PIXEL_SHIFT	= BIT(8),
 };
 
 enum rk_if_color_depth {
@@ -119,8 +114,9 @@ enum rockchip_drm_split_area {
 
 enum rockchip_drm_vop_aclk_mode {
 	ROCKCHIP_VOP_ACLK_NORMAL_MODE = 0,
-	ROCKCHIP_VOP_ACLK_ADVANCED_MODE = 1,
-	ROCKCHIP_VOP_ACLK_MAX_MODE = 2,
+	ROCKCHIP_VOP_ACLK_RESET_MODE,
+	ROCKCHIP_VOP_ACLK_ADVANCED_MODE,
+	ROCKCHIP_VOP_ACLK_MAX_MODE,
 };
 
 struct rockchip_drm_sub_dev {
@@ -165,16 +161,12 @@ struct rockchip_crtc {
 #if defined(CONFIG_ROCKCHIP_DRM_DEBUG)
 	/**
 	 * @vop_dump_status the status of vop dump control
-	 * @vop_dump_list_head the list head of vop dump list
-	 * @vop_dump_list_init_flag init once
 	 * @vop_dump_times control the dump times
-	 * @frme_count the frame of dump buf
+	 * @vop_dump_frame_count the frame of dump buf
 	 */
 	enum vop_dump_status vop_dump_status;
-	struct list_head vop_dump_list_head;
-	bool vop_dump_list_init_flag;
 	int vop_dump_times;
-	int frame_count;
+	int vop_dump_frame_count;
 #endif
 };
 
@@ -230,6 +222,28 @@ struct post_csc {
 	u16 csc_enable;
 };
 
+#define ROCKCHIP_VOP_DCI_LUT_LENGTH 5632
+
+struct dci_data {
+	u32 plat; /* Reserved to distinguish later platform */
+	u8 dci_lut_data[ROCKCHIP_VOP_DCI_LUT_LENGTH];
+	u32 blk_size_h_ratio;
+	u32 blk_size_v_ratio;
+	u32 dci_act_w;
+	u32 dci_act_h;
+	u32 adj0;
+	u32 adj1;
+	u32 uv_adj;
+	u32 dci_en;
+};
+
+#define SHARP_REG_LENGTH 692
+
+struct post_sharp {
+	u32 plat; /* Reserved to distinguish later platform */
+	u32 regs[SHARP_REG_LENGTH / 4];
+};
+
 struct rockchip_crtc_state {
 	struct drm_crtc_state base;
 	int vp_id;
@@ -255,6 +269,11 @@ struct rockchip_crtc_state {
 	 * otherwise use hardware te
 	 */
 	bool soft_te;
+	/**
+	 * sharp and post scaler share line buffer,
+	 * So they are mutually exclusive.
+	 */
+	bool sharp_en;
 
 	struct drm_tv_connector_state *tv_state;
 	int left_margin;
@@ -281,7 +300,8 @@ struct rockchip_crtc_state {
 	int post_y2r_en;
 	int post_csc_mode;
 	int bcsh_en;
-	int color_space;
+	enum drm_color_encoding color_encoding;
+	enum drm_color_range color_range;
 	int eotf;
 	u32 background;
 	u32 line_flag;
@@ -302,11 +322,14 @@ struct rockchip_crtc_state {
 	struct drm_property_blob *hdr_ext_data;
 	struct drm_property_blob *acm_lut_data;
 	struct drm_property_blob *post_csc_data;
+	struct drm_property_blob *post_sharp_data;
 	struct drm_property_blob *cubic_lut_data;
 
 	int request_refresh_rate;
 	int max_refresh_rate;
 	int min_refresh_rate;
+	int shift_x;
+	int shift_y;
 };
 
 #define to_rockchip_crtc_state(s) \
@@ -316,6 +339,15 @@ struct rockchip_drm_vcnt {
 	struct drm_pending_vblank_event *event;
 	__u32 sequence;
 	int pipe;
+};
+
+struct rockchip_drm_error_event {
+	wait_queue_head_t wait;
+	struct task_struct *thread;
+	struct list_head event_list;
+	struct drm_event_vblank event;
+	bool error_state;
+	spinlock_t lock;
 };
 
 struct rockchip_logo {
@@ -334,6 +366,11 @@ struct rockchip_mcu_timing {
 	int mcu_rw_pst;
 	int mcu_rw_pend;
 	int mcu_hold_mode;
+};
+
+struct vop_mcu_bypass_cfg {
+	const struct rockchip_mcu_timing timing;
+	unsigned long dclk_rate;
 };
 
 struct loader_cubic_lut {
@@ -455,10 +492,13 @@ struct rockchip_crtc_funcs {
 			    struct dmcfreq_vop_info *vop_bw_info);
 	void (*cancel_pending_vblank)(struct drm_crtc *crtc,
 				      struct drm_file *file_priv);
+	int (*sysfs_init)(struct device *dev, struct drm_crtc *crtc);
+	int (*sysfs_fini)(struct device *dev, struct drm_crtc *crtc);
 	int (*debugfs_init)(struct drm_minor *minor, struct drm_crtc *crtc);
 	int (*debugfs_dump)(struct drm_crtc *crtc, struct seq_file *s);
 	void (*regs_dump)(struct drm_crtc *crtc, struct seq_file *s);
 	void (*active_regs_dump)(struct drm_crtc *crtc, struct seq_file *s);
+	int (*regs_write)(struct drm_crtc *crtc, phys_addr_t address, u32 val);
 	enum drm_mode_status (*mode_valid)(struct drm_crtc *crtc,
 					   const struct drm_display_mode *mode,
 					   int output_type);
@@ -467,8 +507,12 @@ struct rockchip_crtc_funcs {
 	void (*te_handler)(struct drm_crtc *crtc);
 	int (*wait_vact_end)(struct drm_crtc *crtc, unsigned int mstimeout);
 	void (*crtc_standby)(struct drm_crtc *crtc, bool standby);
+	void (*crtc_output_post_enable)(struct drm_crtc *crtc, int intf);
+	void (*crtc_output_pre_disable)(struct drm_crtc *crtc, int intf);
 	int (*crtc_set_color_bar)(struct drm_crtc *crtc, enum rockchip_color_bar_mode mode);
-	int (*set_aclk)(struct drm_crtc *crtc, enum rockchip_drm_vop_aclk_mode aclk_mode);
+	int (*set_aclk)(struct drm_crtc *crtc, enum rockchip_drm_vop_aclk_mode aclk_mode, struct dmcfreq_vop_info *vop_bw_info);
+	int (*get_crc)(struct drm_crtc *crtc);
+	void (*iommu_fault_handler)(struct drm_crtc *crtc, struct iommu_domain *iommu);
 };
 
 struct rockchip_dclk_pll {
@@ -507,7 +551,6 @@ struct rockchip_drm_private {
 
 	/* private plane prop */
 	struct drm_property *eotf_prop;
-	struct drm_property *color_space_prop;
 	struct drm_property *async_commit_prop;
 	struct drm_property *share_id_prop;
 
@@ -516,6 +559,8 @@ struct rockchip_drm_private {
 	struct drm_property *split_area_prop;
 
 	const struct rockchip_crtc_funcs *crtc_funcs[ROCKCHIP_MAX_CRTC];
+
+	uint64_t iommu_fault_count;
 
 	struct rockchip_dclk_pll default_pll;
 	struct rockchip_dclk_pll hdmi_pll;
@@ -527,6 +572,8 @@ struct rockchip_drm_private {
 	struct mutex ovl_lock;
 
 	struct rockchip_drm_vcnt vcnt[ROCKCHIP_MAX_CRTC];
+	struct rockchip_drm_error_event error_event;
+
 	/**
 	 * @loader_protect
 	 * ignore restore_fbdev_mode_atomic when in logo on state
@@ -538,6 +585,8 @@ struct rockchip_drm_private {
 	int aclk_adjust_frame_num;
 	struct drm_mm_node *clut_reserved_node;
 	struct loader_cubic_lut cubic_lut[ROCKCHIP_MAX_CRTC];
+
+	struct device *sysfs_devs[ROCKCHIP_MAX_CRTC];
 };
 
 struct rockchip_encoder {
@@ -558,6 +607,8 @@ int rockchip_register_crtc_funcs(struct drm_crtc *crtc,
 				 const struct rockchip_crtc_funcs *crtc_funcs);
 void rockchip_unregister_crtc_funcs(struct drm_crtc *crtc);
 void rockchip_drm_crtc_standby(struct drm_crtc *crtc, bool standby);
+void rockchip_drm_crtc_output_post_enable(struct drm_crtc *crtc, int intf);
+void rockchip_drm_crtc_output_pre_disable(struct drm_crtc *crtc, int intf);
 
 void rockchip_drm_register_sub_dev(struct rockchip_drm_sub_dev *sub_dev);
 void rockchip_drm_unregister_sub_dev(struct rockchip_drm_sub_dev *sub_dev);
@@ -566,7 +617,8 @@ int rockchip_drm_add_modes_noedid(struct drm_connector *connector);
 void rockchip_drm_te_handle(struct drm_crtc *crtc);
 void drm_mode_convert_to_split_mode(struct drm_display_mode *mode);
 void drm_mode_convert_to_origin_mode(struct drm_display_mode *mode);
-u32 rockchip_drm_get_dclk_by_width(int width);
+const char *rockchip_drm_get_color_encoding_name(enum drm_color_encoding encoding);
+const char *rockchip_drm_get_color_range_name(enum drm_color_range range);
 #if IS_REACHABLE(CONFIG_DRM_ROCKCHIP)
 int rockchip_drm_get_sub_dev_type(void);
 u32 rockchip_drm_get_scan_line_time_ns(void);
@@ -588,7 +640,7 @@ uint32_t rockchip_drm_of_find_possible_crtcs(struct drm_device *dev,
 uint32_t rockchip_drm_get_bpp(const struct drm_format_info *info);
 uint32_t rockchip_drm_get_cycles_per_pixel(uint32_t bus_format);
 int rockchip_drm_get_yuv422_format(struct drm_connector *connector,
-				   struct edid *edid);
+				   const struct edid *edid);
 int rockchip_drm_parse_cea_ext(struct rockchip_drm_dsc_cap *dsc_cap,
 			       u8 *max_frl_rate_per_lane, u8 *max_lanes, u8 *add_func,
 			       const struct edid *edid);
@@ -598,10 +650,21 @@ int rockchip_drm_parse_colorimetry_data_block(u8 *colorimetry, const struct edid
 struct dma_buf *rockchip_drm_gem_prime_export(struct drm_gem_object *obj, int flags);
 long rockchip_drm_dclk_round_rate(u32 version, struct clk *dclk, unsigned long rate);
 int rockchip_drm_dclk_set_rate(u32 version, struct clk *dclk, unsigned long rate);
+bool rockchip_drm_is_afbc(struct drm_plane *plane, u64 modifier);
+bool rockchip_drm_is_rfbc(struct drm_plane *plane, u64 modifier);
+const char *rockchip_drm_modifier_to_string(uint64_t modifier);
+void rockchip_drm_reset_iommu_fault_handler_rate_limit(void);
+void rockchip_drm_send_error_event(struct rockchip_drm_private *priv,
+				   enum rockchip_drm_error_event_type event);
 
 __printf(3, 4)
-void rockchip_drm_dbg(const struct device *dev, enum rockchip_drm_debug_category category,
+void rockchip_drm_dbg(const struct device *dev,
+		      enum rockchip_drm_debug_category category,
 		      const char *format, ...);
+__printf(3, 4)
+void rockchip_drm_dbg_thread_info(const struct device *dev,
+				  enum rockchip_drm_debug_category category,
+				  const char *format, ...);
 
 extern struct platform_driver cdn_dp_driver;
 extern struct platform_driver dw_hdmi_rockchip_pltfm_driver;

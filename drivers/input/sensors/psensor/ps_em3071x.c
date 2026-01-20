@@ -2,7 +2,7 @@
 /*
  * kernel/drivers/input/sensors/psensor/ps_em3071x.c
  *
- * Copyright (C) 2020 Rockchip Co.,Ltd.
+ * Copyright (C) 2020 Rockchip Electronics Co., Ltd.
  * Author: Wang Jie <dave.wang@rock-chips.com>
  */
 
@@ -262,7 +262,7 @@ static const struct i2c_device_id proximity_em3071x_id[] = {
 
 static struct i2c_driver proximity_em3071x_driver = {
 	.probe = proximity_em3071x_probe,
-	.remove = proximity_em3071x_remove,
+	.remove = (void *)proximity_em3071x_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = proximity_em3071x_id,
 	.driver = {

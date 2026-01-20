@@ -2,7 +2,7 @@
 /*
  * Rockchip DLP (Digital Loopback) driver
  *
- * Copyright (C) 2022 Rockchip Electronics Co., Ltd
+ * Copyright (C) 2022 Rockchip Electronics Co., Ltd.
  * Author: Sugar Zhang <sugar.zhang@rock-chips.com>
  *
  */
@@ -81,7 +81,7 @@ static inline struct dlp *soc_component_to_dlp(struct snd_soc_component *p)
 static inline struct dlp_runtime_data *substream_to_drd(
 	const struct snd_pcm_substream *substream)
 {
-	if (!substream->runtime)
+	if (!substream || !substream->runtime)
 		return NULL;
 
 	return substream->runtime->private_data;

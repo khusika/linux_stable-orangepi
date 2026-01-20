@@ -36,6 +36,7 @@
 #define HAS_VEPU22	IS_ENABLED(CONFIG_ROCKCHIP_MPP_VEPU22)
 #define HAS_IEP2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_IEP2)
 #define HAS_JPGDEC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_JPGDEC)
+#define HAS_JPGENC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_JPGENC)
 #define HAS_RKVDEC2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVDEC2)
 #define HAS_RKVENC2	IS_ENABLED(CONFIG_ROCKCHIP_MPP_RKVENC2)
 #define HAS_AV1DEC	IS_ENABLED(CONFIG_ROCKCHIP_MPP_AV1DEC)
@@ -308,6 +309,39 @@ static int mpp_show_support_device(struct seq_file *file, void *v)
 	return 0;
 }
 
+static int mpp_show_device_load(struct seq_file *file, void *v)
+{
+	u32 i, j;
+	struct mpp_service *srv = file->private;
+
+	if (!srv->load_interval) {
+		seq_puts(file, "please set load_interval first!!!\n");
+		seq_puts(file, "e.g. set 1000ms to load_interval:\n");
+		seq_puts(file, "echo 1000 > /proc/mpp_service/load_interval\n");
+		return 0;
+	}
+
+	for (i = 0; i < MPP_DEVICE_BUTT; i++) {
+		struct mpp_taskqueue *queue = srv->task_queues[i];
+
+		if (!queue)
+			continue;
+
+		for (j = 0; j < MPP_MAX_CORE_NUM; j++) {
+			struct mpp_dev *mpp = queue->cores[j];
+
+			if (!mpp)
+				continue;
+			seq_printf(file, "%-25s load: %3d.%02d%% utilization: %3d.%02d%%\n",
+				   dev_name(mpp->dev),
+				   mpp->load_info.load, mpp->load_info.load_frac,
+				   mpp->load_info.utilization, mpp->load_info.utilization_frac);
+		}
+	}
+
+	return 0;
+}
+
 static int mpp_procfs_init(struct mpp_service *srv)
 {
 	srv->procfs = proc_mkdir(MPP_SERVICE_NAME, NULL);
@@ -326,7 +360,12 @@ static int mpp_procfs_init(struct mpp_service *srv)
 	/* show support devices */
 	proc_create_single_data("supports-device", 0444,
 				srv->procfs, mpp_show_support_device, srv);
+	srv->timing_en = 1;
 	mpp_procfs_create_u32("timing_en", 0644, srv->procfs, &srv->timing_en);
+	/* show per device load info */
+	proc_create_single_data("load", 0444, srv->procfs, mpp_show_device_load, srv);
+	srv->load_interval = 0;
+	mpp_procfs_create_u32("load_interval", 0644, srv->procfs, &srv->load_interval);
 
 	return 0;
 }
@@ -379,7 +418,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 
 		kthread_init_worker(&queue->worker);
 		queue->kworker_task = kthread_run(kthread_worker_fn, &queue->worker,
-						  "queue_work%d", i);
+						  "mpp_worker_%d", i);
 		srv->task_queues[i] = queue;
 	}
 
@@ -424,6 +463,7 @@ static int mpp_service_probe(struct platform_device *pdev)
 	MPP_REGISTER_DRIVER(srv, HAS_VEPU22, VEPU22, vepu22);
 	MPP_REGISTER_DRIVER(srv, HAS_IEP2, IEP2, iep2);
 	MPP_REGISTER_DRIVER(srv, HAS_JPGDEC, JPGDEC, jpgdec);
+	MPP_REGISTER_DRIVER(srv, HAS_JPGENC, JPGENC, jpgenc);
 	MPP_REGISTER_DRIVER(srv, HAS_RKVDEC2, RKVDEC2, rkvdec2);
 	MPP_REGISTER_DRIVER(srv, HAS_RKVENC2, RKVENC2, rkvenc2);
 	MPP_REGISTER_DRIVER(srv, HAS_AV1DEC, AV1DEC, av1dec);

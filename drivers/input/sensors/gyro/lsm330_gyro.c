@@ -1,7 +1,7 @@
 /*
  * kernel/drivers/input/sensors/accel/lsm330_gyro.c
  *
- * Copyright (C) 2012-2016 Rockchip Co.,Ltd.
+ * Copyright (C) 2012-2016 Rockchip Electronics Co., Ltd.
  * Author: Bin Yang <yangbin@rock-chips.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -244,7 +244,7 @@ static const struct i2c_device_id gyro_lsm330_id[] = {
 
 static struct i2c_driver gyro_lsm330_driver = {
 	.probe = gyro_lsm330_probe,
-	.remove = gyro_lsm330_remove,
+	.remove = (void *)gyro_lsm330_remove,
 	.shutdown = sensor_shutdown,
 	.id_table = gyro_lsm330_id,
 	.driver = {

@@ -2,7 +2,7 @@
 /*
  * Crypto acceleration support for Rockchip crypto
  *
- * Copyright (c) 2021, Rockchip Electronics Co., Ltd
+ * Copyright (c) 2021, Rockchip Electronics Co., Ltd.
  *
  * Author: Lin Jinhan <troy.lin@rock-chips.com>
  *
@@ -709,6 +709,9 @@ static int crypto_rsa_run(struct fcrypt *fcr, struct kernel_crypt_rsa_op *krop)
 
 	crypto_init_wait(&wait);
 	akcipher_request_set_crypt(req, &src, &dst, rop->in_len, out_len_max);
+
+	akcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				      crypto_req_done, &wait);
 
 	switch (rop->op) {
 	case AOP_ENCRYPT:

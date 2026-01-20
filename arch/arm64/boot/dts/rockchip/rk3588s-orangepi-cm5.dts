@@ -186,6 +186,10 @@
 	};
 };
 
+&av1d {
+	status = "okay";
+};
+
 &av1d_mmu {
 	status = "okay";
 };
@@ -418,7 +422,7 @@
 };
 
 &display_subsystem {
-	clocks = <&hdptxphy_hdmi_clk0>;
+	clocks = <&hdptxphy_hdmi0>;
 	clock-names = "hdmi0_phy_pll";
 };
 

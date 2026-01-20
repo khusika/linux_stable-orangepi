@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 
-/* Copyright (c) 2022 Rockchip Electronics Co. Ltd. */
+/* Copyright (c) 2022 Rockchip Electronics Co., Ltd. */
 
 #ifndef __RK_CRYPTO_V3_H__
 #define __RK_CRYPTO_V3_H__
@@ -72,6 +72,10 @@ extern struct rk_crypto_algt rk_v3_hmac_sm3;
 
 /* Shared v2 version implementation */
 extern struct rk_crypto_algt rk_v2_asym_rsa;
+extern struct rk_crypto_algt rk_asym_ecc_p192;
+extern struct rk_crypto_algt rk_asym_ecc_p224;
+extern struct rk_crypto_algt rk_asym_ecc_p256;
+extern struct rk_crypto_algt rk_asym_sm2;
 
 int rk_hw_crypto_v3_init(struct device *dev, void *hw_info);
 void rk_hw_crypto_v3_deinit(struct device *dev, void *hw_info);

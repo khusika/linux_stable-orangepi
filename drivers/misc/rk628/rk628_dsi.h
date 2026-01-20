@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * Copyright (c) 2020 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2020 Rockchip Electronics Co., Ltd.
  *
  * Author: Guochun Huang <hero.huang@rock-chips.com>
  */
@@ -43,6 +43,8 @@
 #define DSI_MODE_CFG			0x0034
 #define CMD_VIDEO_MODE(x)		UPDATE(x,  0,  0)
 #define DSI_VID_MODE_CFG		0x0038
+#define VPG_ORIENTATION			BIT(24)
+#define VPG_MODE			BIT(20)
 #define VPG_EN				BIT(16)
 #define LP_CMD_EN			BIT(15)
 #define FRAME_BTA_ACK_EN		BIT(14)
@@ -155,4 +157,5 @@ int rk628_dsi_parse(struct rk628 *rk628, struct device_node *dsi_np);
 void rk628_mipi_dsi_pre_enable(struct rk628 *rk628);
 void rk628_mipi_dsi_enable(struct rk628 *rk628);
 void rk628_dsi_disable(struct rk628 *rk628);
+void rk628_mipi_dsi_create_debugfs_file(struct rk628 *rk628);
 #endif

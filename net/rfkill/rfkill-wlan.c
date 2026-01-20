@@ -434,7 +434,7 @@ static int get_wifi_addr_vendor(unsigned char *addr)
 		LOG("%s: rk_vendor_read wifi mac address failed (%d)\n",
 		    __func__, ret);
 #ifdef CONFIG_WIFI_GENERATE_RANDOM_MAC_ADDR
-		random_ether_addr(addr);
+		eth_random_addr(addr);
 		LOG("%s: generate random wifi mac address: "
 		    "%02x:%02x:%02x:%02x:%02x:%02x\n",
 		    __func__, addr[0], addr[1], addr[2], addr[3], addr[4],
@@ -694,11 +694,11 @@ static void wlan_late_resume(struct early_suspend *h)
 	return;
 }
 
-struct early_suspend wlan_early_suspend {
-	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 20;
-	.suspend = wlan_early_suspend;
-	.resume = wlan_late_resume;
-}
+static struct early_suspend wlan_early_suspend_handler = {
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN - 20,
+	.suspend = wlan_early_suspend,
+	.resume = wlan_late_resume,
+};
 #endif
 
 static void
@@ -888,7 +888,7 @@ static int rfkill_wlan_probe(struct platform_device *pdev)
 #endif
 
 #if defined(CONFIG_HAS_EARLYSUSPEND)
-	register_early_suspend(wlan_early_suspend);
+	register_early_suspend(&wlan_early_suspend_handler);
 #endif
 
 	fb_register_client(&rfkill_wlan_fb_notifier);
@@ -916,6 +916,10 @@ static int rfkill_wlan_remove(struct platform_device *pdev)
 	wake_lock_destroy(&rfkill->wlan_irq_wl);
 
 	fb_unregister_client(&rfkill_wlan_fb_notifier);
+
+#if defined(CONFIG_HAS_EARLYSUSPEND)
+	unregister_early_suspend(&wlan_early_suspend_handler);
+#endif
 
 	if (gpio_is_valid(rfkill->pdata->power_n.io))
 		gpio_free(rfkill->pdata->power_n.io);

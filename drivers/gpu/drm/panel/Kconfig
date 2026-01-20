@@ -91,13 +91,19 @@ config DRM_PANEL_SIMPLE
 	tristate "support for simple panels (other than eDP ones)"
 	depends on OF
 	depends on BACKLIGHT_CLASS_DEVICE
-	depends on PM
 	select VIDEOMODE_HELPERS
 	help
 	  DRM panel driver for dumb non-eDP panels that need at most a regulator
 	  and a GPIO to be powered up. Optionally a backlight can be attached so
 	  that it can be automatically turned off when the panel goes into a
 	  low power state.
+
+config DRM_PANEL_SIMPLE_OF_ONLY
+	bool "compatible is simple-panel or panel-dpi or simple-panel-dsi only"
+	depends on DRM_PANEL_SIMPLE
+	depends on ROCKCHIP_MINI_KERNEL
+	help
+	  Only support panels which all parameters from device tree.
 
 config DRM_PANEL_EDP
 	tristate "support for simple Embedded DisplayPort panels"

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 /*
- * Copyright (c) 2021 Rockchip Electronics Co. Ltd.
+ * Copyright (c) 2021 Rockchip Electronics Co., Ltd.
  *
  * Author: Dingxian Wen <shawn.wen@rock-chips.com>
  * V0.0X01.0X00 first version.
@@ -737,12 +737,6 @@ static int lt6911uxc_s_dv_timings(struct v4l2_subdev *sd,
 	if (v4l2_match_dv_timings(&lt6911uxc->timings, timings, 0, false)) {
 		v4l2_dbg(1, debug, sd, "%s: no change\n", __func__);
 		return 0;
-	}
-
-	if (!v4l2_valid_dv_timings(timings,
-				&lt6911uxc_timings_cap, NULL, NULL)) {
-		v4l2_dbg(1, debug, sd, "%s: timings out of range\n", __func__);
-		return -ERANGE;
 	}
 
 	lt6911uxc->timings = *timings;

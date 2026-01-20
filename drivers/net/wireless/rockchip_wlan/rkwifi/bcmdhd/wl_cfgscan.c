@@ -1,26 +1,7 @@
 /*
  * Linux cfg80211 driver scan related code
  *
- * Copyright (C) 2024 Synaptics Incorporated. All rights reserved.
- *
- * This software is licensed to you under the terms of the
- * GNU General Public License version 2 (the "GPL") with Broadcom special exception.
- *
- * INFORMATION CONTAINED IN THIS DOCUMENT IS PROVIDED "AS-IS," AND SYNAPTICS
- * EXPRESSLY DISCLAIMS ALL EXPRESS AND IMPLIED WARRANTIES, INCLUDING ANY
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE,
- * AND ANY WARRANTIES OF NON-INFRINGEMENT OF ANY INTELLECTUAL PROPERTY RIGHTS.
- * IN NO EVENT SHALL SYNAPTICS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING OUT OF OR IN CONNECTION
- * WITH THE USE OF THE INFORMATION CONTAINED IN THIS DOCUMENT, HOWEVER CAUSED
- * AND BASED ON ANY THEORY OF LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
- * NEGLIGENCE OR OTHER TORTIOUS ACTION, AND EVEN IF SYNAPTICS WAS ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE. IF A TRIBUNAL OF COMPETENT JURISDICTION
- * DOES NOT PERMIT THE DISCLAIMER OF DIRECT DAMAGES OR ANY OTHER DAMAGES,
- * SYNAPTICS' TOTAL CUMULATIVE LIABILITY TO ANY PARTY SHALL NOT
- * EXCEED ONE HUNDRED U.S. DOLLARS
- *
- * Copyright (C) 2024, Broadcom.
+ * Copyright (C) 2022, Broadcom.
  *
  *      Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
@@ -742,12 +723,11 @@ wl_cfg80211_clear_iw_ie(struct bcm_cfg80211 *cfg, struct net_device *ndev, s32 b
 	WL_DBG(("clear interworking IE\n"));
 
 	ie_setbuf = (ie_setbuf_t *)buf;
-	bzero(ie_setbuf, IE_SET_ONE_BUF_LEN);
+	bzero(ie_setbuf, sizeof(ie_setbuf_t));
 
 	ie_setbuf->ie_buffer.iecount = htod32(1);
 	ie_setbuf->ie_buffer.ie_list[0].ie_data.id = DOT11_MNG_INTERWORKING_ID;
 	ie_setbuf->ie_buffer.ie_list[0].ie_data.len = 0;
-
 	return wldev_iovar_setbuf_bsscfg(ndev, "ie", ie_setbuf, IE_SET_ONE_BUF_LEN,
 		cfg->ioctl_buf, WLC_IOCTL_MAXLEN, bssidx, &cfg->ioctl_buf_sync);
 }
@@ -782,7 +762,7 @@ wl_cfg80211_add_iw_ie(struct bcm_cfg80211 *cfg, struct net_device *ndev, s32 bss
 		return BCME_BADARG;
 	}
 
-	buf_len = IE_SET_ONE_BUF_LEN + data_len - 1;
+	buf_len = sizeof(ie_setbuf_t) + data_len - 1;
 
 	ie_getbufp.id = DOT11_MNG_INTERWORKING_ID;
 	if (wldev_iovar_getbuf_bsscfg(ndev, "ie", (void *)&ie_getbufp,
@@ -1814,6 +1794,7 @@ wl_cfgscan_populate_scan_channels(struct bcm_cfg80211 *cfg,
 	int is_printed = false;
 #endif /* P2P_SKIP_DFS */
 	u32 support_chanspec = 0;
+	u32 channel;
 
 	if (!channels || !n_channels) {
 		/* Do full channel scan */
@@ -1824,6 +1805,7 @@ wl_cfgscan_populate_scan_channels(struct bcm_cfg80211 *cfg,
 	is_p2p_scan = p2p_is_on(cfg) && p2p_scan(cfg);
 
 	for (i = 0; i < n_channels; i++) {
+		channel = ieee80211_frequency_to_channel(channels[i]->center_freq);
 		if (skip_dfs && (IS_RADAR_CHAN(channels[i]->flags))) {
 			WL_DBG(("Skipping radar channel. freq:%d\n",
 				(channels[i]->center_freq)));
@@ -4014,7 +3996,7 @@ int wl_cfg80211_scan_mac_config(struct net_device *dev, uint8 *rand_mac, uint8 *
 		/* Disable scan mac for clean-up */
 		return err;
 	}
-	WL_INFORM_MEM(("scanmac configured\n"));
+	WL_INFORM_MEM(("scanmac configured"));
 	cfg->scanmac_config = true;
 
 	return err;
@@ -4332,11 +4314,16 @@ wl_cfgscan_sched_scan_stop_work(struct work_struct *work)
 	cfg = container_of(dw, struct bcm_cfg80211, sched_scan_stop_work);
 	GCC_DIAGNOSTIC_POP();
 
-	/* Hold rtnl_lock -> scan_sync lock to be in sync with cfg80211_ops path */
-	rtnl_lock();
-	mutex_lock(&cfg->scan_sync);
 	if (cfg->sched_scan_req) {
+	/* Hold rtnl_lock -> scan_sync lock to be in sync with cfg80211_ops path */
 		wiphy = cfg->sched_scan_req->wiphy;
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
+		wiphy_lock(wiphy);
+#else
+		rtnl_lock();
+#endif /* KERNEL > 5.12.0 */
+		mutex_lock(&cfg->scan_sync);
+
 		/* Indicate sched scan stopped so that user space
 		 * can do a full scan incase found match is empty.
 		 */
@@ -4348,9 +4335,13 @@ wl_cfgscan_sched_scan_stop_work(struct work_struct *work)
 		cfg80211_sched_scan_stopped_rtnl(wiphy);
 #endif /* KERNEL > 5.12.0 */
 		cfg->sched_scan_req = NULL;
+		mutex_unlock(&cfg->scan_sync);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 12, 0))
+		wiphy_unlock(wiphy);
+#else
+		rtnl_unlock();
+#endif /* KERNEL > 5.12.0 */
 	}
-	mutex_unlock(&cfg->scan_sync);
-	rtnl_unlock();
 }
 #endif /* WL_SCHED_SCAN */
 

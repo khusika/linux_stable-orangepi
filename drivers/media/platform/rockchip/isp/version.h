@@ -483,6 +483,87 @@
  * 20.more time to wait isp end
  * 21.add mode for rv1106 suspend without rtt
  * 22.fix is_on false cause pm isp die
+ *
+ * v2.5.0 (AIQ v5.5.0)
+ * 1.wrap mode first done don't send event
+ * 2.fix 4k and dual_sensor pm oneframe error
+ * 3.isp32 using ktime_get_boottime_ns
+ * 4.fix wait timeout with thunderboot
+ * 5.add buf cnt info to procfs
+ * 6.sync irq_ends
+ * 7.fix resume mi no enable
+ * 8.fix isp32 lost buf
+ * 9.frame start to check and config next buf
+ * 10.fix isp stop to enable isp ctrl
+ * 11.fix isp32 buf no update to hw
+ * 12.add rkisp_buf_dbg
+ * 13.fix isp stop to read stats buf
+ * 14.support multiple wrap
+ * 15.dvbm buf support from rockit
+ * 16.add RKISP_CMD_SET_TB_HEAD_V32 API
+ * 17.add ioctl to get bay3d buf
+ * 18.fix isp32 lite frame buffer data read
+ * 19.support 8k for isp32 lite
+ *
+ * v2.6.0 (AIQ v6.6.1)
+ * 1.add isp39
+ * 2.aiisp for isp39
+ * 3.isp39 support unite mode
+ * 4.add rk3576 config
+ * 5.fix isp39 params config
+ * 6.fix isp39 output error
+ * 7.fix waiting for isp end
+ * 8.fix isp39
+ * 9.dpcc border for isp39
+ * 10.aiisp two buf
+ * 11.default readback mode for multi sensor
+ * 12.skip s_stream of sensor while connect to vicap sditf
+ * 13.fix isp39 unite mode
+ * 14.update gic and check params for isp39
+ *
+ * v2.6.1
+ * 1.fix dmarx deadlock
+ * 2.fix dmatx config
+ * 3.fix multi sensor for isp39
+ * 4.fix cac repeat enable
+ * 5.skip mbus if link to vicap
+ * 6.fix ldcv irq handle
+ * 7.fix cac for multi sensor
+ * 8.add stats log for isp21 and isp30
+ * 9.fix isp39 resume
+ * 10.fix aiisp config
+ * 11.enable bay3d FST_FRAME if change bypass
+ * 12.fix awb resume error
+ * 13.fix memory leak
+ * 14.config bls1 and bls2 black level
+ * 15.frame buf default to ddr for isp39 multi sensor
+ * 16.fix isp39 params
+ * 17.isp39 add api to get params
+ * 18.fix isp39 sensor mode config
+ * 19.clear isp force update bit
+ * 20.isp39 aiisp offline mode default
+ * 21.vpss: online support reset
+ *
+ * v2.9.0 (AIQ v6.9.0)
+ * 1.rawrd format sync with isp input format change
+ * 2.support bytesperline set by user for rawrd video
+ * 3.fix isp39 unite stats frame id
+ * 4.update iqtool video
+ * 5.fix isp32_lite repeat register iqtool video
+ * 6.fix lsc switch for isp30
+ * 7.add fpn function
+ * 8.fix buf config for isp20 and isp21
+ * 9.fix dhaz unite for isp39
+ * 10.fix isp39 no output
+ * 11.sync with kernel-5.10
+ * 12.remove graph_mutex
+ * 13.add raw filter to procfs debug
+ * 14.fix multi sensor with unite mode
+ * 15.fix group aov no working for isp32
+ * 16.fix bay3d if two readback for isp32
+ * 17.fix isp30 unite mode for rk3588
+ * 18.add sensor exposure for isp30 and isp39
+ * 19.support frame information attach to image tail
  */
 
 #define RKISP_DRIVER_VERSION RKISP_API_VERSION
