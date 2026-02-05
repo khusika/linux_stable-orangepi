@@ -43,6 +43,7 @@
 #include <linux/ktime.h>
 #include <linux/kthread.h>
 #include <linux/miscdevice.h>
+#include <linux/vmalloc.h>
 #include <uapi/sound/asound.h>
 #include <sound/control.h>
 #include <sound/soc.h>
